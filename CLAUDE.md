@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-「Grids & Grimoires」— インベントリ・パズルで杖を組み上げる魔術師のダンジョン攻略オートバトラー（Unity 2022.3.20f1 / URLシーンは `Assets/Scenes/SampleScene.unity`）。
+「Grids & Grimoires」— インベントリ・パズルで杖を組み上げる魔術師のダンジョン攻略オートバトラー（Unity 6000.3.9f1 / URLシーンは `Assets/Scenes/SampleScene.unity`）。
 
 企画・データの正本は [Docs/Grids_and_Grimoires_開発資料.md](Docs/Grids_and_Grimoires_開発資料.md)。魔法マスターデータの数値・グリッド形状（8章）・クラフトコスト（6章）など、仕様に迷ったら必ずこのドキュメントを参照する。設計変更や実装ギャップの経緯は auto memory（`game-design-grids-and-grimoires`）にも記録されているので、大きな仕様追加の前に確認するとよい。
 
 ## ビルド・実行
 
-このプロジェクトにコマンドラインのビルド/テストスクリプトは無い。Unity Editor (2022.3.20f1) で `Assets/Scenes/SampleScene.unity` を開いて再生する。
+このプロジェクトにコマンドラインのビルド/テストスクリプトは無い。Unity Editor (6000.3.9f1) で `Assets/Scenes/SampleScene.unity` を開いて再生する。
 
 ### Editor拡張（`Assets/Editor/`）
 マスターデータはコードを直接編集するのではなく、Unityメニューから生成する運用になっている。
