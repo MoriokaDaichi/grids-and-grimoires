@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70e5db69c8b628149a82466ed7665c9f, type: 3}
+  m_Name: StatusShock
+  m_EditorClassIdentifier: 
+  magicName: "\u96FB\u78C1\u6CE2"
+  category: 1
+  attribute: 2
+  range: 1
+  interval: 7
+  damage: 0
+  statusEffect: 2
+  statusEffectChance: 80
+  buffStat: 0
+  buffDuration: 0
+  passiveStage: 1
+  supportRepeatCount: 1
+  effectDescription: 
+  shapeNodes:
+  - {x: 0, y: 0}
+  - {x: 1, y: 0}
+  - {x: 1, y: -1}
+  - {x: 1, y: -2}
+  pieceColor: {r: 1, g: 1, b: 0, a: 1}
+  requiredMaterials:
+  - materialType: 1
+    attribute: 0
+    specialItemName: 
+    amount: 2
+  - materialType: 3
+    attribute: 2
+    specialItemName: 
+    amount: 1

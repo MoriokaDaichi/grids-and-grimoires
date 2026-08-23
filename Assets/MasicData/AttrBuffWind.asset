@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70e5db69c8b628149a82466ed7665c9f, type: 3}
+  m_Name: AttrBuffWind
+  m_EditorClassIdentifier: 
+  magicName: "\u98A8\u5C5E\u6027\u30D0\u30D5"
+  category: 4
+  attribute: 3
+  range: 0
+  interval: 0
+  damage: 0
+  statusEffect: 0
+  statusEffectChance: 0
+  buffStat: 0
+  buffDuration: 0
+  passiveStage: 1
+  supportRepeatCount: 1
+  effectDescription: "\u5BFE\u5FDC\u5C5E\u6027\u306E\u9B54\u6CD5\u5A01\u529B\u3092\u5F37\u5316\u3059\u308B\uFF08\u5E38\u6642\u52B9\u679C\uFF09"
+  shapeNodes:
+  - {x: 0, y: 0}
+  - {x: 1, y: 0}
+  pieceColor: {r: 0, g: 0.8, b: 0.2, a: 1}
+  requiredMaterials:
+  - materialType: 2
+    attribute: 0
+    specialItemName: 
+    amount: 3
