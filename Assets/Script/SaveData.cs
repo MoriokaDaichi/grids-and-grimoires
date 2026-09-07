@@ -11,9 +11,12 @@ public class MaterialStack
     public int count;
 }
 
-// セーブデータ全体。Phase 3 以降で unlockedMagicIds / passiveStages / statAllocation を追加予定。
+// セーブデータ全体。各システムは「読み込み→自分の領域だけ更新→書き込み」で他システムのフィールドを保つこと。
 [Serializable]
 public class SaveData
 {
     public List<MaterialStack> materials = new List<MaterialStack>();
+
+    // 研究で解放済みの魔法ID（= MagicData のアセット名）。コスト0の魔法は常に解放扱いなので含めない。
+    public List<string> unlockedMagicIds = new List<string>();
 }

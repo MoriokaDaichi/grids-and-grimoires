@@ -42,14 +42,19 @@ public static class BattleUISceneBuilder
         DestroyExisting(canvasT, "BattleRoot");
         DestroyExisting(canvasT, "RewardRoot");
         DestroyExisting(canvasT, "InventoryPanel");
+        DestroyExisting(canvasT, "HideoutRoot");
+        DestroyExisting(canvasT, "HideoutButton");
         GameObject oldGpm = GameObject.Find("GamePhaseManager");
         if (oldGpm != null) Object.DestroyImmediate(oldGpm);
 
         EnsureSingleton<PlayerInventory>("PlayerInventory");
+        EnsureSingleton<ResearchManager>("ResearchManager");
 
         GameObject battleRoot = BuildBattleRoot(canvasT);
         GameObject rewardRoot = BuildRewardRoot(canvasT);
         GameObject inventoryPanel = BuildInventoryPanel(canvasT);
+        GameObject hideoutRoot = BuildHideoutRoot(canvasT);
+        GameObject hideoutButton = BuildHideoutButton(canvasT);
 
         GameObject gpmGo = new GameObject("GamePhaseManager");
         GamePhaseManager gpm = gpmGo.AddComponent<GamePhaseManager>();
@@ -83,17 +88,21 @@ public static class BattleUISceneBuilder
             if (t != null) buildObjs.Add(t.gameObject);
         }
         buildObjs.Add(inventoryPanel);
+        buildObjs.Add(hideoutButton);
 
         SerializedObject so = new SerializedObject(gpm);
         SerializedProperty arr = so.FindProperty("buildPhaseObjects");
         arr.arraySize = buildObjs.Count;
         for (int i = 0; i < buildObjs.Count; i++)
             arr.GetArrayElementAtIndex(i).objectReferenceValue = buildObjs[i];
+        so.FindProperty("hideoutRoot").objectReferenceValue = hideoutRoot;
         so.FindProperty("battleRoot").objectReferenceValue = battleRoot;
         so.FindProperty("rewardRoot").objectReferenceValue = rewardRoot;
         so.FindProperty("sortieButton").objectReferenceValue = sortie;
+        so.FindProperty("hideoutButton").objectReferenceValue = hideoutButton.GetComponent<Button>();
         so.ApplyModifiedPropertiesWithoutUndo();
 
+        hideoutRoot.SetActive(false);
         battleRoot.SetActive(false);
         rewardRoot.SetActive(false);
 
@@ -275,6 +284,73 @@ public static class BattleUISceneBuilder
         go.AddComponent<T>();
     }
 
+    // ---------------------------------------------------------------- HideoutRoot（研究画面）
+
+    private static GameObject BuildHideoutRoot(Transform canvas)
+    {
+        RectTransform root = NewUI("HideoutRoot", canvas);
+        Stretch(root);
+        AddImage(root, new Color(0.10f, 0.11f, 0.14f, 1f), true);
+
+        TMP_Text title = AddText(root, "Title", "研究 — 隠れ家", 34, TextAlignmentOptions.Center);
+        Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(700f, 60f));
+
+        // スクロールビュー
+        RectTransform viewport = NewUI("Viewport", root);
+        Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(760f, 520f));
+        Image vpImg = AddImage(viewport, new Color(0f, 0f, 0f, 0.3f), true);
+        Mask mask = viewport.gameObject.AddComponent<Mask>();
+        mask.showMaskGraphic = true;
+        ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+
+        RectTransform listRoot = NewUI("ListRoot", viewport);
+        listRoot.anchorMin = new Vector2(0f, 1f);
+        listRoot.anchorMax = new Vector2(1f, 1f);
+        listRoot.pivot = new Vector2(0.5f, 1f);
+        listRoot.offsetMin = new Vector2(8f, 0f);
+        listRoot.offsetMax = new Vector2(-8f, 0f);
+        listRoot.anchoredPosition = new Vector2(0f, 0f);
+        VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 4f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.padding = new RectOffset(6, 6, 6, 6);
+        ContentSizeFitter csf = listRoot.gameObject.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.content = listRoot;
+        scroll.viewport = viewport;
+
+        RectTransform closeRt = NewUI("CloseButton", root);
+        Frame(closeRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(220f, 56f));
+        Image closeImg = AddImage(closeRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
+        Button closeBtn = closeRt.gameObject.AddComponent<Button>();
+        closeBtn.targetGraphic = closeImg;
+        TMP_Text closeLbl = AddText(closeRt.gameObject.transform, "Label", "戻る", 24, TextAlignmentOptions.Center);
+        Stretch(closeLbl.rectTransform);
+
+        HideoutPanel panel = root.gameObject.AddComponent<HideoutPanel>();
+        SerializedObject so = new SerializedObject(panel);
+        so.FindProperty("listRoot").objectReferenceValue = listRoot;
+        so.FindProperty("entryPrefab").objectReferenceValue = Load("HideoutEntry");
+        so.FindProperty("closeButton").objectReferenceValue = closeBtn;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return root.gameObject;
+    }
+
+    private static GameObject BuildHideoutButton(Transform canvas)
+    {
+        RectTransform rt = NewUI("HideoutButton", canvas);
+        Frame(rt, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(16f, 16f), new Vector2(160f, 52f));
+        Image img = AddImage(rt, new Color(0.30f, 0.26f, 0.45f, 1f), true);
+        Button btn = rt.gameObject.AddComponent<Button>();
+        btn.targetGraphic = img;
+        TMP_Text lbl = AddText(rt.gameObject.transform, "Label", "研究", 22, TextAlignmentOptions.Center);
+        Stretch(lbl.rectTransform);
+        return rt.gameObject;
+    }
+
     // ---------------------------------------------------------------- prefabs
 
     private static void EnsurePrefabs()
@@ -286,6 +362,7 @@ public static class BattleUISceneBuilder
         SavePrefabIfMissing("StatusEffectIcon", BuildStatusIconTemplate);
         SavePrefabIfMissing("BuffIndicator", BuildBuffIndicatorTemplate);
         SavePrefabIfMissing("DropRow", BuildDropRowTemplate);
+        SavePrefabIfMissing("HideoutEntry", BuildHideoutEntryTemplate);
         AssetDatabase.SaveAssets();
     }
 
@@ -371,6 +448,44 @@ public static class BattleUISceneBuilder
         SetPrivate(comp, "icon", icon);
         SetPrivate(comp, "nameLabel", nameLabel);
         SetPrivate(comp, "amountLabel", amountLabel);
+        return rt.gameObject;
+    }
+
+    private static GameObject BuildHideoutEntryTemplate()
+    {
+        RectTransform rt = NewUI("HideoutEntry", null);
+        rt.sizeDelta = new Vector2(740f, 48f);
+        HorizontalLayoutGroup hlg = rt.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 10f;
+        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
+        hlg.childControlWidth = true; hlg.childControlHeight = true;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.padding = new RectOffset(10, 10, 4, 4);
+        LayoutElement le = rt.gameObject.AddComponent<LayoutElement>();
+        le.preferredHeight = 48f; le.minHeight = 48f;
+
+        TMP_Text nameLabel = AddText(rt, "Name", "魔法名", 22, TextAlignmentOptions.MidlineLeft);
+        LayoutElement nameLe = nameLabel.gameObject.AddComponent<LayoutElement>();
+        nameLe.preferredWidth = 180f; nameLe.minWidth = 140f;
+
+        TMP_Text costLabel = AddText(rt, "Cost", "-", 18, TextAlignmentOptions.MidlineLeft);
+        LayoutElement costLe = costLabel.gameObject.AddComponent<LayoutElement>();
+        costLe.flexibleWidth = 1f; costLe.preferredWidth = 400f;
+
+        RectTransform btnRt = NewUI("Action", rt);
+        Image btnImg = AddImage(btnRt, new Color(0.28f, 0.5f, 0.35f, 1f), true);
+        Button btn = btnRt.gameObject.AddComponent<Button>();
+        btn.targetGraphic = btnImg;
+        LayoutElement btnLe = btnRt.gameObject.AddComponent<LayoutElement>();
+        btnLe.preferredWidth = 100f; btnLe.minWidth = 100f;
+        TMP_Text actionLabel = AddText(btnRt.gameObject.transform, "Label", "解放", 18, TextAlignmentOptions.Center);
+        Stretch(actionLabel.rectTransform);
+
+        HideoutEntry comp = rt.gameObject.AddComponent<HideoutEntry>();
+        SetPrivate(comp, "nameLabel", nameLabel);
+        SetPrivate(comp, "costLabel", costLabel);
+        SetPrivate(comp, "actionButton", btn);
+        SetPrivate(comp, "actionLabel", actionLabel);
         return rt.gameObject;
     }
 

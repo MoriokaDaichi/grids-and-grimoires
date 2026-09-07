@@ -16,12 +16,37 @@ public class MagicSpawner : MonoBehaviour
 
     private MagicPieceUI activePiece;   // 現在カーソルに追従中の（未配置の）ピース
     private MagicGeneratorButton lastClickedButton;
+    private ResearchManager research;
 
     void Start()
     {
-        // 初期ボタン生成
+        research = Object.FindFirstObjectByType<ResearchManager>();
+        if (research != null) research.OnUnlocksChanged += RebuildButtons;
+        RebuildButtons();
+    }
+
+    void OnDestroy()
+    {
+        if (research != null) research.OnUnlocksChanged -= RebuildButtons;
+    }
+
+    // 解放済みの魔法だけボタンを並べ直す（研究で解放されたとき、および初期化時に呼ぶ）
+    public void RebuildButtons()
+    {
+        if (buttonContainer != null)
+        {
+            for (int i = buttonContainer.childCount - 1; i >= 0; i--)
+            {
+                Transform child = buttonContainer.GetChild(i);
+                child.SetParent(null, false); // Destroyはフレーム末尾まで遅延するので、先に親から外して数え違いを防ぐ
+                Destroy(child.gameObject);
+            }
+        }
+
         foreach (var data in magicDataList)
         {
+            if (data == null) continue;
+            if (research != null && !research.IsUnlocked(data)) continue;
             CreateButton(data);
         }
     }

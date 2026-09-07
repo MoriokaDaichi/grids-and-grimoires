@@ -30,6 +30,7 @@ public class PlayerInventory : MonoBehaviour
     public int GetCount(MaterialCost cost) { return ledger.GetCount(cost); }
     public MaterialCost Sample(string key) { return ledger.Sample(key); }
     public IEnumerable<KeyValuePair<string, int>> Counts { get { return ledger.Counts; } }
+    public bool CanAfford(IEnumerable<MaterialCost> cost) { return ledger.CanAfford(cost); }
 
     public void Add(IEnumerable<MaterialCost> gained)
     {
@@ -46,7 +47,8 @@ public class PlayerInventory : MonoBehaviour
 
     private void Persist()
     {
-        SaveData data = new SaveData();
+        // 他システム（研究解放など）のフィールドを潰さないよう、読み込んでから素材領域だけ更新する
+        SaveData data = SaveManager.Load();
         ledger.WriteTo(data);
         SaveManager.Save(data);
         OnInventoryChanged?.Invoke();

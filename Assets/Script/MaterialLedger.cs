@@ -36,20 +36,25 @@ public class MaterialLedger
         }
     }
 
+    // 消費せずに、賄えるかどうかだけ判定する。
+    public bool CanAfford(IEnumerable<MaterialCost> cost)
+    {
+        if (cost == null) return true;
+        foreach (KeyValuePair<string, int> kv in Aggregate(cost))
+        {
+            int have;
+            counts.TryGetValue(kv.Key, out have);
+            if (have < kv.Value) return false;
+        }
+        return true;
+    }
+
     // すべて賄えるときだけ消費して true を返す。1つでも足りなければ何も減らさず false。
     public bool TrySpend(IEnumerable<MaterialCost> cost)
     {
         if (cost == null) return true;
 
-        Dictionary<string, int> need = new Dictionary<string, int>();
-        foreach (MaterialCost c in cost)
-        {
-            if (c == null || c.amount <= 0) continue;
-            string key = MaterialCatalog.Key(c);
-            int cur;
-            need.TryGetValue(key, out cur);
-            need[key] = cur + c.amount;
-        }
+        Dictionary<string, int> need = Aggregate(cost);
 
         foreach (KeyValuePair<string, int> kv in need)
         {
@@ -64,6 +69,20 @@ public class MaterialLedger
             if (counts[kv.Key] <= 0) counts.Remove(kv.Key);
         }
         return true;
+    }
+
+    private static Dictionary<string, int> Aggregate(IEnumerable<MaterialCost> cost)
+    {
+        Dictionary<string, int> need = new Dictionary<string, int>();
+        foreach (MaterialCost c in cost)
+        {
+            if (c == null || c.amount <= 0) continue;
+            string key = MaterialCatalog.Key(c);
+            int cur;
+            need.TryGetValue(key, out cur);
+            need[key] = cur + c.amount;
+        }
+        return need;
     }
 
     public void LoadFrom(SaveData data)

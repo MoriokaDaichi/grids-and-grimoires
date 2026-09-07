@@ -1,22 +1,24 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 構築(Build) → 戦闘(Battle) → 報酬(Reward) → 構築 の3状態を管理する単純なステートマシン。
+// 構築(Build) → 戦闘(Battle) → 報酬(Reward) の状態と、研究(Hideout)画面を管理する単純なステートマシン。
 // 各フェーズに属するGameObject群を SetActive で切り替えるだけ。
-// （企画書のTarkov型ホームハブ Character/Trade/Hideout は後続フェーズ。ここではコアループの最小連結のみ）
+// （企画書のTarkov型ホームハブ Character/Trade は後続フェーズ）
 public class GamePhaseManager : MonoBehaviour
 {
-    public enum GamePhase { Build, Battle, Reward }
+    public enum GamePhase { Build, Hideout, Battle, Reward }
 
     [Header("構築フェーズで表示するオブジェクト（杖グリッド/魔法一覧/ステータス/出撃ボタン等）")]
     [SerializeField] private GameObject[] buildPhaseObjects;
 
-    [Header("戦闘・報酬の画面ルート")]
+    [Header("研究・戦闘・報酬の画面ルート")]
+    [SerializeField] private GameObject hideoutRoot;
     [SerializeField] private GameObject battleRoot;
     [SerializeField] private GameObject rewardRoot;
 
-    [Header("出撃ボタン（Awakeでクリックを配線）")]
+    [Header("ボタン（Awakeでクリックを配線）")]
     [SerializeField] private Button sortieButton;
+    [SerializeField] private Button hideoutButton;
 
     public GamePhase Current { get; private set; }
     public bool LastRunCleared { get; private set; }
@@ -28,6 +30,7 @@ public class GamePhaseManager : MonoBehaviour
     {
         dungeon = Object.FindFirstObjectByType<DungeonManager>();
         if (sortieButton != null) sortieButton.onClick.AddListener(StartSortie);
+        if (hideoutButton != null) hideoutButton.onClick.AddListener(GoToHideout);
     }
 
     void OnEnable()
@@ -64,10 +67,17 @@ public class GamePhaseManager : MonoBehaviour
                 if (go != null) go.SetActive(phase == GamePhase.Build);
             }
         }
+        if (hideoutRoot != null) hideoutRoot.SetActive(phase == GamePhase.Hideout);
         if (battleRoot != null) battleRoot.SetActive(phase == GamePhase.Battle);
         if (rewardRoot != null) rewardRoot.SetActive(phase == GamePhase.Reward);
 
         OnPhaseChanged?.Invoke(phase);
+    }
+
+    // 「研究」ボタンから呼ぶ
+    public void GoToHideout()
+    {
+        if (Current == GamePhase.Build) GoTo(GamePhase.Hideout);
     }
 
     // 出撃ボタンから呼ぶ。杖に発動可能な魔法が無ければ構築画面に留まる。
