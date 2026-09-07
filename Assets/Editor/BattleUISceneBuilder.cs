@@ -459,7 +459,7 @@ public static class BattleUISceneBuilder
         RectTransform content = NewUI("TreeContent", viewport);
         content.anchorMin = content.anchorMax = new Vector2(0.5f, 0.5f);
         content.pivot = new Vector2(0.5f, 0.5f);
-        content.sizeDelta = new Vector2(3200f, 3200f);
+        content.sizeDelta = new Vector2(6400f, 6400f);
         content.anchoredPosition = Vector2.zero;
 
         RectTransform edgeLayer = NewUI("Edges", content);
@@ -648,7 +648,7 @@ public static class BattleUISceneBuilder
     {
         RectTransform rt = NewUI("ResearchNode", null);
         rt.sizeDelta = new Vector2(92f, 92f);
-        Image bg = AddImage(rt, new Color(0.32f, 0.34f, 0.40f, 1f), false);
+        Image bg = AddImage(rt, new Color(0.32f, 0.34f, 0.40f, 1f), true); // クリックを拾うため raycastTarget=true 必須
         Button btn = rt.gameObject.AddComponent<Button>();
         btn.targetGraphic = bg;
 

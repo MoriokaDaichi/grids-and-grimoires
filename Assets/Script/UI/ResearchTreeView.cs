@@ -29,8 +29,8 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
     private string selectedId;
     private bool built;
 
-    private const float MinZoom = 0.3f;
-    private const float MaxZoom = 1.6f;
+    private const float MinZoom = 0.14f;
+    private const float MaxZoom = 1.4f;
 
     void Awake()
     {
@@ -50,7 +50,7 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
         BuildOnce();
         if (content != null)
         {
-            content.localScale = Vector3.one * 0.62f;
+            content.localScale = Vector3.one * 0.42f;
             content.anchoredPosition = Vector2.zero;
         }
         if (legendText != null)
@@ -108,11 +108,11 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
 
         Vector2 dir = to - from;
         rt.anchoredPosition = from + dir * 0.5f;
-        rt.sizeDelta = new Vector2(dir.magnitude, 4f);
+        rt.sizeDelta = new Vector2(dir.magnitude, 7f);
         rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
 
         Image img = go.GetComponent<Image>();
-        img.color = new Color(1f, 1f, 1f, 0.16f);
+        img.color = new Color(1f, 1f, 1f, 0.22f);
         img.raycastTarget = false;
         rt.SetAsFirstSibling();
     }

@@ -31,8 +31,8 @@ public class ResearchNodeDef
 
 public static class ResearchGraph
 {
-    public const float Ring0Radius = 165f;
-    public const float RingStep = 142f;
+    public const float Ring0Radius = 260f;
+    public const float RingStep = 380f;
 
     private static List<ResearchNodeDef> _nodes;
     private static Dictionary<string, ResearchNodeDef> _byId;
@@ -103,11 +103,18 @@ public static class ResearchGraph
         _prereq = new Dictionary<string, string>();
 
         // 中心付近の小ノード（マナ・汎用ステータス）。親は各属性の単体基本魔法。
-        Stat("node_core_manaRegen", ResearchStat.ManaRegen, 1.5f, "Fire", 0, 36f, "MPリジェネ+1.5", "マナのリジェネ速度 +1.5/秒", Sm(2), Sm(1));
+        Stat("node_core_manaRegen", ResearchStat.ManaRegen, 1.5f, "Fire", 0, 36f, "MPリジェネ+1.5", "マナのリジェネ速度 +1.5", Sm(2), Sm(1));
         Stat("node_core_manaMax", ResearchStat.ManaMax, 20f, "Thunder", 0, 108f, "MP上限+20", "最大マナ +20", Sm(3));
         Stat("node_core_hp", ResearchStat.Hp, 15f, "Wind", 0, 180f, "HP+15", "最大HP +15", Sm(2), Sm(1));
         Stat("node_core_spd", ResearchStat.Spd, 1f, "Light", 0, 252f, "速さ+1", "速さ +1（発動間隔が縮む）", Sm(2));
         Stat("node_core_luc", ResearchStat.Luc, 1f, "Dark", 0, 324f, "運+1", "運 +1（会心率が上がる）", Sm(2));
+
+        // 中心リングの第2段（各コア小ノードから1つ外へ伸ばす）
+        Stat("node_core_manaRegen2", ResearchStat.ManaRegen, 1.5f, "node_core_manaRegen", 1, 36f, Label(ResearchStat.ManaRegen), Title(ResearchStat.ManaRegen), Sm(3));
+        Stat("node_core_manaMax2", ResearchStat.ManaMax, 20f, "node_core_manaMax", 1, 108f, Label(ResearchStat.ManaMax), Title(ResearchStat.ManaMax), Sm(4));
+        Stat("node_core_hp2", ResearchStat.Hp, 15f, "node_core_hp", 1, 180f, Label(ResearchStat.Hp), Title(ResearchStat.Hp), Sm(3));
+        Stat("node_core_spd2", ResearchStat.Spd, 1f, "node_core_spd", 1, 252f, Label(ResearchStat.Spd), Title(ResearchStat.Spd), Sm(3));
+        Stat("node_core_luc2", ResearchStat.Luc, 1f, "node_core_luc", 1, 324f, Label(ResearchStat.Luc), Title(ResearchStat.Luc), Sm(3));
 
         foreach (Line l in Lines)
         {
@@ -129,27 +136,29 @@ public static class ResearchGraph
             Stat("node_" + l.stem + "_c", s3, Amount(s3), "Mega" + l.stem, 4, a - 12f, Label(s3), Title(s3), Md(1));
             Magic("Giga" + l.stem, "node_" + l.stem + "_c", 5, a - 12f);
 
-            // 全体: 基本 → [小] → メガ → ギガ
+            // 全体: 基本 → [小] → メガ → [小] → ギガ
+            ResearchStat s4 = StatFor(l.attr, 3);
             Magic("Mega" + l.aoe, "node_" + l.stem + "_b", 3, a + 12f);
-            Magic("Giga" + l.aoe, "Mega" + l.aoe, 5, a + 12f);
+            Stat("node_" + l.stem + "_d", s4, Amount(s4), "Mega" + l.aoe, 4, a + 12f, Label(s4), Title(s4), Md(1));
+            Magic("Giga" + l.aoe, "node_" + l.stem + "_d", 5, a + 12f);
 
             // 状態異常特化 ← 単体メガ、付与率バフ ← 状態異常特化
-            Magic(l.status, "Mega" + l.stem, 4, a - 32f);
-            Magic("StatusRateBuff" + l.stem, l.status, 6, a - 34f);
+            Magic(l.status, "Mega" + l.stem, 4, a - 28f);
+            Magic("StatusRateBuff" + l.stem, l.status, 6, a - 28f);
 
             // 属性バフ ← 単体メガ
-            Magic("AttrBuff" + l.stem, "Mega" + l.stem, 5, a - 22f);
+            Magic("AttrBuff" + l.stem, "Mega" + l.stem, 5, a - 20f);
 
             // アクティブバフ ← 単体基本、パッシブ Lv1←バフ→Lv2→Lv3
-            Magic(l.buff, l.stem, 3, a + 32f);
-            Magic(l.buff + "PassiveLv1", l.buff, 4, a + 32f);
-            Magic(l.buff + "PassiveLv2", l.buff + "PassiveLv1", 5, a + 33f);
-            Magic(l.buff + "PassiveLv3", l.buff + "PassiveLv2", 6, a + 34f);
+            Magic(l.buff, l.stem, 3, a + 28f);
+            Magic(l.buff + "PassiveLv1", l.buff, 4, a + 28f);
+            Magic(l.buff + "PassiveLv2", l.buff + "PassiveLv1", 5, a + 29f);
+            Magic(l.buff + "PassiveLv3", l.buff + "PassiveLv2", 6, a + 30f);
         }
 
-        // 共通の補助魔法：中心の「効率的魔力運用」＝マナ回復ノードから伸ばす
-        Magic("AddSpell", "node_core_manaRegen", 3, 20f);
-        Magic("DualSpell", "AddSpell", 5, 20f);
+        // 共通の補助魔法：中心の「効率的魔力運用」＝マナ回復ノードの第2段から伸ばす
+        Magic("AddSpell", "node_core_manaRegen2", 3, 44f);
+        Magic("DualSpell", "AddSpell", 5, 44f);
     }
 
     private static void Magic(string id, string parentId, int ring, float angleDeg)
@@ -182,11 +191,11 @@ public static class ResearchGraph
     {
         switch (attr)
         {
-            case MagicAttribute.Fire:    return new[] { ResearchStat.Atk, ResearchStat.Hp, ResearchStat.Atk }[slot];
-            case MagicAttribute.Thunder: return new[] { ResearchStat.Def, ResearchStat.ManaRegen, ResearchStat.Def }[slot];
-            case MagicAttribute.Wind:    return new[] { ResearchStat.Spd, ResearchStat.Spd, ResearchStat.Luc }[slot];
-            case MagicAttribute.Light:   return new[] { ResearchStat.Luc, ResearchStat.ManaMax, ResearchStat.Luc }[slot];
-            case MagicAttribute.Dark:    return new[] { ResearchStat.ManaMax, ResearchStat.Hp, ResearchStat.ManaRegen }[slot];
+            case MagicAttribute.Fire:    return new[] { ResearchStat.Atk, ResearchStat.Hp, ResearchStat.Atk, ResearchStat.Hp }[slot];
+            case MagicAttribute.Thunder: return new[] { ResearchStat.Def, ResearchStat.ManaRegen, ResearchStat.Def, ResearchStat.ManaMax }[slot];
+            case MagicAttribute.Wind:    return new[] { ResearchStat.Spd, ResearchStat.Spd, ResearchStat.Luc, ResearchStat.Spd }[slot];
+            case MagicAttribute.Light:   return new[] { ResearchStat.Luc, ResearchStat.ManaMax, ResearchStat.Luc, ResearchStat.Hp }[slot];
+            case MagicAttribute.Dark:    return new[] { ResearchStat.ManaMax, ResearchStat.Hp, ResearchStat.ManaRegen, ResearchStat.Def }[slot];
             default:                     return ResearchStat.Hp;
         }
     }
@@ -231,7 +240,7 @@ public static class ResearchGraph
             case ResearchStat.Spd: return "速さ +1（発動間隔が縮む）";
             case ResearchStat.Luc: return "運 +1（会心率が上がる）";
             case ResearchStat.ManaMax: return "最大マナ +20";
-            case ResearchStat.ManaRegen: return "マナのリジェネ速度 +1.5/秒";
+            case ResearchStat.ManaRegen: return "マナのリジェネ速度 +1.5";
             default: return "";
         }
     }
