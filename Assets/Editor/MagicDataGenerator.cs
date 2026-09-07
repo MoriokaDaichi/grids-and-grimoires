@@ -188,13 +188,14 @@ public static class MagicDataGenerator
             },
         };
 
-        int[] singleIntervals = { 3, 5, 7 };
-        int[] singleDamages = { 5, 10, 20 };
+        // 仮バランス調整（序盤を戦えるように Tier1 を強化・発動を速める）。
+        float[] singleIntervals = { 2.8f, 4f, 6f };
+        int[] singleDamages = { 7, 13, 24 };
         int[] singleChances = { 0, 10, 20 };
         string[] tierPrefix = { "", "Mega", "Giga" };
 
-        int[] aoeIntervals = { 5, 7, 9 };
-        int[] aoeDamages = { 3, 6, 12 };
+        float[] aoeIntervals = { 4.5f, 6f, 8f };
+        int[] aoeDamages = { 4, 8, 15 };
         int[] aoeChances = { 0, 10, 20 };
 
         var defs = new List<Def>();

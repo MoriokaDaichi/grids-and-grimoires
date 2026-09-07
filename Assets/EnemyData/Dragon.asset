@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f877b69129ce39a479fa4df5e8a9778c, type: 3}
+  m_Name: Dragon
+  m_EditorClassIdentifier: GridsAndGrimoires.Runtime::EnemyData
+  enemyName: "\u30C9\u30E9\u30B4\u30F3"
+  maxHp: 1750
+  atk: 73
+  def: 31
+  attackInterval: 2.7
+  attribute: 1
+  resistances:
+  - attribute: 1
+    multiplier: 0.25
+  - attribute: 2
+    multiplier: 1.3
+  drops:
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u7ADC\u738B\u306E\u3046\u308D\u3053"
+    amount: 1
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u7ADC\u306E\u5FC3\u81D3"
+    amount: 1
+  sprite: {fileID: 0}

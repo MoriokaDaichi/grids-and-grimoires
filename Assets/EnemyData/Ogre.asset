@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f877b69129ce39a479fa4df5e8a9778c, type: 3}
+  m_Name: Ogre
+  m_EditorClassIdentifier: GridsAndGrimoires.Runtime::EnemyData
+  enemyName: "\u30AA\u30FC\u30AC"
+  maxHp: 540
+  atk: 31
+  def: 12
+  attackInterval: 3.2
+  attribute: 0
+  resistances: []
+  drops:
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u30AA\u30FC\u30AC\u306E\u7259"
+    amount: 2
+  sprite: {fileID: 0}

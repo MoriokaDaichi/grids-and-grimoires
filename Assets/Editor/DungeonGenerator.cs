@@ -19,8 +19,8 @@ public static class DungeonGenerator
             return;
         }
 
-        // 弱い → 強い の順
-        string[] order = { "Slime", "GiantRat", "Goblin", "ForestGuard" };
+        // 弱い → 強い の順（正本は EnemyDataGenerator.OrderWeakToStrong）
+        string[] order = EnemyDataGenerator.OrderWeakToStrong;
         EnemyData[] enemies = new EnemyData[order.Length];
         for (int i = 0; i < order.Length; i++)
         {
@@ -50,7 +50,7 @@ public static class DungeonGenerator
 
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorSceneManager.MarkSceneDirty(dm.gameObject.scene);
-        Debug.Log("[Grimoire] エンドレスダンジョンの敵プール（スライム/大ネズミ/ゴブリン/森の番人・仮バランス）を設定しました。シーンを保存してください。");
+        Debug.Log($"[Grimoire] エンドレスダンジョンの敵プール（{enemies.Length}体・弱い順・仮バランス）を設定しました。シーンを保存してください。");
     }
 
     private static EnemyData Load(string fileId)

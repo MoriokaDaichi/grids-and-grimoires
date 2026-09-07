@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Goblin
   m_EditorClassIdentifier: 
   enemyName: "\u30B4\u30D6\u30EA\u30F3"
-  maxHp: 90
-  atk: 9
-  def: 4
+  maxHp: 88
+  atk: 8
+  def: 3
   attackInterval: 3.5
   attribute: 5
   resistances:

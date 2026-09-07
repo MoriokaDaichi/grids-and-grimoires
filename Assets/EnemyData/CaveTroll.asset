@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f877b69129ce39a479fa4df5e8a9778c, type: 3}
+  m_Name: CaveTroll
+  m_EditorClassIdentifier: GridsAndGrimoires.Runtime::EnemyData
+  enemyName: "\u6D1E\u7A9F\u30C8\u30ED\u30EB"
+  maxHp: 460
+  atk: 25
+  def: 11
+  attackInterval: 3.2
+  attribute: 0
+  resistances:
+  - attribute: 1
+    multiplier: 1.4
+  drops:
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u30C8\u30ED\u30EB\u306E\u751F\u76AE"
+    amount: 2
+  sprite: {fileID: 0}

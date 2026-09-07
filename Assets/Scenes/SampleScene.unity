@@ -4806,6 +4806,8 @@ MonoBehaviour:
   width: 5
   height: 5
   cellSize: 50
+  minGridSize: 2
+  maxGridSize: 5
 --- !u!114 &482944431
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11030,9 +11032,45 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyPool:
   - {fileID: 11400000, guid: b387a4a5e1581554480a294897ad6f7a, type: 2}
+  - {fileID: 11400000, guid: ecca06668e5fd254cbb103fd67fbc16a, type: 2}
+  - {fileID: 11400000, guid: 5dae1e9504c5c5046be36aa1e8bfcd44, type: 2}
   - {fileID: 11400000, guid: afdf7ae2ffc294347877818921933c44, type: 2}
+  - {fileID: 11400000, guid: e00ed30f1c487794a80925273c7115bb, type: 2}
+  - {fileID: 11400000, guid: b93677453d3c9b14f9f7aa436672a151, type: 2}
   - {fileID: 11400000, guid: 26c21f641d929c54b94581628a033e10, type: 2}
+  - {fileID: 11400000, guid: 1ef8867bde9f54a4882da9338a647d3a, type: 2}
+  - {fileID: 11400000, guid: 21f3d563fcdab7d4d8e22707f95e48f3, type: 2}
+  - {fileID: 11400000, guid: f0897238a4ad3b045b286be1214d2788, type: 2}
+  - {fileID: 11400000, guid: b26b5d7b57542ac4982f13408490f585, type: 2}
+  - {fileID: 11400000, guid: a197d7409ca137a4093e27c9be0bd6e0, type: 2}
+  - {fileID: 11400000, guid: 9e15b30ce742a024f9a42ff075072c76, type: 2}
+  - {fileID: 11400000, guid: 8e8345673838bb94b9df88d4d8a02a0b, type: 2}
+  - {fileID: 11400000, guid: abc4f6d603cd7614d876fa83a1e4174c, type: 2}
+  - {fileID: 11400000, guid: 107b1e6109e4f474f8af4187a3ad196c, type: 2}
+  - {fileID: 11400000, guid: 75ca6b6d26aeb73458e3b9f2d9668410, type: 2}
+  - {fileID: 11400000, guid: 73d549804849766409f9a2a0106b355f, type: 2}
+  - {fileID: 11400000, guid: e19ca119eb317f146af07c73ce27714a, type: 2}
   - {fileID: 11400000, guid: fa6c8943a119f6541b2333315fc72f4d, type: 2}
+  - {fileID: 11400000, guid: abace4c431c319349a15fdad708f6436, type: 2}
+  - {fileID: 11400000, guid: 04cee1c270bd93845b194dc02968a2d1, type: 2}
+  - {fileID: 11400000, guid: c4d60faa067e1044888eff4d5ee37105, type: 2}
+  - {fileID: 11400000, guid: aa2a8631589f0614ba9b5df5530cab2b, type: 2}
+  - {fileID: 11400000, guid: 0175a10b25052b74bb45e1e682aaf2ba, type: 2}
+  - {fileID: 11400000, guid: 904a0961527142d4686bed6e53f86882, type: 2}
+  - {fileID: 11400000, guid: 68343f2ed9a311249a3230e601633033, type: 2}
+  - {fileID: 11400000, guid: 7ed0cc73bf6462a49914d31f850a464e, type: 2}
+  - {fileID: 11400000, guid: 6625f4d32e76598449510f1bd193e415, type: 2}
+  - {fileID: 11400000, guid: 344aa5233eeb45c43b678407363e0286, type: 2}
+  - {fileID: 11400000, guid: 24e76073da5354a48aa41c544d27d10f, type: 2}
+  - {fileID: 11400000, guid: b39c45c10a14a3042a626f4f65cd75f8, type: 2}
+  - {fileID: 11400000, guid: d568b5c37ec4e50499e57edfc56677e5, type: 2}
+  - {fileID: 11400000, guid: a9e9fe3b0083aee4bb6ec0ab1a74c15b, type: 2}
+  - {fileID: 11400000, guid: b4bc0156b44626d458106f6c97f9e022, type: 2}
+  - {fileID: 11400000, guid: b382da2b40a2330408004939f29bcc5e, type: 2}
+  - {fileID: 11400000, guid: a9d8ca75f73406e47b4251e0b36bd101, type: 2}
+  - {fileID: 11400000, guid: 3dbf690dd92d6e54cbabb5fb5791aa39, type: 2}
+  - {fileID: 11400000, guid: 31328291ed5451e44b2d83d11cacb8cb, type: 2}
+  - {fileID: 11400000, guid: 39a2b667adf09454e911bf371ad7d0e9, type: 2}
   waves: []
   encounters:
   - {fileID: 11400000, guid: b387a4a5e1581554480a294897ad6f7a, type: 2}
@@ -18153,14 +18191,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7526c50b7c654b34191bce2ba0af65e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hp: 100
-  atk: 5
+  hp: 130
+  atk: 7
   def: 5
   spd: 5
   luc: 5
-  statsPoint: 5
-  maxMana: 100
-  manaRegenPerSecond: 8
+  statsPoint: 10
+  maxMana: 120
+  manaRegenPerSecond: 10
 --- !u!4 &1757679418
 Transform:
   m_ObjectHideFlags: 0

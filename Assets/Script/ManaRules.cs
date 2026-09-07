@@ -5,10 +5,10 @@ using UnityEngine;
 public static class ManaRules
 {
     // プレイヤーの基準最大マナ（仮）
-    public const int BaseMaxMana = 100;
+    public const int BaseMaxMana = 120;
 
     // 毎秒のマナ自然回復量（仮）
-    public const float DefaultRegenPerSecond = 8f;
+    public const float DefaultRegenPerSecond = 10f;
 
     // マナ不足で発動を見送ったときの再試行間隔（秒）
     public const float StarvedRetryDelay = 0.2f;

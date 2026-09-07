@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: GiantRat
   m_EditorClassIdentifier: 
   enemyName: "\u5927\u30CD\u30BA\u30DF"
-  maxHp: 80
-  atk: 11
-  def: 3
-  attackInterval: 3
+  maxHp: 48
+  atk: 5
+  def: 1
+  attackInterval: 3.6
   attribute: 5
   resistances:
   - attribute: 3

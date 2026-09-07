@@ -16,9 +16,9 @@ MonoBehaviour:
   category: 0
   attribute: 3
   range: 1
-  interval: 3
-  damage: 5
-  manaCost: 11
+  interval: 2.8
+  damage: 7
+  manaCost: 12
   statusEffect: 3
   statusEffectChance: 0
   buffStat: 0
