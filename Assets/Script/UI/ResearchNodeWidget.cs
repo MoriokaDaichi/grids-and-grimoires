@@ -20,13 +20,13 @@ public class ResearchNodeWidget : MonoBehaviour
     {
         Id = id;
         RectTransform rt = (RectTransform)transform;
-        float size = large ? 124f : 68f;
+        float size = large ? 150f : 92f;
         rt.sizeDelta = new Vector2(size, size);
 
         if (label != null)
         {
             label.text = shortLabel;
-            label.fontSize = large ? 16.5f : 11.5f;
+            label.fontSize = large ? 19f : 13f;
         }
         if (button != null)
         {
