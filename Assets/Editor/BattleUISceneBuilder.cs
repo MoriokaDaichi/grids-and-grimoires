@@ -401,51 +401,16 @@ public static class BattleUISceneBuilder
 
     // ---------------------------------------------------------------- HideoutRoot（研究画面）
 
-    // スクロール可能なリストパネル（研究・トレード共通）を組む。listRoot と closeBtn を out で返す。
-    private static GameObject BuildScrollPanel(Transform canvas, string rootName, string titleText,
-        out RectTransform listRoot, out Button closeBtn)
+    // 横並びのタブバー（子はレイアウト要素で自分の幅を決める）。
+    private static RectTransform TabStrip(RectTransform parent, string name, Vector2 anchoredPos, Vector2 size, float spacing)
     {
-        RectTransform root = NewUI(rootName, canvas);
-        Stretch(root);
-        AddImage(root, new Color(0.10f, 0.11f, 0.14f, 1f), true);
-
-        TMP_Text title = AddText(root, "Title", titleText, 34, TextAlignmentOptions.Center);
-        Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(700f, 60f));
-
-        RectTransform viewport = NewUI("Viewport", root);
-        Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(760f, 520f));
-        AddImage(viewport, new Color(0f, 0f, 0f, 0.3f), true);
-        Mask mask = viewport.gameObject.AddComponent<Mask>();
-        mask.showMaskGraphic = true;
-        ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.vertical = true;
-
-        listRoot = NewUI("ListRoot", viewport);
-        listRoot.anchorMin = new Vector2(0f, 1f);
-        listRoot.anchorMax = new Vector2(1f, 1f);
-        listRoot.pivot = new Vector2(0.5f, 1f);
-        listRoot.offsetMin = new Vector2(8f, 0f);
-        listRoot.offsetMax = new Vector2(-8f, 0f);
-        listRoot.anchoredPosition = new Vector2(0f, 0f);
-        VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 4f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
-        vlg.childControlWidth = true; vlg.childControlHeight = true;
-        vlg.padding = new RectOffset(6, 6, 6, 6);
-        ContentSizeFitter csf = listRoot.gameObject.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        scroll.content = listRoot;
-        scroll.viewport = viewport;
-
-        RectTransform closeRt = NewUI("CloseButton", root);
-        Frame(closeRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(220f, 56f));
-        Image closeImg = AddImage(closeRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
-        closeBtn = closeRt.gameObject.AddComponent<Button>();
-        closeBtn.targetGraphic = closeImg;
-        TMP_Text closeLbl = AddText(closeRt.gameObject.transform, "Label", "戻る", 24, TextAlignmentOptions.Center);
-        Stretch(closeLbl.rectTransform);
-
-        return root.gameObject;
+        RectTransform strip = NewUI(name, parent);
+        Frame(strip, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), anchoredPos, size);
+        HorizontalLayoutGroup h = strip.gameObject.AddComponent<HorizontalLayoutGroup>();
+        h.spacing = spacing; h.childAlignment = TextAnchor.MiddleCenter;
+        h.childControlWidth = true; h.childControlHeight = true;
+        h.childForceExpandWidth = false; h.childForceExpandHeight = false;
+        return strip;
     }
 
     // 研究（放射状スキルツリー）画面。ハイドアウトのハブ（研究机）から入る。
@@ -597,20 +562,74 @@ public static class BattleUISceneBuilder
         return root.gameObject;
     }
 
+    // トレード画面。トレーダーごとのタブ＋「交換/依頼」サブタブ。行は TradePanel がコードで生成する。
     private static GameObject BuildTradeRoot(Transform canvas)
     {
-        RectTransform listRoot;
-        Button closeBtn;
-        GameObject root = BuildScrollPanel(canvas, "TradeRoot", "トレード", out listRoot, out closeBtn);
+        RectTransform root = NewUI("TradeRoot", canvas);
+        Stretch(root);
+        AddImage(root, new Color(0.10f, 0.11f, 0.14f, 1f), true);
 
-        TradePanel panel = root.AddComponent<TradePanel>();
+        TMP_Text title = AddText(root, "Title", "トレード", 34, TextAlignmentOptions.Center);
+        Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(700f, 52f));
+
+        RectTransform tabBar = TabStrip(root, "TabBar", new Vector2(0f, -84f), new Vector2(1180f, 60f), 8f);
+        RectTransform subTabBar = TabStrip(root, "SubTabBar", new Vector2(0f, -150f), new Vector2(700f, 44f), 8f);
+
+        TMP_Text blurb = AddText(root, "Blurb", "", 15, TextAlignmentOptions.Center);
+        Frame(blurb.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(1180f, 30f));
+        blurb.color = new Color(1f, 1f, 1f, 0.7f);
+
+        RectTransform viewport = NewUI("Viewport", root);
+        Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(1180f, 600f));
+        AddImage(viewport, new Color(0f, 0f, 0f, 0.25f), true);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false; scroll.vertical = true; scroll.scrollSensitivity = 26f;
+
+        RectTransform listRoot = NewUI("ListRoot", viewport);
+        listRoot.anchorMin = new Vector2(0f, 1f);
+        listRoot.anchorMax = new Vector2(1f, 1f);
+        listRoot.pivot = new Vector2(0.5f, 1f);
+        listRoot.offsetMin = new Vector2(8f, 0f);
+        listRoot.offsetMax = new Vector2(-8f, 0f);
+        VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 6f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.padding = new RectOffset(6, 6, 6, 6);
+        listRoot.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.content = listRoot;
+        scroll.viewport = viewport;
+
+        RectTransform closeRt = NewUI("CloseButton", root);
+        Frame(closeRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(220f, 54f));
+        Image closeImg = AddImage(closeRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
+        Button closeBtn = closeRt.gameObject.AddComponent<Button>();
+        closeBtn.targetGraphic = closeImg;
+        TMP_Text closeLbl = AddText(closeRt.gameObject.transform, "Label", "戻る", 22, TextAlignmentOptions.Center);
+        Stretch(closeLbl.rectTransform);
+
+        TradePanel panel = root.gameObject.AddComponent<TradePanel>();
         SerializedObject so = new SerializedObject(panel);
+        so.FindProperty("tabBar").objectReferenceValue = tabBar;
+        so.FindProperty("subTabBar").objectReferenceValue = subTabBar;
         so.FindProperty("listRoot").objectReferenceValue = listRoot;
-        so.FindProperty("entryPrefab").objectReferenceValue = Load("HideoutEntry");
+        so.FindProperty("blurbText").objectReferenceValue = blurb;
         so.FindProperty("closeButton").objectReferenceValue = closeBtn;
+        if (JpFont != null) so.FindProperty("font").objectReferenceValue = JpFont;
+
+        // traderIcons をトレーダーIDで先埋め（ユーザーが後で Sprite を割り当てる）
+        SerializedProperty icons = so.FindProperty("traderIcons");
+        System.Collections.Generic.List<Trader> traders = TraderCatalog.BuildTraders();
+        icons.arraySize = traders.Count;
+        for (int i = 0; i < traders.Count; i++)
+        {
+            SerializedProperty e = icons.GetArrayElementAtIndex(i);
+            e.FindPropertyRelative("traderId").stringValue = traders[i].id;
+            e.FindPropertyRelative("icon").objectReferenceValue = null;
+        }
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        return root;
+        return root.gameObject;
     }
 
     // シーンに既にあるボタン（MenuPanel の子など）を探し、ラベルを差し替えて返す。
@@ -648,7 +667,6 @@ public static class BattleUISceneBuilder
         SavePrefabIfMissing("StatusEffectIcon", BuildStatusIconTemplate);
         SavePrefabIfMissing("BuffIndicator", BuildBuffIndicatorTemplate);
         SavePrefabIfMissing("DropRow", BuildDropRowTemplate);
-        SavePrefabIfMissing("HideoutEntry", BuildHideoutEntryTemplate);
         SavePrefabIfMissing("ResearchNode", BuildResearchNodeTemplate);
         AssetDatabase.SaveAssets();
     }
@@ -756,43 +774,6 @@ public static class BattleUISceneBuilder
         return rt.gameObject;
     }
 
-    private static GameObject BuildHideoutEntryTemplate()
-    {
-        RectTransform rt = NewUI("HideoutEntry", null);
-        rt.sizeDelta = new Vector2(740f, 48f);
-        HorizontalLayoutGroup hlg = rt.gameObject.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10f;
-        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
-        hlg.childControlWidth = true; hlg.childControlHeight = true;
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.padding = new RectOffset(10, 10, 4, 4);
-        LayoutElement le = rt.gameObject.AddComponent<LayoutElement>();
-        le.preferredHeight = 48f; le.minHeight = 48f;
-
-        TMP_Text nameLabel = AddText(rt, "Name", "魔法名", 22, TextAlignmentOptions.MidlineLeft);
-        LayoutElement nameLe = nameLabel.gameObject.AddComponent<LayoutElement>();
-        nameLe.preferredWidth = 180f; nameLe.minWidth = 140f;
-
-        TMP_Text costLabel = AddText(rt, "Cost", "-", 18, TextAlignmentOptions.MidlineLeft);
-        LayoutElement costLe = costLabel.gameObject.AddComponent<LayoutElement>();
-        costLe.flexibleWidth = 1f; costLe.preferredWidth = 400f;
-
-        RectTransform btnRt = NewUI("Action", rt);
-        Image btnImg = AddImage(btnRt, new Color(0.28f, 0.5f, 0.35f, 1f), true);
-        Button btn = btnRt.gameObject.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        LayoutElement btnLe = btnRt.gameObject.AddComponent<LayoutElement>();
-        btnLe.preferredWidth = 100f; btnLe.minWidth = 100f;
-        TMP_Text actionLabel = AddText(btnRt.gameObject.transform, "Label", "解放", 18, TextAlignmentOptions.Center);
-        Stretch(actionLabel.rectTransform);
-
-        HideoutEntry comp = rt.gameObject.AddComponent<HideoutEntry>();
-        SetPrivate(comp, "nameLabel", nameLabel);
-        SetPrivate(comp, "costLabel", costLabel);
-        SetPrivate(comp, "actionButton", btn);
-        SetPrivate(comp, "actionLabel", actionLabel);
-        return rt.gameObject;
-    }
 
     // ---------------------------------------------------------------- helpers
 
