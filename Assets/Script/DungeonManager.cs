@@ -23,6 +23,10 @@ public class DungeonManager : MonoBehaviour
     private int waveIndex;
     private bool dungeonActive;
 
+    // この出撃で実際に倒した敵（報酬の対象）。失敗した場合は死ぬ前に倒したぶんだけ入る。
+    private readonly List<EnemyData> defeatedEnemies = new List<EnemyData>();
+    public IReadOnlyList<EnemyData> DefeatedEnemies { get { return defeatedEnemies; } }
+
     void Awake()
     {
         playerStatus = Object.FindFirstObjectByType<PlayerStatus>();
@@ -54,6 +58,7 @@ public class DungeonManager : MonoBehaviour
         playerStatus.BattleReset();
         waveIndex = 0;
         dungeonActive = true;
+        defeatedEnemies.Clear();
         return SpawnNextWave();
     }
 
@@ -89,6 +94,14 @@ public class DungeonManager : MonoBehaviour
     private void HandleEnemyDefeated()
     {
         if (!dungeonActive) return;
+
+        // いま表示中のウェーブは encounters[waveIndex - 1]（SpawnNextWaveでインクリメント済み）
+        int justCleared = waveIndex - 1;
+        if (justCleared >= 0 && justCleared < encounters.Count)
+        {
+            defeatedEnemies.Add(encounters[justCleared]);
+        }
+
         SpawnNextWave();
     }
 

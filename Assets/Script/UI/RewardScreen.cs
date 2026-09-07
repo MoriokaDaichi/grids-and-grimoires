@@ -3,8 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 報酬画面。有効化されると結果テキストとドロップ一覧を表示する。
-// Phase 1 は表示のみ（素材の付与・保存は Phase 2 でここに追加する）。
+// 報酬画面。有効化されると結果テキストと「実際に倒した敵」のドロップ集計を表示する。
+// 「帰還」ボタン押下時に PlayerInventory へ付与しセーブする（多重付与しないようガードあり）。
 public class RewardScreen : MonoBehaviour
 {
     [SerializeField] private RectTransform dropListRoot;
@@ -14,6 +14,9 @@ public class RewardScreen : MonoBehaviour
 
     private DungeonManager dungeon;
     private GamePhaseManager phaseManager;
+
+    private readonly List<MaterialCost> pendingDrops = new List<MaterialCost>();
+    private bool granted;
 
     void Awake()
     {
@@ -29,11 +32,21 @@ public class RewardScreen : MonoBehaviour
 
     private void OnReturn()
     {
+        if (!granted && pendingDrops.Count > 0)
+        {
+            PlayerInventory inv = PlayerInventory.Instance;
+            if (inv == null) inv = Object.FindFirstObjectByType<PlayerInventory>();
+            if (inv != null) inv.Add(pendingDrops);
+            granted = true;
+        }
         if (phaseManager != null) phaseManager.ReturnToBuild();
     }
 
     private void Populate()
     {
+        granted = false;
+        pendingDrops.Clear();
+
         bool cleared = phaseManager != null && phaseManager.LastRunCleared;
 
         if (resultText != null)
@@ -54,12 +67,14 @@ public class RewardScreen : MonoBehaviour
         bool grant = cleared || dungeon.grantLootOnFailure;
         if (!grant) return;
 
-        // 全エンカウントのドロップを種別ごとに集計（Phase 2 で「実際に倒した敵」に限定する）
+        // 実際に倒した敵のドロップだけを種別ごとに集計
         Dictionary<string, int> totals = new Dictionary<string, int>();
         Dictionary<string, MaterialCost> sample = new Dictionary<string, MaterialCost>();
 
-        foreach (EnemyData enemy in dungeon.encounters)
+        IReadOnlyList<EnemyData> defeated = dungeon.DefeatedEnemies;
+        for (int i = 0; i < defeated.Count; i++)
         {
+            EnemyData enemy = defeated[i];
             if (enemy == null || enemy.drops == null) continue;
             foreach (MaterialCost drop in enemy.drops)
             {
@@ -73,11 +88,20 @@ public class RewardScreen : MonoBehaviour
 
         foreach (KeyValuePair<string, int> kv in totals)
         {
+            MaterialCost mc = sample[kv.Key];
+            pendingDrops.Add(new MaterialCost
+            {
+                materialType = mc.materialType,
+                attribute = mc.attribute,
+                specialItemName = mc.specialItemName,
+                amount = kv.Value,
+            });
+
             GameObject row = Instantiate(dropRowPrefab, dropListRoot, false);
             DropRow dropRow = row.GetComponent<DropRow>();
             if (dropRow != null)
             {
-                dropRow.Bind(MaterialCatalog.DisplayName(sample[kv.Key]), kv.Value, Color.white);
+                dropRow.Bind(MaterialCatalog.DisplayName(mc), kv.Value, Color.white);
             }
         }
     }

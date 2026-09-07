@@ -41,11 +41,15 @@ public static class BattleUISceneBuilder
 
         DestroyExisting(canvasT, "BattleRoot");
         DestroyExisting(canvasT, "RewardRoot");
+        DestroyExisting(canvasT, "InventoryPanel");
         GameObject oldGpm = GameObject.Find("GamePhaseManager");
         if (oldGpm != null) Object.DestroyImmediate(oldGpm);
 
+        EnsureSingleton<PlayerInventory>("PlayerInventory");
+
         GameObject battleRoot = BuildBattleRoot(canvasT);
         GameObject rewardRoot = BuildRewardRoot(canvasT);
+        GameObject inventoryPanel = BuildInventoryPanel(canvasT);
 
         GameObject gpmGo = new GameObject("GamePhaseManager");
         GamePhaseManager gpm = gpmGo.AddComponent<GamePhaseManager>();
@@ -78,6 +82,7 @@ public static class BattleUISceneBuilder
             Transform t = canvasT.Find(n);
             if (t != null) buildObjs.Add(t.gameObject);
         }
+        buildObjs.Add(inventoryPanel);
 
         SerializedObject so = new SerializedObject(gpm);
         SerializedProperty arr = so.FindProperty("buildPhaseObjects");
@@ -227,6 +232,47 @@ public static class BattleUISceneBuilder
         so.ApplyModifiedPropertiesWithoutUndo();
 
         return root.gameObject;
+    }
+
+    // ---------------------------------------------------------------- InventoryPanel（構築画面 左上）
+
+    private static GameObject BuildInventoryPanel(Transform canvas)
+    {
+        RectTransform root = NewUI("InventoryPanel", canvas);
+        Frame(root, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -16f), new Vector2(300f, 260f));
+        AddImage(root, new Color(0f, 0f, 0f, 0.4f), false);
+
+        TMP_Text title = AddText(root, "Title", "所持素材", 20, TextAlignmentOptions.TopLeft);
+        Frame(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(280f, 28f));
+
+        RectTransform listRoot = NewUI("ListRoot", root);
+        Frame(listRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -40f), new Vector2(284f, 210f));
+        VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 4f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.padding = new RectOffset(4, 4, 4, 4);
+        ContentSizeFitter csf = listRoot.gameObject.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        TMP_Text empty = AddText(root, "EmptyLabel", "（まだ何も持っていない）", 16, TextAlignmentOptions.TopLeft);
+        Frame(empty.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(12f, -44f), new Vector2(276f, 24f));
+        empty.color = new Color(1f, 1f, 1f, 0.6f);
+
+        InventoryPanel panel = root.gameObject.AddComponent<InventoryPanel>();
+        SerializedObject so = new SerializedObject(panel);
+        so.FindProperty("listRoot").objectReferenceValue = listRoot;
+        so.FindProperty("rowPrefab").objectReferenceValue = Load("DropRow");
+        so.FindProperty("emptyLabel").objectReferenceValue = empty;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return root.gameObject;
+    }
+
+    private static void EnsureSingleton<T>(string goName) where T : Component
+    {
+        if (Object.FindFirstObjectByType<T>() != null) return;
+        GameObject go = new GameObject(goName);
+        go.AddComponent<T>();
     }
 
     // ---------------------------------------------------------------- prefabs
