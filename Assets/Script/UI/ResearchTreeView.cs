@@ -29,8 +29,8 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
     private string selectedId;
     private bool built;
 
-    private const float MinZoom = 0.4f;
-    private const float MaxZoom = 1.4f;
+    private const float MinZoom = 0.3f;
+    private const float MaxZoom = 1.6f;
 
     void Awake()
     {
@@ -50,7 +50,7 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
         BuildOnce();
         if (content != null)
         {
-            content.localScale = Vector3.one * 0.52f;
+            content.localScale = Vector3.one * 0.62f;
             content.anchoredPosition = Vector2.zero;
         }
         if (legendText != null) legendText.text = "緑=取得済 / 金=取得可 / 灰=前提未取得　ドラッグで移動・ホイールで拡大縮小";

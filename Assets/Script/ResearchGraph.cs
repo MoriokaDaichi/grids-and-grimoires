@@ -31,8 +31,8 @@ public class ResearchNodeDef
 
 public static class ResearchGraph
 {
-    public const float Ring0Radius = 150f;
-    public const float RingStep = 128f;
+    public const float Ring0Radius = 165f;
+    public const float RingStep = 142f;
 
     private static List<ResearchNodeDef> _nodes;
     private static Dictionary<string, ResearchNodeDef> _byId;
