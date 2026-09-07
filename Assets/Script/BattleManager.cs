@@ -90,30 +90,15 @@ public class BattleManager : MonoBehaviour
     // グリッドに配置中のBuffPassiveの魔法を集計する（対応ステータスの強化 / 属性威力強化 / 状態異常付与率強化の3種）
     private void ComputePassiveBonuses()
     {
-        passiveStatPercent.Clear();
-        passiveAttrDamagePercent.Clear();
-        passiveStatusRateBonus.Clear();
+        PassiveBonuses bonuses = PassiveBonusCalculator.Aggregate(
+            gridManager.GetPlacedMagics(),
+            PassiveStatPercentPerStage,
+            PassiveAttrDamagePercent,
+            PassiveStatusRateBonus);
 
-        foreach (MagicData data in gridManager.GetPlacedMagics())
-        {
-            if (data.category != MagicCategory.BuffPassive) continue;
-
-            if (data.buffStat != BuffStat.None)
-            {
-                float percent = data.passiveStage * PassiveStatPercentPerStage;
-                passiveStatPercent[data.buffStat] = GetOrZero(passiveStatPercent, data.buffStat) + percent;
-            }
-            else if (data.attribute != MagicAttribute.None && data.statusEffect == StatusEffectType.None)
-            {
-                // 属性バフ
-                passiveAttrDamagePercent[data.attribute] = GetOrZero(passiveAttrDamagePercent, data.attribute) + PassiveAttrDamagePercent;
-            }
-            else if (data.attribute != MagicAttribute.None && data.statusEffect != StatusEffectType.None)
-            {
-                // 状態異常付与率バフ
-                passiveStatusRateBonus[data.attribute] = GetOrZeroInt(passiveStatusRateBonus, data.attribute) + PassiveStatusRateBonus;
-            }
-        }
+        passiveStatPercent = bonuses.StatPercent;
+        passiveAttrDamagePercent = bonuses.AttrDamagePercent;
+        passiveStatusRateBonus = bonuses.StatusRateBonus;
 
         LogPassiveSummary();
     }
@@ -238,8 +223,7 @@ public class BattleManager : MonoBehaviour
 
         float effectiveAtk = playerStatus.atk * (1f + TotalStatPercent(BuffStat.Atk) / 100f);
         float damagePercent = TotalStatPercent(BuffStat.Damage) + GetOrZero(passiveAttrDamagePercent, data.attribute);
-        float rawDamage = (data.damage + effectiveAtk) * (1f + damagePercent / 100f);
-        int damage = Mathf.Max(1, Mathf.RoundToInt(rawDamage) - enemyStatus.def);
+        int damage = BattleFormula.AttackDamage(data.damage, effectiveAtk, damagePercent, enemyStatus.def);
 
         int hpAfterThisHit = Mathf.Max(0, hpBefore - damage);
         bool willDefeat = hpAfterThisHit <= 0;
@@ -317,7 +301,7 @@ public class BattleManager : MonoBehaviour
         }
 
         float effectiveDef = playerStatus.def * (1f + TotalStatPercent(BuffStat.Def) / 100f);
-        int damage = Mathf.Max(1, Mathf.RoundToInt(enemyStatus.atk * enemyStatus.AtkMultiplier) - Mathf.RoundToInt(effectiveDef));
+        int damage = BattleFormula.EnemyAttackDamage(enemyStatus.atk, enemyStatus.AtkMultiplier, effectiveDef);
         playerStatus.TakeDamage(damage);
         Debug.Log($"{enemyStatus.enemyName} の攻撃！ プレイヤーに {damage} ダメージ（残りHP: {playerStatus.currentHp}）");
 
