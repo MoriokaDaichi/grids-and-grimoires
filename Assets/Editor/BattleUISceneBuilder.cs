@@ -65,8 +65,11 @@ public static class BattleUISceneBuilder
         GameObject researchRoot = BuildResearchRoot(canvasT);
         GameObject hideoutRoot = BuildHideoutRoot(canvasT);
         GameObject tradeRoot = BuildTradeRoot(canvasT);
-        GameObject hideoutButton = BuildCornerButton(canvasT, "HideoutButton", "ハイドアウト", 16f, new Color(0.30f, 0.26f, 0.45f, 1f));
-        GameObject tradeButton = BuildCornerButton(canvasT, "TradeButton", "トレード", 188f, new Color(0.26f, 0.40f, 0.42f, 1f));
+
+        // シーンの MenuPanel に既にあるボタンを使う（左下のコーナーボタンは作らない）
+        // Button (2) = トレード / Button (3) = ハイドアウト
+        Button tradeButton = BindMenuButton(canvasT, "MenuPanel/Button (2)", "トレード");
+        Button hideoutButton = BindMenuButton(canvasT, "MenuPanel/Button (3)", "ハイドアウト");
 
         GameObject gpmGo = new GameObject("GamePhaseManager");
         GamePhaseManager gpm = gpmGo.AddComponent<GamePhaseManager>();
@@ -100,8 +103,7 @@ public static class BattleUISceneBuilder
             if (t != null) buildObjs.Add(t.gameObject);
         }
         buildObjs.Add(inventoryPanel);
-        buildObjs.Add(hideoutButton);
-        buildObjs.Add(tradeButton);
+        // ハイドアウト/トレードボタンは MenuPanel の子なので、MenuPanel と一緒に表示切替される
 
         SerializedObject so = new SerializedObject(gpm);
         SerializedProperty arr = so.FindProperty("buildPhaseObjects");
@@ -115,8 +117,8 @@ public static class BattleUISceneBuilder
         so.FindProperty("waveClearRoot").objectReferenceValue = waveClearRoot;
         so.FindProperty("rewardRoot").objectReferenceValue = rewardRoot;
         so.FindProperty("sortieButton").objectReferenceValue = sortie;
-        so.FindProperty("hideoutButton").objectReferenceValue = hideoutButton.GetComponent<Button>();
-        so.FindProperty("tradeButton").objectReferenceValue = tradeButton.GetComponent<Button>();
+        so.FindProperty("hideoutButton").objectReferenceValue = hideoutButton;
+        so.FindProperty("tradeButton").objectReferenceValue = tradeButton;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         hideoutRoot.SetActive(false);
@@ -611,16 +613,28 @@ public static class BattleUISceneBuilder
         return root;
     }
 
-    private static GameObject BuildCornerButton(Transform canvas, string name, string label, float xOffset, Color color)
+    // シーンに既にあるボタン（MenuPanel の子など）を探し、ラベルを差し替えて返す。
+    // onClick の配線は GamePhaseManager が Awake で行うのでここでは触らない。
+    private static Button BindMenuButton(Transform canvas, string path, string label)
     {
-        RectTransform rt = NewUI(name, canvas);
-        Frame(rt, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(xOffset, 16f), new Vector2(160f, 52f));
-        Image img = AddImage(rt, color, true);
-        Button btn = rt.gameObject.AddComponent<Button>();
-        btn.targetGraphic = img;
-        TMP_Text lbl = AddText(rt.gameObject.transform, "Label", label, 22, TextAlignmentOptions.Center);
-        Stretch(lbl.rectTransform);
-        return rt.gameObject;
+        Transform t = canvas.Find(path);
+        if (t == null)
+        {
+            Debug.LogWarning("[Grimoire] ボタンが見つかりません: Canvas/" + path + "。GamePhaseManager の該当ボタンを手動で設定してください。");
+            return null;
+        }
+        Button b = t.GetComponent<Button>();
+        if (b == null)
+        {
+            Debug.LogWarning("[Grimoire] " + path + " に Button コンポーネントがありません。");
+            return null;
+        }
+        if (!string.IsNullOrEmpty(label))
+        {
+            TMP_Text lbl = b.GetComponentInChildren<TMP_Text>(true);
+            if (lbl != null) lbl.text = label;
+        }
+        return b;
     }
 
     // ---------------------------------------------------------------- prefabs
