@@ -19,6 +19,16 @@ public class StringIntPair
     public int value;
 }
 
+// マジックサークルで進行中の「捧げもの」1件。
+[Serializable]
+public class BrewRecord
+{
+    public double startUnixSeconds; // 開始時刻（UTC, Unix秒）
+    public float hours;             // 完成までの時間
+    public int inputRarity;         // (int)ItemRarity（捧げたアイテムのレア度）
+    public string inputLabel;       // 表示用（捧げたアイテム名）
+}
+
 // セーブデータ全体。各システムは「読み込み→自分の領域だけ更新→書き込み」で他システムのフィールドを保つこと。
 [Serializable]
 public class SaveData
@@ -37,4 +47,13 @@ public class SaveData
     public int lifetimeEnemyKills;
     public int bestDungeonDepth;
     public List<StringIntPair> enemyKillCounts = new List<StringIntPair>();
+
+    // ハイドアウト：設備レベル（key = (FacilityKind).ToString(), value = 0..3）
+    public List<StringIntPair> facilityLevels = new List<StringIntPair>();
+    // 魔力炉に溜まっている燃料（魔力結晶の価値換算）
+    public long furnaceFuel;
+    // マジックサークルで進行中の捧げもの
+    public List<BrewRecord> magicCircleBrews = new List<BrewRecord>();
+    // 作業台で製作済みの装備ID（所有で PlayerStatus に永続ボーナス）
+    public List<string> craftedGearIds = new List<string>();
 }

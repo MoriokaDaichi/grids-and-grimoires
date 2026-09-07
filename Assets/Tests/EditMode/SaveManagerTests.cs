@@ -27,5 +27,37 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.IsNotNull(SaveManager.Deserialize(""));
             Assert.AreEqual(0, SaveManager.Deserialize("").materials.Count);
         }
+
+        [Test]
+        public void HideoutFields_RoundTrip()
+        {
+            SaveData src = new SaveData();
+            src.facilityLevels.Add(new StringIntPair { key = FacilityKind.ManaFurnace.ToString(), value = 2 });
+            src.facilityLevels.Add(new StringIntPair { key = FacilityKind.ResearchDesk.ToString(), value = 1 });
+            src.furnaceFuel = 137;
+            src.magicCircleBrews.Add(new BrewRecord { startUnixSeconds = 1000.5, hours = 6f, inputRarity = 1, inputLabel = "ゴブリンの牙" });
+            src.craftedGearIds.Add("wand_oak");
+
+            SaveData dst = SaveManager.Deserialize(SaveManager.Serialize(src));
+
+            Assert.AreEqual(2, dst.facilityLevels.Count);
+            Assert.AreEqual(FacilityKind.ManaFurnace.ToString(), dst.facilityLevels[0].key);
+            Assert.AreEqual(2, dst.facilityLevels[0].value);
+            Assert.AreEqual(137, dst.furnaceFuel);
+            Assert.AreEqual(1, dst.magicCircleBrews.Count);
+            Assert.AreEqual(6f, dst.magicCircleBrews[0].hours);
+            Assert.AreEqual("ゴブリンの牙", dst.magicCircleBrews[0].inputLabel);
+            Assert.AreEqual("wand_oak", dst.craftedGearIds[0]);
+        }
+
+        [Test]
+        public void NewSaveData_HideoutCollectionsNonNull()
+        {
+            SaveData d = SaveManager.Deserialize("");
+            Assert.IsNotNull(d.facilityLevels);
+            Assert.IsNotNull(d.magicCircleBrews);
+            Assert.IsNotNull(d.craftedGearIds);
+            Assert.AreEqual(0, d.furnaceFuel);
+        }
     }
 }
