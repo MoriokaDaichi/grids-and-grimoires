@@ -18,39 +18,46 @@ EditMode テストが `Assets/Tests/EditMode/`（asmdef: `GridsAndGrimoires.Edit
 - Editor起動中: MCP (`unity-mcp`) の `run_tests`（EditMode）で実行。
 - Editor停止時: `Tools/unity-tests.ps1`（`Tools/unity-compile.ps1` はコンパイルチェックのみ）。
 
-純ロジックは `BattleFormula`（ダメージ式・Spd/Luc）/ `PassiveBonusCalculator`（パッシブ集計）/ `StatusEffectController`（状態異常タイマー）/ `MaterialLedger`（素材集計）/ `ResearchRules`（解放判定）/ `TradeCatalog`（交換メニュー）に切り出してあり、シーン非依存でテストできる。
+純ロジックは `BattleFormula`（ダメージ式・Spd/Luc）/ `ManaRules`（マナ消費・回復）/ `PassiveBonusCalculator`（パッシブ集計）/ `StatusEffectController`（状態異常タイマー）/ `EndlessWaveGenerator`（エンドレスの深度スケーリング・ウェーブ生成）/ `MaterialLedger`（素材集計）/ `ResearchRules`＋`ResearchTree`（スキルツリー解放判定）/ `TradeCatalog`（交換メニュー）/ `TraderCatalog`＋`TaskRules`（複数トレーダーと依頼タスク）に切り出してあり、シーン非依存でテストできる。
 
 ### Editor拡張（`Assets/Editor/`）
 マスターデータやシーンUIはコードを直接編集するのではなく、Unityメニューから生成する運用。
 
 - **Grimoire > Generate Master Magic Data**（[MagicDataGenerator.cs](Assets/Editor/MagicDataGenerator.cs)）: `Docs/`の4章・6章・8章のデータに基づき `Assets/MasicData/` 配下の `MagicData` アセットを一括生成・上書きする。
 - **Grimoire > Generate Enemy Data**（[EnemyDataGenerator.cs](Assets/Editor/EnemyDataGenerator.cs)）: `Assets/EnemyData/` の敵4体（スライム/ゴブリン/大ネズミ/森の番人）＋属性・耐性・暫定ドロップを生成。**数値は全て仮バランス**。
-- **Grimoire > Generate Dungeon**（[DungeonGenerator.cs](Assets/Editor/DungeonGenerator.cs)）: 開いているシーンの `DungeonManager.waves` に敵グループ入りの5ウェーブ（仮）を設定。実行後シーン保存。
+- **Grimoire > Generate Dungeon**（[DungeonGenerator.cs](Assets/Editor/DungeonGenerator.cs)）: 開いているシーンの `DungeonManager.enemyPool` にエンドレスダンジョン用の敵プール（弱い順: スライム/大ネズミ/ゴブリン/森の番人）を設定し、旧 `waves` はクリアする。実行後シーン保存。
 - **Grimoire > Populate MagicSpawner List**（[MagicSpawnerPopulator.cs](Assets/Editor/MagicSpawnerPopulator.cs)）: `MagicSpawner.magicDataList` を再登録する。実行後シーン保存（Ctrl+S）。
-- **Grimoire > Build Battle UI**（[BattleUISceneBuilder.cs](Assets/Editor/BattleUISceneBuilder.cs)）: `SampleScene` に戦闘HUD/報酬/研究/トレードの画面ルート、`GamePhaseManager` / `PlayerInventory` / `ResearchManager` / `TradeManager` / `EnemyRoster` / `InventoryPanel` を構築し、出撃・研究・トレードボタンを配線する。旧・単体 `EnemyStatus` GameObject は除去する。再実行可能。実行後シーン保存。
+- **Grimoire > Build Battle UI**（[BattleUISceneBuilder.cs](Assets/Editor/BattleUISceneBuilder.cs)）: `SampleScene` に戦闘HUD/ウェーブ突破（脱出選択）/報酬/研究/トレードの画面ルート、`GamePhaseManager` / `PlayerInventory` / `ResearchManager` / `TradeManager` / `EnemyRoster` / `InventoryPanel` を構築し、出撃・研究・トレードボタンを配線する。旧・単体 `EnemyStatus` GameObject は除去する。再実行可能。実行後シーン保存。
 - **Grimoire > Wipe Save**（[SaveMenu.cs](Assets/Editor/SaveMenu.cs)）: `Application.persistentDataPath/gg_save.json` を削除。
 
 ## アーキテクチャ
 
 ### 魔法データ（`MagicData` / `Assets/MasicData/`）
-`MagicData`（[MagicData.cs](Assets/Script/MagicData.cs)）は `ScriptableObject` で、企画書の分類をそのまま反映した列挙型構造を持つ：`MagicCategory`（攻撃/状態異常/補助/バフActive/バフPassive）× `MagicAttribute`（炎/雷/風/光/闇）× `MagicRange`（単体/全体/なし）。加えて `StatusEffectType`、`BuffStat`、`shapeNodes`（パズル形状、中心を(0,0)とした相対座標）、`requiredMaterials`（解放コスト）を持つ。
+`MagicData`（[MagicData.cs](Assets/Script/MagicData.cs)）は `ScriptableObject` で、企画書の分類をそのまま反映した列挙型構造を持つ：`MagicCategory`（攻撃/状態異常/補助/バフActive/バフPassive）× `MagicAttribute`（炎/雷/風/光/闇）× `MagicRange`（単体/全体/なし）。加えて `StatusEffectType`、`BuffStat`、`shapeNodes`（パズル形状、中心を(0,0)とした相対座標）、`requiredMaterials`（解放コスト）、`manaCost`（発動マナ。生成時に `ManaRules.CastCost` を焼き込む）を持つ。
 
 ### 実装済み / 未実装（2026-09 時点、ブランチ `feat/battle-ui-core-loop`）
-- **動作**: 構築フェーズ（グリッド配置・回転・ドラッグ）、ステータス振り分けUI、**オートバトル**（攻撃/状態異常専用/補助/アクティブ・パッシブバフ、敵の反撃、状態異常5種、属性耐性、Spd=発動間隔短縮・Luc=会心）、**複数敵ウェーブ＋全体(AoE)魔法**（`EnemyRoster`）、**ダンジョン進行**（ウェーブ順送り・プレイヤーHP持ち越し）、**戦闘HUD**（代表敵HPバー・残り体数・ダメージ数字・状態異常アイコン・バフインジケータ・ウェーブ表示）、**報酬画面＋素材インベントリ＋JSON永続化**（`gg_save.json`）、**研究(Hideout)による魔法解放**（コスト0の魔法は初期解放、他は素材で解放）、**トレード画面**（結晶変換・欠片→エレメント・ステータスポイント購入）。
-- **未実装 / 今後**: 戦闘HUDでのN体分の個別敵ウィジェット（現在は先頭生存個体＋残り体数のみ）、`PlayerStatus` のステータス振り分けのセーブ対象化、研究の本格的な分岐ツリー（現在はフラットな解放リスト）、Tarkov型ホームハブ（Character画面）、AoE以外の範囲パターン。
-- **数値は全て仮**: 敵ステータス・属性耐性・ドロップ、状態異常の効果量/時間（`StatusEffectController` の定数）、バフ倍率（`BattleManager` の `PassiveStatPercentPerStage` 等）、Spd/Luc 係数（`BattleFormula`）、トレードレート（`TradeCatalog`）。企画書に記載が無く暫定。
+- **動作**: 構築フェーズ（グリッド配置・回転・ドラッグ）、ステータス振り分けUI、**オートバトル**（攻撃/状態異常専用/補助/アクティブ・パッシブバフ、敵の反撃、状態異常5種、属性耐性、Spd=発動間隔短縮・Luc=会心、**マナ消費＋自然回復**）、**複数敵ウェーブ＋全体(AoE)魔法**（`EnemyRoster`）、**エンドレスダンジョン**（深度1から無限、ウェーブ突破ごとに「深層へ進む／脱出」を選択、深度に応じて敵がスケール）、**戦闘HUD**（代表敵HPバー・残り体数・マナバー・ダメージ数字・状態異常アイコン・バフインジケータ・深度表示）、**報酬画面＋素材インベントリ＋JSON永続化**（`gg_save.json`）、**研究(Hideout)のスキルツリー解放**（前提を満たした魔法のみ解放可、コスト0の魔法＝木の根は初期解放）、**トレード画面**（4トレーダー＝結晶両替/エレメント精製/戦闘/蒐集、各自の交換メニュー＋依頼タスク＝納品/討伐/深度到達）。
+- **未実装 / 今後**: 戦闘HUDでのN体分の個別敵ウィジェット（現在は先頭生存個体＋残り体数のみ）、`PlayerStatus` のステータス振り分け・マナ上限のセーブ対象化、PoE型のノードグラフUI（現在は前提リンク付きのリスト）、Tarkov型ホームハブ（Character画面）、AoE以外の範囲パターン。
+- **数値は全て仮**: 敵ステータス・属性耐性・ドロップ、状態異常の効果量/時間（`StatusEffectController` の定数）、バフ倍率（`BattleManager` の `PassiveStatPercentPerStage` 等）、Spd/Luc 係数（`BattleFormula`）、マナ上限/回復/魔法コスト（`ManaRules`）、深度スケーリング（`EndlessWaveGenerator`）、トレードレート（`TradeCatalog`）、トレーダーの依頼内容・報酬（`TraderCatalog`）。企画書に記載が無く暫定。
 
 ### コアループの画面遷移（`GamePhaseManager`）
-[GamePhaseManager.cs](Assets/Script/GamePhaseManager.cs) が `Build` / `Hideout`（研究）/ `Trade` / `Battle` / `Reward` を管理する（`buildPhaseObjects` と各画面ルートを `SetActive` で切替）。出撃ボタン→`StartSortie()`、研究ボタン→`GoToHideout()`、トレードボタン→`GoToTrade()`、各画面の戻る/帰還ボタン→`ReturnToBuild()`。`DungeonManager` の `OnDungeonCleared` / `OnDungeonFailed` を購読して報酬画面へ遷移する。`DungeonManager.Start()` での自動出撃は廃止済み（出撃は必ず `StartSortie()` 経由）。空杖で出撃した場合は `StartDungeon()` が `false` を返し構築画面に戻る。
+[GamePhaseManager.cs](Assets/Script/GamePhaseManager.cs) が `Build` / `Hideout`（研究）/ `Trade` / `Battle` / `WaveClear`（脱出選択）/ `Reward` を管理する（`buildPhaseObjects` と各画面ルートを `SetActive` で切替）。出撃ボタン→`StartSortie()`、研究ボタン→`GoToHideout()`、トレードボタン→`GoToTrade()`、各画面の戻る/帰還ボタン→`ReturnToBuild()`。`DungeonManager` の `OnWaveCleared` を購読して `WaveClear` 画面へ、`OnDungeonCleared`（脱出）/ `OnDungeonFailed`（敗北）で報酬画面へ遷移する。`WaveClear` 画面の「深層へ進む」→`ContinueRun()`（→`dungeon.ContinueDeeper()`）、「脱出する」→`EscapeRun()`（→`dungeon.Escape()`）。`DungeonManager.Start()` での自動出撃は廃止済み（出撃は必ず `StartSortie()` 経由）。空杖で出撃した場合は `StartDungeon()` が `false` を返し構築画面に戻る。
 
 ### 永続化（`SaveManager` / `SaveData`）
-単一JSON（`Application.persistentDataPath/gg_save.json`）。各システムは **`SaveManager.Load()` → 自分の領域だけ更新 → `SaveManager.Save()`** の順で他システムのフィールドを潰さないようにする（`PlayerInventory.Persist` / `ResearchManager.Save` 参照）。`SaveData` = 素材スタック（`MaterialLedger`）＋解放済み魔法ID。`Serialize`/`Deserialize` は純粋関数でテスト済み。
+単一JSON（`Application.persistentDataPath/gg_save.json`）。各システムは **`SaveManager.Load()` → 自分の領域だけ更新 → `SaveManager.Save()`** の順で他システムのフィールドを潰さないようにする（`PlayerInventory.Persist` / `ResearchManager.Save` / `TradeManager.SaveProgress` 参照）。`SaveData` = 素材スタック（`MaterialLedger`）＋解放済み魔法ID＋トレーダーのタスク進捗（達成タスクID／累計撃破数／敵種別ごとの撃破数／最深到達深度）。`Serialize`/`Deserialize` は純粋関数でテスト済み。
 
 ### オートバトル（`BattleManager` / `EnemyRoster` / `EnemyStatus` / `DungeonManager`）
-- 敵は `EnemyRoster`（シーンシングルトン）がプール管理する複数体。`DungeonManager.waves`（`List<EnemyWave>`、無ければ `encounters` を1体ずつに変換）を順送りし、ウェーブ全滅で `roster.OnWaveDefeated` → 次ウェーブ。単体魔法は `roster.FirstAlive()`、全体(`MagicRange.AoE`)魔法は `roster.Living` 全員に命中。反撃は各 `EnemyStatus` が自分の `attackTimer` で独立に行う。
+- 敵は `EnemyRoster`（シーンシングルトン）がプール管理する複数体。`DungeonManager` は `enemyPool`（弱い順）から `EndlessWaveGenerator` で深度に応じたウェーブを生成し、`roster.SpawnWave(enemies, scaling)` で `WaveScaling`（HP/Atk/Def 倍率）を適用する。ウェーブ全滅で `roster.OnWaveDefeated` → `DungeonManager.HandleWaveDefeated` が戦利品を積み、`battleManager.EndBattle()` で戦闘を止めて `OnWaveCleared` を発火（自動では次ウェーブに進まない）。「深層へ進む」で `ContinueDeeper()` → 次深度の `AdvanceWave()`、「脱出」で `Escape()` → `OnDungeonCleared`。単体魔法は `roster.FirstAlive()`、全体(`MagicRange.AoE`)魔法は `roster.Living` 全員に命中。反撃は各 `EnemyStatus` が自分の `attackTimer` で独立に行う。
+- **マナ**: `BattleManager.Update` が毎フレーム `playerStatus.RegenMana(dt)`。発動タイミングで `playerStatus.HasMana(ManaRules.CastCost(data))` を判定し、不足なら `OnManaStarved` を発火して `ManaRules.StarvedRetryDelay` 後に再試行（発動間隔は消費しない）。足りれば `SpendMana` してから発動。マナはHPと同様ダンジョン内で持ち越し（`BattleReset` で全回復）。
 - **再入ガードが要**: ウェーブ全滅→次ウェーブへの切替が列挙中に連鎖するため、`BattleManager.casts` は `Clear()` せず `new List<>()` へ差し替え、`foreach` 前にリスト参照/`roster.Living` をスナップショット、`TakeDamage` 前に敵名/HPをローカルへ退避、AoE/反撃ループは `roster.Generation` の変化で打ち切る。`EnemyStatus` 側は自身の `battleGeneration` で tick適用ループを打ち切る。新しい処理を足すときはこの規律を崩さないこと。
-- **戦闘UIの拡張点**: HUDやエフェクトはロジックに触らず、`public System.Action` イベントを購読して作る（[StatusUIManager](Assets/Script/StatusUIManager.cs) の `OnStatusChanged` 購読パターンの踏襲）。既存イベント: `PlayerStatus.OnDamaged` / `EnemyStatus.OnDamaged`・`OnStatusApplied`・`OnStatusExpired`・`OnStatusTick` / `EnemyRoster.OnRosterChanged`・`OnWaveDefeated` / `BattleManager.OnCastFired`・`OnAttackHit`・`OnBuffApplied`・`OnBuffExpired` / `DungeonManager.OnWaveChanged`・`OnDungeonCleared`・`OnDungeonFailed` / `PlayerInventory.OnInventoryChanged` / `ResearchManager.OnUnlocksChanged` / `TradeManager.OnTraded`。参考実装は [BattleHUD.cs](Assets/Script/UI/BattleHUD.cs) / [HideoutPanel.cs](Assets/Script/UI/HideoutPanel.cs)。
+- **戦闘UIの拡張点**: HUDやエフェクトはロジックに触らず、`public System.Action` イベントを購読して作る（[StatusUIManager](Assets/Script/StatusUIManager.cs) の `OnStatusChanged` 購読パターンの踏襲）。既存イベント: `PlayerStatus.OnDamaged`・`OnManaChanged` / `EnemyStatus.OnDamaged`・`OnStatusApplied`・`OnStatusExpired`・`OnStatusTick` / `EnemyRoster.OnRosterChanged`・`OnWaveDefeated` / `BattleManager.OnCastFired`・`OnAttackHit`・`OnBuffApplied`・`OnBuffExpired`・`OnManaStarved` / `DungeonManager.OnWaveChanged`（深度, -1=エンドレス, 表示名）・`OnWaveCleared`・`OnEnemyDefeated`・`OnDungeonCleared`・`OnDungeonFailed` / `PlayerInventory.OnInventoryChanged` / `ResearchManager.OnUnlocksChanged` / `TradeManager.OnTraded`・`OnTasksChanged`。参考実装は [BattleHUD.cs](Assets/Script/UI/BattleHUD.cs) / [HideoutPanel.cs](Assets/Script/UI/HideoutPanel.cs)。
 - **座標系の注意**: グリッドはY上方向が正だが、`Docs/`の8章データは行が下方向に増加する座標系なので符号が逆（`MagicDataGenerator.cs` の `Shape()` ヘルパーで変換済み）。
+
+### 研究スキルツリー（`ResearchTree` / `ResearchRules` / `ResearchManager`）
+企画書5章の系統ツリー（単体 基本→メガ→ギガ／全体 基本→メガ→ギガ／状態異常特化←単体メガ／アクティブバフ←単体基本／パッシブ Lv1←バフ→Lv2→Lv3／属性バフ←単体メガ／付与率バフ←状態異常特化／デュアル←アッド）を [ResearchTree.cs](Assets/Script/ResearchTree.cs) が「魔法ID→前提魔法ID」の辞書として定義する（5属性ステムをハードコード。`MagicDataGenerator` と同じくマスターデータ扱い）。`ResearchRules.CanUnlock` は **未解放 かつ 前提が解放済み かつ 素材を賄える** で判定。`HideoutPanel` は前提未解放の魔法を「要: 〇〇」表示＋ボタン不可にし、`Researchable()` は木の深さ順で並べる。
+
+### 複数トレーダーと依頼タスク（`TraderCatalog` / `TaskRules` / `TradeManager`）
+[TraderCatalog.cs](Assets/Script/TraderCatalog.cs) が専門分野ごとに4トレーダー（両替商グレン＝結晶／精霊使いリーゼ＝エレメント／傭兵ギルド ダグ＝戦闘／蒐集家オルカ＝深層）を定義し、各自 `TradeOffer` の交換メニューと `TraderTask` の依頼を持つ。タスク種別は `DeliverItems`（納品・受取時に素材消費）／`DefeatEnemies`（累計 or 種類指定の討伐数）／`ReachDepth`（最深到達）。`TaskRules.IsComplete/ProgressText` が純粋関数で判定。`TradeManager` は `DungeonManager.OnEnemyDefeated`・`OnWaveChanged` を購読して撃破数・最深深度を集計し、`SaveData`（達成タスクID／累計撃破数／敵種別ごとの撃破数／最深深度）へ永続化する。`TradePanel` は全トレーダーを縦に並べて見出し＋交換＋依頼を1スクロールで表示する。
 
 ### インベントリパズル（杖のグリッド配置）
 3つのスクリプトが協調して動く：
@@ -62,7 +69,7 @@ EditMode テストが `Assets/Tests/EditMode/`（asmdef: `GridsAndGrimoires.Edit
 3者はシーン内で `FindFirstObjectByType` により互いを参照するため、シーン上に `MagicGridManager` と `MagicSpawner` が単一ずつ存在する前提になっている。
 
 ### ステータス割り振りUI
-[PlayerStatus.cs](Assets/Script/PlayerStatus.cs)（HP/Atk/Def/Spd/Lucとポイント振り分けのデータ・ロジック）と [StatusUIManager.cs](Assets/Script/StatusUIManager.cs)（テキスト/バー/ボタンの表示更新）は `OnStatusChanged` イベントで疎結合になっている。UIを増やす場合はこのイベント購読パターンを踏襲する。
+[PlayerStatus.cs](Assets/Script/PlayerStatus.cs)（HP/Atk/Def/Spd/Luc＋マナ（`maxMana`/`currentMana`/`manaRegenPerSecond`）とポイント振り分けのデータ・ロジック）と [StatusUIManager.cs](Assets/Script/StatusUIManager.cs)（テキスト/バー/ボタンの表示更新）は `OnStatusChanged` イベントで疎結合になっている。マナの増減は `OnManaChanged` でも通知する。UIを増やす場合はこのイベント購読パターンを踏襲する。
 
 ### 汎用UI部品
 [PanelSwitcher.cs](Assets/Script/PanelSwitcher.cs)（パネルの表示切り替え）、[ButtonHoverEffect.cs](Assets/Script/ButtonHoverEffect.cs)（ホバー時の枠線表示）は他のシステムと独立した単純なUIユーティリティ。
