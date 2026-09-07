@@ -132,6 +132,17 @@ public static class EnemyDataGenerator
             Debug.LogWarning($"[Grimoire] 敵定義数 {defs.Count} と OrderWeakToStrong {OrderWeakToStrong.Length} が不一致です。");
         }
 
+        // ドロップ名が MonsterPartCatalog（トレーダー変換・錬金釜・ハイドアウトコストが参照する正本）に
+        // 登録されているか確認する。未登録だと変換ルートが tier1 相当にフォールバックしてしまう。
+        foreach (Def d in defs)
+        {
+            foreach (MaterialCost drop in d.Drops)
+            {
+                if (drop.materialType == MaterialType.SpecialItem && !MonsterPartCatalog.IsKnown(drop.specialItemName))
+                    Debug.LogWarning($"[Grimoire] ドロップ「{drop.specialItemName}」（{d.Name}）が MonsterPartCatalog に未登録です。");
+            }
+        }
+
         int created = 0, updated = 0;
         foreach (Def d in defs)
         {

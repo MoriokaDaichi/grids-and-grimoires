@@ -48,8 +48,12 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.AreEqual(ItemRarity.Common, HideoutRules.RarityOf(Small(1)));
             Assert.AreEqual(ItemRarity.Uncommon, HideoutRules.RarityOf(new MaterialCost { materialType = MaterialType.MediumManaCrystal, amount = 1 }));
             Assert.AreEqual(ItemRarity.Rare, HideoutRules.RarityOf(new MaterialCost { materialType = MaterialType.LargeManaCrystal, amount = 1 }));
-            Assert.AreEqual(ItemRarity.Common, HideoutRules.RarityOf(Part("ゴブリンの牙", 1)));
-            Assert.AreEqual(ItemRarity.Uncommon, HideoutRules.RarityOf(Part("古木の芯", 1)));
+            Assert.AreEqual(ItemRarity.Common, HideoutRules.RarityOf(Part("ゴブリンの牙", 1)));   // tier1
+            Assert.AreEqual(ItemRarity.Uncommon, HideoutRules.RarityOf(Part("古木の芯", 1)));     // tier2
+            Assert.AreEqual(ItemRarity.Uncommon, HideoutRules.RarityOf(Part("オーガの牙", 1)));   // tier3
+            Assert.AreEqual(ItemRarity.Rare, HideoutRules.RarityOf(Part("竜のうろこ", 1)));       // tier4
+            Assert.AreEqual(ItemRarity.Epic, HideoutRules.RarityOf(Part("混沌の核", 1)));         // tier5
+            Assert.AreEqual(ItemRarity.Common, HideoutRules.RarityOf(Part("謎の破片", 1)));       // 未登録
         }
 
         [Test]
@@ -107,6 +111,25 @@ namespace GridsAndGrimoires.EditModeTests
             List<MaterialCost> core = HideoutRules.Transmute(Part("古木の芯", 1), 1, 1f);
             Assert.AreEqual(MaterialType.ElementFragment, core[0].materialType);
             Assert.AreEqual(MagicAttribute.Wind, core[0].attribute);
+
+            // 中位（tier3・属性なし）→ 中結晶
+            List<MaterialCost> mid = HideoutRules.Transmute(Part("オーガの牙", 2), 2, 1f);
+            Assert.AreEqual(MaterialType.MediumManaCrystal, mid[0].materialType);
+
+            // 深層（tier5・属性なし）→ 大結晶
+            List<MaterialCost> deep = HideoutRules.Transmute(Part("混沌の核", 1), 1, 1f);
+            Assert.AreEqual(MaterialType.LargeManaCrystal, deep[0].materialType);
+
+            // 深層（tier5・属性あり）→ 属性の欠片が複数
+            List<MaterialCost> deepAttr = HideoutRules.Transmute(Part("深淵の欠片", 1), 1, 1f);
+            Assert.AreEqual(MaterialType.ElementFragment, deepAttr[0].materialType);
+            Assert.AreEqual(MagicAttribute.Dark, deepAttr[0].attribute);
+            Assert.AreEqual(3, deepAttr[0].amount);
+
+            // 未登録の素材は tier1 相当（小結晶×2）
+            List<MaterialCost> unknown = HideoutRules.Transmute(Part("謎の破片", 1), 1, 1f);
+            Assert.AreEqual(MaterialType.SmallManaCrystal, unknown[0].materialType);
+            Assert.AreEqual(2, unknown[0].amount);
 
             // 非モンスター素材は変換不可
             Assert.AreEqual(0, HideoutRules.Transmute(Small(5), 1, 1f).Count);

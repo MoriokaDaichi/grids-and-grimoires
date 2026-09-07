@@ -118,12 +118,26 @@ public static class TraderCatalog
         liese.offers.Add(Offer("ゴブリンの牙 ×3 → 闇エレメントの欠片 ×1", Part("ゴブリンの牙", 3), Frag(MagicAttribute.Dark, 1)));
         liese.offers.Add(Offer("大ネズミの尾 ×3 → 闇エレメントの欠片 ×1", Part("大ネズミの尾", 3), Frag(MagicAttribute.Dark, 1)));
         liese.offers.Add(Offer("古木の芯 ×2 → 風エレメント ×1", Part("古木の芯", 2), Elem(MagicAttribute.Wind, 1)));
+        // 中位〜深層の素材（属性持ち）→ 欠片・エレメント
+        liese.offers.Add(Offer("錆びた短剣 ×4 → 炎エレメントの欠片 ×1", Part("錆びた短剣", 4), Frag(MagicAttribute.Fire, 1)));
+        liese.offers.Add(Offer("竜人の鱗 ×3 → 炎エレメントの欠片 ×1", Part("竜人の鱗", 3), Frag(MagicAttribute.Fire, 1)));
+        liese.offers.Add(Offer("焦げた牙 ×2 → 炎エレメントの欠片 ×1", Part("焦げた牙", 2), Frag(MagicAttribute.Fire, 1)));
+        liese.offers.Add(Offer("古びた骨 ×3 → 闇エレメントの欠片 ×1", Part("古びた骨", 3), Frag(MagicAttribute.Dark, 1)));
+        liese.offers.Add(Offer("呪われた指輪 ×2 → 闇エレメントの欠片 ×1", Part("呪われた指輪", 2), Frag(MagicAttribute.Dark, 1)));
+        liese.offers.Add(Offer("風切羽 ×3 → 風エレメントの欠片 ×1", Part("風切羽", 3), Frag(MagicAttribute.Wind, 1)));
+        liese.offers.Add(Offer("石化の眼 ×2 → 風エレメントの欠片 ×1", Part("石化の眼", 2), Frag(MagicAttribute.Wind, 1)));
+        liese.offers.Add(Offer("竜のうろこ ×2 → 炎エレメント ×1", Part("竜のうろこ", 2), Elem(MagicAttribute.Fire, 1)));
+        liese.offers.Add(Offer("世界樹の若枝 ×2 → 風エレメント ×1", Part("世界樹の若枝", 2), Elem(MagicAttribute.Wind, 1)));
+        liese.offers.Add(Offer("深淵の欠片 ×1 → 闇エレメント ×1", Part("深淵の欠片", 1), Elem(MagicAttribute.Dark, 1)));
         liese.tasks.Add(Deliver("liese_t1", "liese", "炎の欠片を 5 つ納める",
             new List<MaterialCost> { Frag(MagicAttribute.Fire, 5) },
             new List<MaterialCost> { Elem(MagicAttribute.Fire, 2) }));
         liese.tasks.Add(Deliver("liese_t2", "liese", "光と闇の欠片を 3 つずつ",
             new List<MaterialCost> { Frag(MagicAttribute.Light, 3), Frag(MagicAttribute.Dark, 3) },
             new List<MaterialCost> { M(MaterialType.MediumManaCrystal, 4) }, rewardStat: 1));
+        liese.tasks.Add(Deliver("liese_t3", "liese", "炎系の中位素材を束ねる（竜人の鱗/悪魔の角/焦げた牙 ×3）",
+            new List<MaterialCost> { Part("竜人の鱗", 3), Part("悪魔の角", 3), Part("焦げた牙", 3) },
+            new List<MaterialCost> { Elem(MagicAttribute.Fire, 2) }, rewardStat: 1));
         traders.Add(liese);
 
         // --- 傭兵ギルド受付 ダグ（戦闘）---
@@ -134,7 +148,15 @@ public static class TraderCatalog
         dag.offers.Add(Offer("スライムゼリー ×5 → 小結晶 ×3", Part("スライムゼリー", 5), M(MaterialType.SmallManaCrystal, 3)));
         dag.offers.Add(Offer("ゴブリンの牙 ×4 → 小結晶 ×5", Part("ゴブリンの牙", 4), M(MaterialType.SmallManaCrystal, 5)));
         dag.offers.Add(Offer("大ネズミの尾 ×4 → 小結晶 ×4", Part("大ネズミの尾", 4), M(MaterialType.SmallManaCrystal, 4)));
+        dag.offers.Add(Offer("鋭い爪 ×5 → 小結晶 ×4", Part("鋭い爪", 5), M(MaterialType.SmallManaCrystal, 4)));
         dag.offers.Add(Offer("番人の樹皮 ×3 → 中結晶 ×1", Part("番人の樹皮", 3), M(MaterialType.MediumManaCrystal, 1)));
+        dag.offers.Add(Offer("鉄の兜 ×3 → 中結晶 ×1", Part("鉄の兜", 3), M(MaterialType.MediumManaCrystal, 1)));
+        dag.offers.Add(Offer("腐肉 ×6 → 中結晶 ×1", Part("腐肉", 6), M(MaterialType.MediumManaCrystal, 1)));
+        dag.offers.Add(Offer("オーガの牙 ×2 → 中結晶 ×3", Part("オーガの牙", 2), M(MaterialType.MediumManaCrystal, 3)));
+        dag.offers.Add(Offer("トロルの生皮 ×2 → 中結晶 ×2", Part("トロルの生皮", 2), M(MaterialType.MediumManaCrystal, 2)));
+        dag.offers.Add(Offer("巨神の核 ×1 → 大結晶 ×1", Part("巨神の核", 1), M(MaterialType.LargeManaCrystal, 1)));
+        dag.offers.Add(Offer("ベヒモスの角 ×1 → 大結晶 ×2", Part("ベヒモスの角", 1), M(MaterialType.LargeManaCrystal, 2)));
+        dag.offers.Add(Offer("竜王のうろこ ×1 → 大結晶 ×2", Part("竜王のうろこ", 1), M(MaterialType.LargeManaCrystal, 2)));
         dag.tasks.Add(Kill("dag_t1", "dag", "魔物を 10 体討伐", null, 10,
             new List<MaterialCost> { M(MaterialType.MediumManaCrystal, 3) }));
         dag.tasks.Add(Kill("dag_t2", "dag", "魔物を 30 体討伐", null, 30,
@@ -144,19 +166,39 @@ public static class TraderCatalog
         dag.tasks.Add(Deliver("dag_t4", "dag", "ゴブリンの牙を 12 本納める",
             new List<MaterialCost> { Part("ゴブリンの牙", 12) },
             new List<MaterialCost> { M(MaterialType.MediumManaCrystal, 3) }, rewardStat: 1));
+        dag.tasks.Add(Kill("dag_t5", "dag", "スケルトンを 8 体討伐", "スケルトン", 8,
+            new List<MaterialCost> { Frag(MagicAttribute.Dark, 2) }));
+        dag.tasks.Add(Kill("dag_t6", "dag", "オーガを 5 体討伐", "オーガ", 5,
+            new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 1) }, rewardStat: 1));
+        dag.tasks.Add(Kill("dag_t7", "dag", "ドラゴンを 3 体討伐", "ドラゴン", 3,
+            new List<MaterialCost> { Elem(MagicAttribute.Fire, 2) }, rewardStat: 1));
         traders.Add(dag);
 
         // --- 蒐集家 オルカ（深層）---
         var orca = new Trader { id = "orca", name = "蒐集家 オルカ", specialty = TraderSpecialty.Collector,
             blurb = "深層の澱みでしか採れぬものがある。潜れる者を求む。" };
         orca.offers.Add(Offer("大結晶 ×1 → ステータスポイント +2（仮）", M(MaterialType.LargeManaCrystal, 1), null, bonusStat: 2));
+        // 深層でしか採れぬ素材の買取（蒐集家価格）
+        orca.offers.Add(Offer("死霊術の書片 ×1 → 大結晶 ×1", Part("死霊術の書片", 1), M(MaterialType.LargeManaCrystal, 1)));
+        orca.offers.Add(Offer("首無しの兜 ×1 → 大結晶 ×1", Part("首無しの兜", 1), M(MaterialType.LargeManaCrystal, 1)));
+        orca.offers.Add(Offer("混沌の核 ×1 → 大結晶 ×3", Part("混沌の核", 1), M(MaterialType.LargeManaCrystal, 3)));
         orca.tasks.Add(Depth("orca_t1", "orca", "深度 5 まで到達する", 5,
             new List<MaterialCost> { M(MaterialType.MediumManaCrystal, 5) }));
         orca.tasks.Add(Depth("orca_t2", "orca", "深度 10 まで到達する", 10,
             new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 2) }, rewardStat: 1));
-        orca.tasks.Add(Deliver("orca_t3", "orca", "各モンスターの素材を 3 つずつ蒐集する",
+        orca.tasks.Add(Deliver("orca_t3", "orca", "浅層の素材を 3 つずつ蒐集する",
             new List<MaterialCost> { Part("スライムゼリー", 3), Part("ゴブリンの牙", 3), Part("大ネズミの尾", 3), Part("番人の樹皮", 3) },
             new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 1) }, rewardStat: 1));
+        orca.tasks.Add(Depth("orca_t4", "orca", "深度 15 まで到達する", 15,
+            new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 2) }, rewardStat: 1));
+        orca.tasks.Add(Depth("orca_t5", "orca", "深度 25 まで到達する", 25,
+            new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 4) }, rewardStat: 2));
+        orca.tasks.Add(Deliver("orca_t6", "orca", "遺跡の遺物を 5 つずつ蒐集する（石の破片/古びた骨/腐肉）",
+            new List<MaterialCost> { Part("石の破片", 5), Part("古びた骨", 5), Part("腐肉", 5) },
+            new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 1) }, rewardStat: 1));
+        orca.tasks.Add(Deliver("orca_t7", "orca", "深淵の証を捧げる（竜の心臓/深淵の欠片/混沌の核 ×1）",
+            new List<MaterialCost> { Part("竜の心臓", 1), Part("深淵の欠片", 1), Part("混沌の核", 1) },
+            new List<MaterialCost> { Elem(MagicAttribute.Dark, 3) }, rewardStat: 3));
         traders.Add(orca);
 
         return traders;

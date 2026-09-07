@@ -55,7 +55,14 @@ public static class HideoutRules
             case MaterialType.ElementFragment: return ItemRarity.Uncommon;
             case MaterialType.Element: return ItemRarity.Rare;
             case MaterialType.SpecialItem:
-                return c.specialItemName == "古木の芯" ? ItemRarity.Uncommon : ItemRarity.Common;
+            {
+                // モンスター素材は tier でレア度を決める（未登録は Common）。
+                int t = MonsterPartCatalog.TierOf(c.specialItemName);
+                if (t >= 5) return ItemRarity.Epic;
+                if (t >= 4) return ItemRarity.Rare;
+                if (t >= 2) return ItemRarity.Uncommon;
+                return ItemRarity.Common;
+            }
             default: return ItemRarity.Common;
         }
     }
@@ -105,19 +112,39 @@ public static class HideoutRules
 
     // ---------------------------------------------------------------- 錬金釜
 
-    // モンスター素材 → 結晶/エレメント。yieldMult で産出量が増える（floor、最低1）。
-    // 牙/尾/ゼリー → 小結晶×2、番人の樹皮 → 中結晶×1、古木の芯 → 風エレメントの欠片×1（1個あたり）。
+    // モンスター素材 → 結晶/エレメントの欠片。産出は素材の tier で決まり、yieldMult で増える（floor、最低1）。
+    //  ・属性を持つ tier2+ 素材 → 対応属性の欠片（tier で 1/1/2/3 個/個）
+    //  ・それ以外 → tier1:小結晶×2 / tier2:中結晶×1 / tier3:中結晶×2 / tier4:大結晶×1 / tier5:大結晶×3（1個あたり）
+    // 未登録の素材は tier1 相当（小結晶×2）として扱う。
     public static List<MaterialCost> Transmute(MaterialCost part, int times, float yieldMult)
     {
         List<MaterialCost> outp = new List<MaterialCost>();
         if (part == null || times <= 0 || part.materialType != MaterialType.SpecialItem) return outp;
 
+        int tier = Math.Max(1, MonsterPartCatalog.TierOf(part.specialItemName));
+        MagicAttribute attr = MonsterPartCatalog.AttributeOf(part.specialItemName);
+
         MaterialType outType;
         MagicAttribute outAttr = MagicAttribute.None;
         int per;
-        if (part.specialItemName == "番人の樹皮") { outType = MaterialType.MediumManaCrystal; per = 1; }
-        else if (part.specialItemName == "古木の芯") { outType = MaterialType.ElementFragment; outAttr = MagicAttribute.Wind; per = 1; }
-        else { outType = MaterialType.SmallManaCrystal; per = 2; }
+
+        if (tier >= 2 && attr != MagicAttribute.None)
+        {
+            outType = MaterialType.ElementFragment;
+            outAttr = attr;
+            per = tier >= 5 ? 3 : (tier >= 4 ? 2 : 1);
+        }
+        else
+        {
+            switch (tier)
+            {
+                case 1: outType = MaterialType.SmallManaCrystal; per = 2; break;
+                case 2: outType = MaterialType.MediumManaCrystal; per = 1; break;
+                case 3: outType = MaterialType.MediumManaCrystal; per = 2; break;
+                case 4: outType = MaterialType.LargeManaCrystal; per = 1; break;
+                default: outType = MaterialType.LargeManaCrystal; per = 3; break;
+            }
+        }
 
         int amt = Math.Max(1, (int)Math.Floor(per * times * (double)yieldMult));
         outp.Add(new MaterialCost { materialType = outType, attribute = outAttr, amount = amt });

@@ -81,5 +81,16 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.AreEqual(0, HideoutCatalog.WorkbenchTier(0));
             Assert.AreEqual(3, HideoutCatalog.WorkbenchTier(3));
         }
+
+        [Test]
+        public void EverySpecialItemInCosts_IsKnownMonsterPart()
+        {
+            foreach (FacilityDef d in HideoutCatalog.Facilities)
+                foreach (var step in d.costByStep)
+                    foreach (MaterialCost c in step)
+                        if (c != null && c.materialType == MaterialType.SpecialItem)
+                            Assert.IsTrue(MonsterPartCatalog.IsKnown(c.specialItemName),
+                                d.kind + " のコストに未登録の固有アイテム「" + c.specialItemName + "」");
+        }
     }
 }

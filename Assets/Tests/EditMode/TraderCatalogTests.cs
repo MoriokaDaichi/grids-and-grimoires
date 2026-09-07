@@ -81,4 +81,41 @@ public class TraderCatalogTests
                 if (task.kind == TraderTaskKind.ReachDepth) found = true;
         Assert.IsTrue(found, "深度到達タスクが1つも無い");
     }
+
+    [Test]
+    public void EverySpecialItemReferenced_IsKnownMonsterPart()
+    {
+        foreach (Trader t in TraderCatalog.BuildTraders())
+        {
+            foreach (TradeOffer o in t.offers)
+            {
+                foreach (MaterialCost c in o.give) AssertKnownPart(c, t.id + " offer give");
+                foreach (MaterialCost c in o.receive) AssertKnownPart(c, t.id + " offer receive");
+            }
+            foreach (TraderTask task in t.tasks)
+            {
+                foreach (MaterialCost c in task.deliverItems) AssertKnownPart(c, task.id + " deliver");
+                foreach (MaterialCost c in task.rewardItems) AssertKnownPart(c, task.id + " reward");
+            }
+        }
+    }
+
+    [Test]
+    public void EveryNamedKillTask_TargetsAKnownEnemyOrIsGeneric()
+    {
+        // 敵名は EnemyDataGenerator の enemyName と一致している必要がある。ここでは
+        // 代表的な名前が生きていることだけ担保する（アセット非依存で回せる範囲）。
+        var known = new HashSet<string> { "森の番人", "スケルトン", "オーガ", "ドラゴン" };
+        foreach (Trader t in TraderCatalog.BuildTraders())
+            foreach (TraderTask task in t.tasks)
+                if (task.kind == TraderTaskKind.DefeatEnemies && !string.IsNullOrEmpty(task.targetEnemyName))
+                    Assert.IsTrue(known.Contains(task.targetEnemyName), "未知の討伐対象: " + task.targetEnemyName);
+    }
+
+    private static void AssertKnownPart(MaterialCost c, string where)
+    {
+        if (c == null || c.materialType != MaterialType.SpecialItem) return;
+        Assert.IsTrue(MonsterPartCatalog.IsKnown(c.specialItemName),
+            where + " の固有アイテム「" + c.specialItemName + "」が MonsterPartCatalog に無い");
+    }
 }
