@@ -112,6 +112,13 @@ public static class HideoutRules
 
     // ---------------------------------------------------------------- 錬金釜
 
+    // 錬金釜のレベルでこの tier のモンスター素材を処理できるか。
+    // Lv1→tier1 / Lv2→tier1〜3 / Lv3→tier1〜5（未登録素材は tier0 扱いで Lv1 から可）。
+    public static bool CanCauldronProcess(int cauldronLevel, int partTier)
+    {
+        return cauldronLevel >= 1 && partTier <= HideoutCatalog.CauldronMaxTier(cauldronLevel);
+    }
+
     // モンスター素材 → 結晶/エレメントの欠片。産出は素材の tier で決まり、yieldMult で増える（floor、最低1）。
     //  ・属性を持つ tier2+ 素材 → 対応属性の欠片（tier で 1/1/2/3 個/個）
     //  ・それ以外 → tier1:小結晶×2 / tier2:中結晶×1 / tier3:中結晶×2 / tier4:大結晶×1 / tier5:大結晶×3（1個あたり）

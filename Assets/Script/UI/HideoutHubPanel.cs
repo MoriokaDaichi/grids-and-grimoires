@@ -160,20 +160,44 @@ public class HideoutHubPanel : MonoBehaviour
     {
         if (level <= 0) return;
         float mult = HideoutCatalog.CauldronYieldMult(level);
-        Label(card, "変換効率 ×" + mult.ToString("0.0"), 13, FontStyles.Normal, new Color(0.9f, 0.85f, 1f, 0.9f));
+        int maxTier = HideoutCatalog.CauldronMaxTier(level);
+        Label(card, "変換効率 ×" + mult.ToString("0.0") + "  /  変換可能: tier1〜" + maxTier, 13,
+            FontStyles.Normal, new Color(0.9f, 0.85f, 1f, 0.9f));
 
-        string[] parts = { "スライムゼリー", "ゴブリンの牙", "大ネズミの尾", "番人の樹皮", "古木の芯" };
-        foreach (string p in parts)
+        // 所持しているモンスター素材を tier 順に列挙する。
+        List<MonsterPart> held = new List<MonsterPart>();
+        foreach (MonsterPart mp in MonsterPartCatalog.All)
         {
-            MaterialCost part = new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = p, amount = 1 };
-            int have = inventory != null ? inventory.GetCount(part) : 0;
-            if (have <= 0) continue;
+            MaterialCost probe = new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = mp.name, amount = 1 };
+            if (inventory != null && inventory.GetCount(probe) > 0) held.Add(mp);
+        }
+        held.Sort((a, b) => a.tier != b.tier ? a.tier.CompareTo(b.tier) : string.CompareOrdinal(a.name, b.name));
+
+        if (held.Count == 0)
+        {
+            Label(card, "変換できるモンスター素材を持っていない。", 12, FontStyles.Italic, new Color(1f, 1f, 1f, 0.5f));
+            return;
+        }
+
+        foreach (MonsterPart mp in held)
+        {
+            MaterialCost part = new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = mp.name, amount = 1 };
+            int have = inventory.GetCount(part);
             int times = Mathf.Min(have, 3);
+
+            if (mp.tier > maxTier)
+            {
+                int needLv = HideoutCatalog.CauldronLevelForTier(mp.tier);
+                ActionRow(card, mp.name + "（tier" + mp.tier + " / 所持 " + have + "） … 錬金釜Lv" + needLv + "で解放",
+                    "Lv" + needLv, false, DimBtn, null);
+                continue;
+            }
+
             List<MaterialCost> outp = HideoutRules.Transmute(part, times, mult);
             string outText = outp.Count > 0 ? MaterialCatalog.DisplayName(outp[0]) + " ×" + outp[0].amount : "?";
             bool can = hideout.CanTransmute(part, times);
             MaterialCost captured = part; int t = times;
-            ActionRow(card, p + " ×" + times + " → " + outText + "（所持 " + have + "）", "変換",
+            ActionRow(card, mp.name + " ×" + times + " → " + outText + "（tier" + mp.tier + " / 所持 " + have + "）", "変換",
                 can, OkBtn, () => hideout.Transmute(captured, t));
         }
     }

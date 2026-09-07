@@ -66,6 +66,21 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
+        public void Cauldron_TierGate_OpensWithLevel()
+        {
+            Assert.AreEqual(0, HideoutCatalog.CauldronMaxTier(0)); // 未建造
+            Assert.AreEqual(1, HideoutCatalog.CauldronMaxTier(1)); // Lv1 → tier1
+            Assert.AreEqual(3, HideoutCatalog.CauldronMaxTier(2)); // Lv2 → tier1〜3
+            Assert.AreEqual(5, HideoutCatalog.CauldronMaxTier(3)); // Lv3 → tier1〜5
+
+            Assert.AreEqual(1, HideoutCatalog.CauldronLevelForTier(1));
+            Assert.AreEqual(2, HideoutCatalog.CauldronLevelForTier(2));
+            Assert.AreEqual(2, HideoutCatalog.CauldronLevelForTier(3));
+            Assert.AreEqual(3, HideoutCatalog.CauldronLevelForTier(4));
+            Assert.AreEqual(3, HideoutCatalog.CauldronLevelForTier(5));
+        }
+
+        [Test]
         public void Furnace_SlotsGrow_FuelPerActionShrinks_WithLevel()
         {
             Assert.AreEqual(0, HideoutCatalog.FurnaceSlots(0));

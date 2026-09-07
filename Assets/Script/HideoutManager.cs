@@ -148,10 +148,15 @@ public class HideoutManager : MonoBehaviour
 
     // ---------------------------------------------------------------- 錬金釜
 
+    // 錬金釜が変換できるモンスター素材の tier 上限（0 = 未建造）。
+    public int CauldronMaxTier { get { return HideoutCatalog.CauldronMaxTier(Level(FacilityKind.AlchemyCauldron)); } }
+
     public bool CanTransmute(MaterialCost part, int times)
     {
         if (!IsBuilt(FacilityKind.AlchemyCauldron) || part == null || times <= 0) return false;
         if (part.materialType != MaterialType.SpecialItem) return false;
+        // 錬金釜のレベルで扱える tier に制限（Lv1:tier1 / Lv2:tier1〜3 / Lv3:tier1〜5）
+        if (!HideoutRules.CanCauldronProcess(Level(FacilityKind.AlchemyCauldron), MonsterPartCatalog.TierOf(part.specialItemName))) return false;
         if (!CanPowerFacilityAction()) return false;
         PlayerInventory inv = PlayerInventory.Instance;
         MaterialCost need = new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = part.specialItemName, amount = times };

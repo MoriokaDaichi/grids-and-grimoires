@@ -136,6 +136,24 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
+        public void CanCauldronProcess_GatedByLevelAndTier()
+        {
+            // Lv1 → tier1 のみ
+            Assert.IsTrue(HideoutRules.CanCauldronProcess(1, 1));
+            Assert.IsFalse(HideoutRules.CanCauldronProcess(1, 2));
+            Assert.IsFalse(HideoutRules.CanCauldronProcess(1, 5));
+            // Lv2 → tier1〜3
+            Assert.IsTrue(HideoutRules.CanCauldronProcess(2, 3));
+            Assert.IsFalse(HideoutRules.CanCauldronProcess(2, 4));
+            // Lv3 → tier1〜5 すべて
+            Assert.IsTrue(HideoutRules.CanCauldronProcess(3, 1));
+            Assert.IsTrue(HideoutRules.CanCauldronProcess(3, 5));
+            // 未建造は不可 / 未登録素材(tier0)は Lv1 から可
+            Assert.IsFalse(HideoutRules.CanCauldronProcess(0, 1));
+            Assert.IsTrue(HideoutRules.CanCauldronProcess(1, 0));
+        }
+
+        [Test]
         public void CircleReward_NonNull_AmountPositive_ValueTrendsUpWithRarity()
         {
             long commonVal = 0, epicVal = 0;

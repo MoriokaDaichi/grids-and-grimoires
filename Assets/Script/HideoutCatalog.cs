@@ -153,6 +153,20 @@ public static class HideoutCatalog
         switch (level) { case 1: return 1f; case 2: return 1.4f; case 3: return 1.9f; default: return 0f; }
     }
 
+    // 錬金釜：変換できるモンスター素材の tier 上限（0 = 未建造）。Lv1:tier1 / Lv2:tier1〜3 / Lv3:tier1〜5
+    public static int CauldronMaxTier(int level)
+    {
+        switch (level) { case 1: return 1; case 2: return 3; case 3: return 5; default: return 0; }
+    }
+
+    // その tier のモンスター素材を変換するのに必要な錬金釜レベル（1〜3）。
+    public static int CauldronLevelForTier(int tier)
+    {
+        if (tier <= 1) return 1;
+        if (tier <= 3) return 2;
+        return 3;
+    }
+
     // 魔力炉：スロット数（＝燃料バッファ上限は slots × 大結晶価値）
     public static int FurnaceSlots(int level)
     {
