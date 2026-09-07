@@ -137,4 +137,38 @@ public static class HideoutRules
     {
         return furnaceLevel >= 1 && fuel >= HideoutCatalog.FurnaceFuelPerAction(furnaceLevel);
     }
+
+    // ---------------------------------------------------------------- マジックサークルの報酬
+
+    private static MagicAttribute PickAttr(uint h)
+    {
+        MagicAttribute[] a = { MagicAttribute.Fire, MagicAttribute.Thunder, MagicAttribute.Wind, MagicAttribute.Light, MagicAttribute.Dark };
+        return a[(h >> 8) % 5u];
+    }
+
+    // 完成レア度から実際の報酬アイテムを1つ決める（決定論的）。
+    public static MaterialCost CircleReward(ItemRarity rarity, int seed)
+    {
+        uint h = (uint)seed * 2246822519u + 3266489917u;
+        bool crystalRoute = (h & 1u) == 0u;
+        switch (rarity)
+        {
+            case ItemRarity.Common:
+                return crystalRoute
+                    ? new MaterialCost { materialType = MaterialType.SmallManaCrystal, amount = 3 }
+                    : new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = "スライムゼリー", amount = 2 };
+            case ItemRarity.Uncommon:
+                return crystalRoute
+                    ? new MaterialCost { materialType = MaterialType.MediumManaCrystal, amount = 2 }
+                    : new MaterialCost { materialType = MaterialType.ElementFragment, attribute = PickAttr(h), amount = 2 };
+            case ItemRarity.Rare:
+                return crystalRoute
+                    ? new MaterialCost { materialType = MaterialType.LargeManaCrystal, amount = 1 }
+                    : new MaterialCost { materialType = MaterialType.Element, attribute = PickAttr(h), amount = 1 };
+            default: // Epic
+                return crystalRoute
+                    ? new MaterialCost { materialType = MaterialType.LargeManaCrystal, amount = 3 }
+                    : new MaterialCost { materialType = MaterialType.Element, attribute = PickAttr(h), amount = 2 };
+        }
+    }
 }

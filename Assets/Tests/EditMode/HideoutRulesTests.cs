@@ -113,6 +113,23 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
+        public void CircleReward_NonNull_AmountPositive_ValueTrendsUpWithRarity()
+        {
+            long commonVal = 0, epicVal = 0;
+            for (int seed = 0; seed < 200; seed++)
+            {
+                MaterialCost c = HideoutRules.CircleReward(ItemRarity.Common, seed);
+                MaterialCost e = HideoutRules.CircleReward(ItemRarity.Epic, seed);
+                Assert.IsNotNull(c);
+                Assert.Greater(c.amount, 0);
+                Assert.Greater(e.amount, 0);
+                commonVal += MaterialCatalog.Value(c.materialType) * c.amount + 1; // +1 で結晶以外(価値0)も比較可能に
+                epicVal += MaterialCatalog.Value(e.materialType) * e.amount + 1;
+            }
+            Assert.Greater(epicVal, commonVal, "高レアほど報酬の価値が高いはず");
+        }
+
+        [Test]
         public void Furnace_CapacityAndPowerGate()
         {
             Assert.AreEqual(0, HideoutRules.FurnaceCapacity(0));

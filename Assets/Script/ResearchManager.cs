@@ -57,15 +57,28 @@ public class ResearchManager : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
+    // 研究机レベルによる小ノードのボーナス倍率（未建造・机なしなら等倍）
+    private float BonusMult
+    {
+        get { return HideoutManager.Instance != null ? HideoutManager.Instance.ResearchBonusMult : 1f; }
+    }
+
+    // 研究机が建っていて研究可能か（ハイドアウトがシーンに無ければ常に可）
+    public bool ResearchEnabled
+    {
+        get { return HideoutManager.Instance == null || HideoutManager.Instance.ResearchUnlocked; }
+    }
+
     // 割り当て済みの小ノードぶんのボーナスを PlayerStatus へ一括反映（起動時に1回）
     private void ApplyAllStatNodes()
     {
         if (statsApplied || playerStatus == null) return;
         statsApplied = true;
+        float mult = BonusMult;
         foreach (string id in allocated)
         {
             ResearchNodeDef def = ResearchGraph.Get(id);
-            if (def != null && !def.isMagic) playerStatus.ApplyResearchDelta(def.stat, def.statAmount);
+            if (def != null && !def.isMagic) playerStatus.ApplyResearchDelta(def.stat, def.statAmount * mult);
         }
     }
 
@@ -95,12 +108,17 @@ public class ResearchManager : MonoBehaviour
 
     public bool CanAllocate(string id)
     {
+        if (!ResearchEnabled) return false; // 研究机が未建造
         ResearchNodeDef def = ResearchGraph.Get(id);
         if (def == null || IsIdAllocated(id)) return false;
         if (def.parentId != null && !IsIdAllocated(def.parentId)) return false;
 
         PlayerInventory inv = PlayerInventory.Instance;
-        return inv != null && inv.CanAfford(CostOf(def));
+        if (inv == null || !inv.CanAfford(EffectiveCost(def))) return false;
+
+        // 魔力炉の電力（ハイドアウトがある場合のみ）
+        if (HideoutManager.Instance != null && !HideoutManager.Instance.CanPowerFacilityAction()) return false;
+        return true;
     }
 
     public bool Allocate(string id)
@@ -108,18 +126,28 @@ public class ResearchManager : MonoBehaviour
         if (!CanAllocate(id)) return false;
         ResearchNodeDef def = ResearchGraph.Get(id);
 
+        // 魔力炉の電力を消費（不足なら中止）
+        if (HideoutManager.Instance != null && !HideoutManager.Instance.TryConsumeResearchPower()) return false;
+
         PlayerInventory inv = PlayerInventory.Instance;
-        if (inv != null && !inv.TrySpend(CostOf(def))) return false;
+        if (inv != null && !inv.TrySpend(EffectiveCost(def))) return false;
 
         allocated.Add(id);
 
         if (!def.isMagic && playerStatus != null)
-            playerStatus.ApplyResearchDelta(def.stat, def.statAmount);
+            playerStatus.ApplyResearchDelta(def.stat, def.statAmount * BonusMult);
 
         Save();
         OnUnlocksChanged?.Invoke();
         Debug.Log($"[研究] ノード「{NodeTitle(id)}」を取得した。");
         return true;
+    }
+
+    // 研究机レベルでスケール済みのコスト
+    private List<MaterialCost> EffectiveCost(ResearchNodeDef def)
+    {
+        List<MaterialCost> raw = CostOf(def);
+        return HideoutManager.Instance != null ? HideoutManager.Instance.ScaleResearchCost(raw) : raw;
     }
 
     // ---------------------------------------------------------------- 表示ヘルパー（ビュー用）
@@ -202,7 +230,7 @@ public class ResearchManager : MonoBehaviour
     {
         ResearchNodeDef def = ResearchGraph.Get(id);
         if (def == null) return "-";
-        List<MaterialCost> cost = CostOf(def);
+        List<MaterialCost> cost = EffectiveCost(def);
         if (cost == null || cost.Count == 0) return "初期解放";
         List<string> parts = new List<string>();
         foreach (MaterialCost c in cost)
