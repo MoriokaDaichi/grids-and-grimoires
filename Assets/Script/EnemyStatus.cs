@@ -14,8 +14,12 @@ public class EnemyStatus : MonoBehaviour
     public int atk = 6;
     public int def = 2;
     public float attackInterval = 4f;
+    public MagicAttribute attribute = MagicAttribute.None;
 
     public int hp { get; private set; }
+
+    // 属性ごとの被ダメージ倍率（Setupで EnemyData から構築）。未登録の属性は 1.0。
+    private readonly Dictionary<MagicAttribute, float> resistances = new Dictionary<MagicAttribute, float>();
 
     public Action OnStatusChanged;
     public Action OnDefeated;
@@ -54,7 +58,25 @@ public class EnemyStatus : MonoBehaviour
         atk = data.atk;
         def = data.def;
         attackInterval = data.attackInterval;
+        attribute = data.attribute;
+
+        resistances.Clear();
+        if (data.resistances != null)
+        {
+            foreach (AttributeResistance r in data.resistances)
+            {
+                if (r != null) resistances[r.attribute] = r.multiplier;
+            }
+        }
+
         ResetBattle();
+    }
+
+    // 指定属性の魔法で受けるダメージ倍率。未設定なら等倍。
+    public float ResistanceTo(MagicAttribute attr)
+    {
+        float m;
+        return resistances.TryGetValue(attr, out m) ? m : 1f;
     }
 
     public void ResetBattle()

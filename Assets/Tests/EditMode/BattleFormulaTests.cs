@@ -60,5 +60,37 @@ namespace GridsAndGrimoires.EditModeTests
             // RoundToInt(7 * 0.5 = 3.5) - RoundToInt(1.5) = 4 - 2 = 2
             Assert.AreEqual(2, BattleFormula.EnemyAttackDamage(7, 0.5f, 1.5f));
         }
+
+        [Test]
+        public void AttackDamage_AttributeMultiplier_ScalesRawDamage()
+        {
+            // raw = (10 + 10) * 1.0 * 1.5 = 30 → 30 - 0 = 30
+            Assert.AreEqual(30, BattleFormula.AttackDamage(10, 10f, 0f, 0, 1.5f));
+            // raw = 20 * 0.5 = 10 → 10
+            Assert.AreEqual(10, BattleFormula.AttackDamage(10, 10f, 0f, 0, 0.5f));
+            // 等倍オーバーロードは 1.0 と一致
+            Assert.AreEqual(
+                BattleFormula.AttackDamage(10, 10f, 0f, 2),
+                BattleFormula.AttackDamage(10, 10f, 0f, 2, 1f));
+        }
+
+        [Test]
+        public void SpdCastMultiplier_BaselineAndClamp()
+        {
+            Assert.AreEqual(1f, BattleFormula.SpdCastMultiplier(5));
+            Assert.AreEqual(0.9f, BattleFormula.SpdCastMultiplier(10), 0.0001f);
+            Assert.AreEqual(1.1f, BattleFormula.SpdCastMultiplier(0), 0.0001f);
+            Assert.AreEqual(0.5f, BattleFormula.SpdCastMultiplier(60)); // 下限
+            Assert.AreEqual(1.5f, BattleFormula.SpdCastMultiplier(-60)); // 上限
+        }
+
+        [Test]
+        public void LucCritChance_BaselineAndCap()
+        {
+            Assert.AreEqual(0, BattleFormula.LucCritChance(5));
+            Assert.AreEqual(0, BattleFormula.LucCritChance(3));
+            Assert.AreEqual(15, BattleFormula.LucCritChance(20));
+            Assert.AreEqual(50, BattleFormula.LucCritChance(200));
+        }
     }
 }

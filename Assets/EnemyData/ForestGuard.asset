@@ -17,6 +17,14 @@ MonoBehaviour:
   atk: 14
   def: 6
   attackInterval: 3
+  attribute: 3
+  resistances:
+  - attribute: 3
+    multiplier: 0.5
+  - attribute: 1
+    multiplier: 1.5
+  - attribute: 4
+    multiplier: 1.3
   drops:
   - materialType: 1
     attribute: 0

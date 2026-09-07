@@ -12,8 +12,9 @@ public class BattleManager : MonoBehaviour
     private const float PassiveAttrDamagePercent = 15f;    // 属性バフ(パッシブ)1枚につき対応属性の魔法威力+15%
     private const int PassiveStatusRateBonus = 15;          // 状態異常付与率バフ(パッシブ)1枚につき対応属性の付与率+15pt
 
-    // Spd/Lucバフも集計はするが、PlayerStatus.spd/lucそのものが未使用（戦闘計算に登場しない）ため現状は効果なし。
-    // 素早さ・運が絡む仕組み（行動速度・クリティカル等）を実装する際にTotalStatPercentを参照すれば有効化できる。
+    // Spd = 発動間隔の短縮（BattleFormula.SpdCastMultiplier）、Luc = 会心発生率（BattleFormula.LucCritChance）。
+    // どちらも Spd/Luc バフ(%)が乗る。倍率・発生率は企画書に記載が無いため仮決め。
+    // 攻撃魔法は敵の属性耐性倍率（EnemyStatus.ResistanceTo）も掛かる。
 
     private PlayerStatus playerStatus;
     private EnemyStatus enemyStatus;
@@ -84,7 +85,7 @@ public class BattleManager : MonoBehaviour
                 || data.category == MagicCategory.BuffActive
                 || data.category == MagicCategory.Support;
             if (!isCastable) continue;
-            newCasts.Add(new CastState { data = data, timer = data.interval });
+            newCasts.Add(new CastState { data = data, timer = data.interval * CastIntervalScale() });
         }
         casts = newCasts;
 
@@ -161,6 +162,22 @@ public class BattleManager : MonoBehaviour
         return percent;
     }
 
+    private int EffectiveSpd()
+    {
+        return Mathf.RoundToInt(playerStatus.spd * (1f + TotalStatPercent(BuffStat.Spd) / 100f));
+    }
+
+    private int EffectiveLuc()
+    {
+        return Mathf.RoundToInt(playerStatus.luc * (1f + TotalStatPercent(BuffStat.Luc) / 100f));
+    }
+
+    // 素早さによる発動間隔の倍率
+    private float CastIntervalScale()
+    {
+        return BattleFormula.SpdCastMultiplier(EffectiveSpd());
+    }
+
     void Update()
     {
         if (!battleActive) return;
@@ -188,7 +205,7 @@ public class BattleManager : MonoBehaviour
                 if (casts != currentCasts) return;
                 // 最終ウェーブでの撃破はcastsが差し替わらないため、上と別にここでも決着を検知して打ち切る
                 if (!battleActive) return;
-                cast.timer += cast.data.interval;
+                cast.timer += cast.data.interval * CastIntervalScale();
             }
         }
 
@@ -268,14 +285,20 @@ public class BattleManager : MonoBehaviour
 
         float effectiveAtk = playerStatus.atk * (1f + TotalStatPercent(BuffStat.Atk) / 100f);
         float damagePercent = TotalStatPercent(BuffStat.Damage) + GetOrZero(passiveAttrDamagePercent, data.attribute);
-        int damage = BattleFormula.AttackDamage(data.damage, effectiveAtk, damagePercent, enemyStatus.def);
+        float resist = enemyStatus.ResistanceTo(data.attribute);
+        int damage = BattleFormula.AttackDamage(data.damage, effectiveAtk, damagePercent, enemyStatus.def, resist);
+
+        // 運による会心
+        bool crit = Random.Range(0, 100) < BattleFormula.LucCritChance(EffectiveLuc());
+        if (crit) damage = Mathf.RoundToInt(damage * BattleFormula.CritMultiplier);
 
         int hpAfterThisHit = Mathf.Max(0, hpBefore - damage);
         bool willDefeat = hpAfterThisHit <= 0;
 
         enemyStatus.TakeDamage(damage);
         OnAttackHit?.Invoke(data, damage);
-        Debug.Log($"{data.magicName} が発動！ {targetName} に {damage} ダメージ（残りHP: {hpAfterThisHit}）");
+        string critText = crit ? "（会心！）" : "";
+        Debug.Log($"{data.magicName} が発動！ {targetName} に {damage} ダメージ{critText}（残りHP: {hpAfterThisHit}）");
 
         if (willDefeat)
         {
