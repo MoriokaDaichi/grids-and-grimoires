@@ -24,7 +24,7 @@ EditMode テストが `Assets/Tests/EditMode/`（asmdef: `GridsAndGrimoires.Edit
 マスターデータやシーンUIはコードを直接編集するのではなく、Unityメニューから生成する運用。
 
 - **Grimoire > Generate Master Magic Data**（[MagicDataGenerator.cs](Assets/Editor/MagicDataGenerator.cs)）: `Docs/`の4章・6章・8章のデータに基づき `Assets/MasicData/` 配下の `MagicData` アセットを一括生成・上書きする。
-- **Grimoire > Generate Enemy Data**（[EnemyDataGenerator.cs](Assets/Editor/EnemyDataGenerator.cs)）: `Assets/EnemyData/` の敵4体（スライム/ゴブリン/大ネズミ/森の番人）＋属性・耐性・暫定ドロップを生成。**数値は全て仮バランス**。
+- **Grimoire > Generate Enemy Data**（[EnemyDataGenerator.cs](Assets/Editor/EnemyDataGenerator.cs)）: `Assets/EnemyData/` の敵4体（スライム/ゴブリン/大ネズミ/森の番人）＋属性・耐性・**モンスター固有ドロップ**を生成。ドロップは魔力結晶ではなく `MaterialType.SpecialItem`（`specialItemName`）＝スライムゼリー/ゴブリンの牙/大ネズミの尾/番人の樹皮・古木の芯。研究に使う結晶・欠片へはトレーダー（ダグ＝結晶化買取／リーゼ＝欠片・エレメント精製）で変換する。**数量・変換レートは全て仮バランス**。
 - **Grimoire > Generate Dungeon**（[DungeonGenerator.cs](Assets/Editor/DungeonGenerator.cs)）: 開いているシーンの `DungeonManager.enemyPool` にエンドレスダンジョン用の敵プール（弱い順: スライム/大ネズミ/ゴブリン/森の番人）を設定し、旧 `waves` はクリアする。実行後シーン保存。
 - **Grimoire > Populate MagicSpawner List**（[MagicSpawnerPopulator.cs](Assets/Editor/MagicSpawnerPopulator.cs)）: `MagicSpawner.magicDataList` を再登録する。実行後シーン保存（Ctrl+S）。
 - **Grimoire > Build Battle UI**（[BattleUISceneBuilder.cs](Assets/Editor/BattleUISceneBuilder.cs)）: `SampleScene` に戦闘HUD/ウェーブ突破（脱出選択）/報酬/研究（放射状スキルツリー `ResearchTreeView`）/トレードの画面ルート、`GamePhaseManager` / `PlayerInventory` / `ResearchManager` / `TradeManager` / `EnemyRoster` / `InventoryPanel` を構築し、出撃・研究・トレードボタンを配線する。演出/行/ノードのプレハブ（`ResearchNode` 含む）も生成。旧・単体 `EnemyStatus` GameObject は除去する。再実行可能。実行後シーン保存。
@@ -60,7 +60,7 @@ EditMode テストが `Assets/Tests/EditMode/`（asmdef: `GridsAndGrimoires.Edit
 - `ResearchTreeView`（Viewport に付く）が `ResearchGraph` から実行時にノード（`ResearchNodeWidget` 大150px/小92px、状態で色分け）とエッジを生成。**ノード背景 Image は `raycastTarget=true` 必須**（false だとクリックが全部パン用の Viewport に吸われる）。ツリーが巨大（167ノード、最外 ring7≈3560、円盤状）なのでドラッグでパン・ホイールでズーム前提（初期 0.16、`MinZoom=0.08` で全景／`MaxZoom=1.3`）、`content` は 10000²。ノードを1回クリックで選択＋詳細（効果/コスト/状態）、選択済みの取得可ノードをもう一度クリック（または右下 [取得] ボタン）で割り当て。`ResearchNode.prefab` は builder が生成。
 
 ### 複数トレーダーと依頼タスク（`TraderCatalog` / `TaskRules` / `TradeManager`）
-[TraderCatalog.cs](Assets/Script/TraderCatalog.cs) が専門分野ごとに4トレーダー（両替商グレン＝結晶／精霊使いリーゼ＝エレメント／傭兵ギルド ダグ＝戦闘／蒐集家オルカ＝深層）を定義し、各自 `TradeOffer` の交換メニューと `TraderTask` の依頼を持つ。タスク種別は `DeliverItems`（納品・受取時に素材消費）／`DefeatEnemies`（累計 or 種類指定の討伐数）／`ReachDepth`（最深到達）。`TaskRules.IsComplete/ProgressText` が純粋関数で判定。`TradeManager` は `DungeonManager.OnEnemyDefeated`・`OnWaveChanged` を購読して撃破数・最深深度を集計し、`SaveData`（達成タスクID／累計撃破数／敵種別ごとの撃破数／最深深度）へ永続化する。`TradePanel` は全トレーダーを縦に並べて見出し＋交換＋依頼を1スクロールで表示する。
+[TraderCatalog.cs](Assets/Script/TraderCatalog.cs) が専門分野ごとに4トレーダー（両替商グレン＝結晶／精霊使いリーゼ＝エレメント／傭兵ギルド ダグ＝戦闘／蒐集家オルカ＝深層）を定義し、各自 `TradeOffer` の交換メニューと `TraderTask` の依頼を持つ。タスク種別は `DeliverItems`（納品・受取時に素材消費）／`DefeatEnemies`（累計 or 種類指定の討伐数）／`ReachDepth`（最深到達）。`TaskRules.IsComplete/ProgressText` が純粋関数で判定。ダグ／リーゼはモンスター固有ドロップ（ゴブリンの牙 等）→結晶・欠片・エレメントの変換オファーを持ち、これがドロップ→研究素材の橋渡しになる（ダグに牙の納品タスク、オルカに各素材の蒐集タスク）。`TradeManager` は `DungeonManager.OnEnemyDefeated`・`OnWaveChanged` を購読して撃破数・最深深度を集計し、`SaveData`（達成タスクID／累計撃破数／敵種別ごとの撃破数／最深深度）へ永続化する。`TradePanel` は全トレーダーを縦に並べて見出し＋交換＋依頼を1スクロールで表示する。
 
 ### インベントリパズル（杖のグリッド配置）
 3つのスクリプトが協調して動く：

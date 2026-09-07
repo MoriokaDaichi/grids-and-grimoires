@@ -24,8 +24,8 @@ MonoBehaviour:
   - attribute: 4
     multiplier: 1.4
   drops:
-  - materialType: 0
+  - materialType: 5
     attribute: 0
-    specialItemName: 
-    amount: 3
+    specialItemName: "\u30B4\u30D6\u30EA\u30F3\u306E\u7259"
+    amount: 2
   sprite: {fileID: 0}

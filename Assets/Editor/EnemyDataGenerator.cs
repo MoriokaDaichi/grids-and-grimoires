@@ -22,14 +22,10 @@ public static class EnemyDataGenerator
         public List<MaterialCost> Drops = new List<MaterialCost>();
     }
 
-    private static MaterialCost Mat(MaterialType type, int amount)
+    // そのモンスター固有のドロップ品（牙・毛皮など）。集計・所持は名前で一意になる（MaterialType.SpecialItem）。
+    private static MaterialCost Part(string name, int amount)
     {
-        return new MaterialCost { materialType = type, amount = amount };
-    }
-
-    private static MaterialCost Frag(MagicAttribute attribute, int amount)
-    {
-        return new MaterialCost { materialType = MaterialType.ElementFragment, attribute = attribute, amount = amount };
+        return new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = name, amount = amount };
     }
 
     private static AttributeResistance Res(MagicAttribute attribute, float multiplier)
@@ -50,19 +46,19 @@ public static class EnemyDataGenerator
             new Def { FileId = "Slime",       Name = "スライム",     MaxHp = 60,  Atk = 6,  Def_ = 2, AttackInterval = 4f,
                 Attribute = MagicAttribute.Wind,
                 Resistances = new List<AttributeResistance> { Res(MagicAttribute.Fire, 1.5f), Res(MagicAttribute.Thunder, 0.6f) },
-                Drops = new List<MaterialCost> { Mat(MaterialType.SmallManaCrystal, 2) } },
+                Drops = new List<MaterialCost> { Part("スライムゼリー", 2) } },
             new Def { FileId = "Goblin",      Name = "ゴブリン",     MaxHp = 90,  Atk = 9,  Def_ = 4, AttackInterval = 3.5f,
                 Attribute = MagicAttribute.Dark,
                 Resistances = new List<AttributeResistance> { Res(MagicAttribute.Dark, 0.7f), Res(MagicAttribute.Light, 1.4f) },
-                Drops = new List<MaterialCost> { Mat(MaterialType.SmallManaCrystal, 3) } },
+                Drops = new List<MaterialCost> { Part("ゴブリンの牙", 2) } },
             new Def { FileId = "GiantRat",    Name = "大ネズミ",     MaxHp = 80,  Atk = 11, Def_ = 3, AttackInterval = 3f,
                 Attribute = MagicAttribute.Dark,
                 Resistances = new List<AttributeResistance> { Res(MagicAttribute.Wind, 1.3f) },
-                Drops = new List<MaterialCost> { Mat(MaterialType.SmallManaCrystal, 2), Frag(MagicAttribute.Wind, 1) } },
+                Drops = new List<MaterialCost> { Part("大ネズミの尾", 2) } },
             new Def { FileId = "ForestGuard", Name = "森の番人",     MaxHp = 180, Atk = 14, Def_ = 6, AttackInterval = 3f,
                 Attribute = MagicAttribute.Wind,
                 Resistances = new List<AttributeResistance> { Res(MagicAttribute.Wind, 0.5f), Res(MagicAttribute.Fire, 1.5f), Res(MagicAttribute.Light, 1.3f) },
-                Drops = new List<MaterialCost> { Mat(MaterialType.MediumManaCrystal, 1), Frag(MagicAttribute.Light, 1) } },
+                Drops = new List<MaterialCost> { Part("番人の樹皮", 1), Part("古木の芯", 1) } },
         };
 
         int created = 0, updated = 0;

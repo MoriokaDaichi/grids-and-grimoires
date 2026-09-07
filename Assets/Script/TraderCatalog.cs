@@ -38,6 +38,12 @@ public static class TraderCatalog
         return new MaterialCost { materialType = MaterialType.Element, attribute = attr, amount = amount };
     }
 
+    // モンスター固有のドロップ品（EnemyDataGenerator の Part と対応）。
+    private static MaterialCost Part(string name, int amount)
+    {
+        return new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = name, amount = amount };
+    }
+
     private static TradeOffer Offer(string label, MaterialCost give, MaterialCost receive, int bonusStat = 0)
     {
         TradeOffer o = new TradeOffer { label = label, bonusStatPoints = bonusStat };
@@ -106,6 +112,12 @@ public static class TraderCatalog
         {
             liese.offers.Add(Offer(an[i] + "エレメントの欠片 ×3 → " + an[i] + "エレメント ×1", Frag(attrs[i], 3), Elem(attrs[i], 1)));
         }
+        // モンスター素材から属性の欠片・エレメントを精製する（敵の属性に対応）
+        liese.offers.Add(Offer("スライムゼリー ×4 → 風エレメントの欠片 ×1", Part("スライムゼリー", 4), Frag(MagicAttribute.Wind, 1)));
+        liese.offers.Add(Offer("番人の樹皮 ×2 → 風エレメントの欠片 ×1", Part("番人の樹皮", 2), Frag(MagicAttribute.Wind, 1)));
+        liese.offers.Add(Offer("ゴブリンの牙 ×3 → 闇エレメントの欠片 ×1", Part("ゴブリンの牙", 3), Frag(MagicAttribute.Dark, 1)));
+        liese.offers.Add(Offer("大ネズミの尾 ×3 → 闇エレメントの欠片 ×1", Part("大ネズミの尾", 3), Frag(MagicAttribute.Dark, 1)));
+        liese.offers.Add(Offer("古木の芯 ×2 → 風エレメント ×1", Part("古木の芯", 2), Elem(MagicAttribute.Wind, 1)));
         liese.tasks.Add(Deliver("liese_t1", "liese", "炎の欠片を 5 つ納める",
             new List<MaterialCost> { Frag(MagicAttribute.Fire, 5) },
             new List<MaterialCost> { Elem(MagicAttribute.Fire, 2) }));
@@ -118,12 +130,20 @@ public static class TraderCatalog
         var dag = new Trader { id = "dag", name = "傭兵ギルド受付 ダグ", specialty = TraderSpecialty.Combat,
             blurb = "討伐依頼を回してる。腕が立つなら報酬は弾む。" };
         dag.offers.Add(Offer("小結晶 ×6 → 風エレメントの欠片 ×1", M(MaterialType.SmallManaCrystal, 6), Frag(MagicAttribute.Wind, 1)));
+        // 討伐で得たモンスター素材の買取（結晶化）
+        dag.offers.Add(Offer("スライムゼリー ×5 → 小結晶 ×3", Part("スライムゼリー", 5), M(MaterialType.SmallManaCrystal, 3)));
+        dag.offers.Add(Offer("ゴブリンの牙 ×4 → 小結晶 ×5", Part("ゴブリンの牙", 4), M(MaterialType.SmallManaCrystal, 5)));
+        dag.offers.Add(Offer("大ネズミの尾 ×4 → 小結晶 ×4", Part("大ネズミの尾", 4), M(MaterialType.SmallManaCrystal, 4)));
+        dag.offers.Add(Offer("番人の樹皮 ×3 → 中結晶 ×1", Part("番人の樹皮", 3), M(MaterialType.MediumManaCrystal, 1)));
         dag.tasks.Add(Kill("dag_t1", "dag", "魔物を 10 体討伐", null, 10,
             new List<MaterialCost> { M(MaterialType.MediumManaCrystal, 3) }));
         dag.tasks.Add(Kill("dag_t2", "dag", "魔物を 30 体討伐", null, 30,
             new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 1) }, rewardStat: 1));
         dag.tasks.Add(Kill("dag_t3", "dag", "森の番人を 3 体討伐", "森の番人", 3,
             new List<MaterialCost> { Elem(MagicAttribute.Light, 1) }));
+        dag.tasks.Add(Deliver("dag_t4", "dag", "ゴブリンの牙を 12 本納める",
+            new List<MaterialCost> { Part("ゴブリンの牙", 12) },
+            new List<MaterialCost> { M(MaterialType.MediumManaCrystal, 3) }, rewardStat: 1));
         traders.Add(dag);
 
         // --- 蒐集家 オルカ（深層）---
@@ -134,6 +154,9 @@ public static class TraderCatalog
             new List<MaterialCost> { M(MaterialType.MediumManaCrystal, 5) }));
         orca.tasks.Add(Depth("orca_t2", "orca", "深度 10 まで到達する", 10,
             new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 2) }, rewardStat: 1));
+        orca.tasks.Add(Deliver("orca_t3", "orca", "各モンスターの素材を 3 つずつ蒐集する",
+            new List<MaterialCost> { Part("スライムゼリー", 3), Part("ゴブリンの牙", 3), Part("大ネズミの尾", 3), Part("番人の樹皮", 3) },
+            new List<MaterialCost> { M(MaterialType.LargeManaCrystal, 1) }, rewardStat: 1));
         traders.Add(orca);
 
         return traders;
