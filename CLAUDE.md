@@ -37,7 +37,7 @@ EditMode テストが `Assets/Tests/EditMode/`（asmdef: `GridsAndGrimoires.Edit
 
 ### 実装済み / 未実装（2026-09 時点、ブランチ `feat/battle-ui-core-loop`）
 - **動作**: 構築フェーズ（グリッド配置・回転・ドラッグ）、ステータス振り分けUI、**オートバトル**（攻撃/状態異常専用/補助/アクティブ・パッシブバフ、敵の反撃、状態異常5種、属性耐性、Spd=発動間隔短縮・Luc=会心、**マナ消費＋自然回復**）、**複数敵ウェーブ＋全体(AoE)魔法**（`EnemyRoster`）、**エンドレスダンジョン**（深度1から無限、ウェーブ突破ごとに「深層へ進む／脱出」を選択、深度に応じて敵がスケール）、**戦闘HUD**（代表敵HPバー・残り体数・マナバー・ダメージ数字・状態異常アイコン・バフインジケータ・深度表示）、**報酬画面＋素材インベントリ＋JSON永続化**（`gg_save.json`）、**研究(Hideout)の放射状スキルツリー**（中心から5属性の枝、小ノード＝ステータス/マナ強化を経由して大ノード＝魔法を解放、ドラッグ/ズーム対応。小ノードは `PlayerStatus` に恒久ボーナス）、**トレード画面**（4トレーダー＝結晶両替/エレメント精製/戦闘/蒐集、各自の交換メニュー＋依頼タスク＝納品/討伐/深度到達）。
-- **未実装 / 今後**: 戦闘HUDでのN体分の個別敵ウィジェット（現在は先頭生存個体＋残り体数のみ）、`PlayerStatus` の手動ステータス振り分けのセーブ対象化（研究の小ノードぶんは永続化済み）、スキルツリーのレイアウト整形（現状は自動極座標配置で密集気味）、Tarkov型ホームハブ（Character画面）、AoE以外の範囲パターン。
+- **未実装 / 今後**: 戦闘HUDでのN体分の個別敵ウィジェット（現在は先頭生存個体＋残り体数のみ）、`PlayerStatus` の手動ステータス振り分けのセーブ対象化（研究の小ノードぶんは永続化済み）、スキルツリーのレイアウト整形（自動極座標配置。大型化で重なりは解消したが手調整の余地あり）、Tarkov型ホームハブ（Character画面）、AoE以外の範囲パターン。
 - **数値は全て仮**: 敵ステータス・属性耐性・ドロップ、状態異常の効果量/時間（`StatusEffectController` の定数）、バフ倍率（`BattleManager` の `PassiveStatPercentPerStage` 等）、Spd/Luc 係数（`BattleFormula`）、マナ上限/回復/魔法コスト（`ManaRules`）、深度スケーリング（`EndlessWaveGenerator`）、研究の小ノードの増加量・コスト（`ResearchGraph`）、トレードレート（`TradeCatalog`）、トレーダーの依頼内容・報酬（`TraderCatalog`）。企画書に記載が無く暫定。
 
 ### コアループの画面遷移（`GamePhaseManager`）
@@ -54,10 +54,10 @@ EditMode テストが `Assets/Tests/EditMode/`（asmdef: `GridsAndGrimoires.Edit
 - **座標系の注意**: グリッドはY上方向が正だが、`Docs/`の8章データは行が下方向に増加する座標系なので符号が逆（`MagicDataGenerator.cs` の `Shape()` ヘルパーで変換済み）。
 
 ### 研究：放射状スキルツリー（`ResearchGraph` / `ResearchRules` / `ResearchManager` / `ResearchTreeView`）
-[ResearchGraph.cs](Assets/Script/ResearchGraph.cs) が企画書5章の系統＋「深淵のスキルツリー」構想に沿って **87ノード**（大＝魔法67 / 小＝ステータス系20）を極座標（`ring` / `angleDeg`）で定義する。中心から5属性の枝が放射状に伸び、各枝は 単体 基本→[小]→メガ→[小]→ギガ／全体 基本→[小]→メガ→ギガ／状態異常特化←単体メガ／アクティブバフ←単体基本→パッシブ Lv1→2→3／属性バフ←単体メガ／付与率バフ←状態異常特化。中心付近にマナ回復速度・マナ上限・HP・速さ・運の小ノード。各ノードの親は1つ（純粋な木）。`ResearchStat`＝Hp/Atk/Def/Spd/Luc/ManaMax/ManaRegen。
+[ResearchGraph.cs](Assets/Script/ResearchGraph.cs) が企画書5章の系統＋「深淵のスキルツリー」構想に沿って **97ノード**（大＝魔法67 / 小＝ステータス系30）を極座標（`ring` / `angleDeg`、`Ring0Radius=260` / `RingStep=380`）で定義する。中心から5属性の枝が放射状に伸び、各枝は 単体 基本→[小]→メガ→[小]→ギガ／全体 基本→[小]→メガ→[小]→ギガ／状態異常特化←単体メガ／アクティブバフ←単体基本→パッシブ Lv1→2→3／属性バフ←単体メガ／付与率バフ←状態異常特化。中心付近にマナ回復速度・マナ上限・HP・速さ・運の小ノード（さらに1段外へ第2段の小ノード）。各ノードの親は1つ（純粋な木）。`ResearchStat`＝Hp/Atk/Def/Spd/Luc/ManaMax/ManaRegen。
 - **大ノード**＝魔法（id は `MagicData` 名、コストは `requiredMaterials`）。**小ノード**＝ステータス系（id は `"node_..."`、コストはノード定義が保持）。
 - `ResearchManager` はノードIDベース。`NodeState`（Allocated / Allocatable / Locked）、`CanAllocate` / `Allocate`（親が割り当て済み かつ 素材を賄える）。小ノード割り当て時＆起動時（`Start`）に `PlayerStatus.ApplyResearchDelta` で恒久ボーナスを反映する（`PlayerStatus` の値はセーブされないため毎起動再適用）。`SaveData.allocatedResearchNodes` に全ノードIDを永続化し、`unlockedMagicIds` は魔法サブセットとして同期（旧セーブからの移行対応）。
-- `ResearchTreeView`（Viewport に付く）が `ResearchGraph` から実行時にノード（`ResearchNodeWidget` 大92px/小50px、状態で色分け）とエッジを生成。ドラッグでパン・ホイールでズーム、ノード選択で詳細（効果/コスト/状態）、取得ボタンで割り当て。`ResearchNode.prefab` は builder が生成。
+- `ResearchTreeView`（Viewport に付く）が `ResearchGraph` から実行時にノード（`ResearchNodeWidget` 大124px/小68px、状態で色分け）とエッジを生成。**ノード背景 Image は `raycastTarget=true` 必須**（false だとクリックが全部パン用の Viewport に吸われる）。ドラッグでパン・ホイールでズーム（初期 0.42、`MinZoom=0.14`）、ノードを1回クリックで選択＋詳細（効果/コスト/状態）、選択済みの取得可ノードをもう一度クリック（または右下 [取得] ボタン）で割り当て。`ResearchNode.prefab` は builder が生成。
 
 ### 複数トレーダーと依頼タスク（`TraderCatalog` / `TaskRules` / `TradeManager`）
 [TraderCatalog.cs](Assets/Script/TraderCatalog.cs) が専門分野ごとに4トレーダー（両替商グレン＝結晶／精霊使いリーゼ＝エレメント／傭兵ギルド ダグ＝戦闘／蒐集家オルカ＝深層）を定義し、各自 `TradeOffer` の交換メニューと `TraderTask` の依頼を持つ。タスク種別は `DeliverItems`（納品・受取時に素材消費）／`DefeatEnemies`（累計 or 種類指定の討伐数）／`ReachDepth`（最深到達）。`TaskRules.IsComplete/ProgressText` が純粋関数で判定。`TradeManager` は `DungeonManager.OnEnemyDefeated`・`OnWaveChanged` を購読して撃破数・最深深度を集計し、`SaveData`（達成タスクID／累計撃破数／敵種別ごとの撃破数／最深深度）へ永続化する。`TradePanel` は全トレーダーを縦に並べて見出し＋交換＋依頼を1スクロールで表示する。
