@@ -56,12 +56,34 @@ public class HideoutPanel : MonoBehaviour
             if (entry == null) continue;
 
             MagicData captured = md;
+            bool unlocked = research.IsUnlocked(md);
+            bool prereqMet = research.PrerequisiteMet(md);
+            bool canUnlock = research.CanUnlock(md);
+
+            string detail;
+            string buttonText;
+            if (unlocked)
+            {
+                detail = CostText(md);
+                buttonText = "解放済";
+            }
+            else if (!prereqMet)
+            {
+                detail = "要: " + research.PrerequisiteName(md) + "　（" + CostText(md) + "）";
+                buttonText = "前提未解放";
+            }
+            else
+            {
+                detail = CostText(md);
+                buttonText = "解放";
+            }
+
             entry.Bind(
                 md.magicName,
-                CostText(md),
-                research.IsUnlocked(md),
-                research.CanUnlock(md),
-                () => research.Unlock(captured));
+                detail,
+                buttonText,
+                !unlocked && canUnlock,
+                unlocked ? null : () => research.Unlock(captured));
         }
     }
 

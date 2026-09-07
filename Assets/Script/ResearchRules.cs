@@ -3,9 +3,10 @@ using System.Collections.Generic;
 
 // 研究解放の判定ロジック（純粋関数）。MonoBehaviour / インベントリ実体に依存しないので
 // EditModeテストで検証できる。ResearchManager がこれを実インベントリと結線する。
+// 前提関係は ResearchTree（スキルツリー）が既定。
 public static class ResearchRules
 {
-    // コスト0の魔法（各属性のTier1: ファイア/フレイム系など）は最初から解放扱い。
+    // コスト0の魔法（各属性の単体/全体Tier1）は最初から解放扱い＝木の根。
     public static bool IsBaseFree(MagicData md)
     {
         return md != null && (md.requiredMaterials == null || md.requiredMaterials.Count == 0);
@@ -18,14 +19,30 @@ public static class ResearchRules
         return unlockedIds != null && unlockedIds.Contains(md.name);
     }
 
-    // パッシブの段階前提: "〜PassiveLv2" は "〜PassiveLv1"、"〜PassiveLv3" は "〜PassiveLv2" が前提。
-    // それ以外は前提なし（null）。
+    // 前提の魔法ID（既定のスキルツリー）。前提が無ければ null。
     public static string PrerequisiteId(string magicId)
     {
-        if (string.IsNullOrEmpty(magicId)) return null;
-        if (magicId.EndsWith("PassiveLv2")) return magicId.Substring(0, magicId.Length - 1) + "1";
-        if (magicId.EndsWith("PassiveLv3")) return magicId.Substring(0, magicId.Length - 1) + "2";
-        return null;
+        return PrerequisiteId(magicId, ResearchTree.Prerequisites);
+    }
+
+    public static string PrerequisiteId(string magicId, IReadOnlyDictionary<string, string> prereqs)
+    {
+        if (string.IsNullOrEmpty(magicId) || prereqs == null) return null;
+        return prereqs.TryGetValue(magicId, out string p) ? p : null;
+    }
+
+    // 前提が満たされているか（前提が無ければ常に true）。
+    public static bool PrerequisiteMet(MagicData md, Func<string, bool> isIdUnlocked)
+    {
+        return PrerequisiteMet(md, isIdUnlocked, ResearchTree.Prerequisites);
+    }
+
+    public static bool PrerequisiteMet(MagicData md, Func<string, bool> isIdUnlocked, IReadOnlyDictionary<string, string> prereqs)
+    {
+        if (md == null) return false;
+        string prereq = PrerequisiteId(md.name, prereqs);
+        if (prereq == null) return true;
+        return isIdUnlocked != null && isIdUnlocked(prereq);
     }
 
     // 解放可能か: 未解放 かつ 前提を満たす かつ コストを賄える。
@@ -35,11 +52,19 @@ public static class ResearchRules
         Func<string, bool> isIdUnlocked,
         Func<IEnumerable<MaterialCost>, bool> canAfford)
     {
+        return CanUnlock(md, unlockedIds, isIdUnlocked, canAfford, ResearchTree.Prerequisites);
+    }
+
+    public static bool CanUnlock(
+        MagicData md,
+        ICollection<string> unlockedIds,
+        Func<string, bool> isIdUnlocked,
+        Func<IEnumerable<MaterialCost>, bool> canAfford,
+        IReadOnlyDictionary<string, string> prereqs)
+    {
         if (md == null) return false;
         if (IsUnlocked(md, unlockedIds)) return false;
-
-        string prereq = PrerequisiteId(md.name);
-        if (prereq != null && (isIdUnlocked == null || !isIdUnlocked(prereq))) return false;
+        if (!PrerequisiteMet(md, isIdUnlocked, prereqs)) return false;
 
         return canAfford != null && canAfford(md.requiredMaterials);
     }

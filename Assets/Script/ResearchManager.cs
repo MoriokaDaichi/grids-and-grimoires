@@ -60,7 +60,8 @@ public class ResearchManager : MonoBehaviour
         return byId.TryGetValue(id, out md) && ResearchRules.IsBaseFree(md);
     }
 
-    // 研究対象（コスト0でない魔法）を、属性→カテゴリ→名前 の順で返す
+    // 研究対象（コスト0でない魔法）を、ツリーの深さ→属性→カテゴリ→名前 の順で返す。
+    // 深さ順にすることで、前提の魔法が依存側より必ず上に並ぶ。
     public List<MagicData> Researchable()
     {
         List<MagicData> list = new List<MagicData>();
@@ -70,13 +71,31 @@ public class ResearchManager : MonoBehaviour
         }
         list.Sort(delegate (MagicData a, MagicData b)
         {
-            int c = a.attribute.CompareTo(b.attribute);
+            int c = ResearchTree.Depth(a.name).CompareTo(ResearchTree.Depth(b.name));
+            if (c != 0) return c;
+            c = a.attribute.CompareTo(b.attribute);
             if (c != 0) return c;
             c = a.category.CompareTo(b.category);
             if (c != 0) return c;
             return string.CompareOrdinal(a.name, b.name);
         });
         return list;
+    }
+
+    // 前提が満たされているか
+    public bool PrerequisiteMet(MagicData md)
+    {
+        return ResearchRules.PrerequisiteMet(md, IsIdUnlocked);
+    }
+
+    // 前提の魔法の表示名（無ければ null）
+    public string PrerequisiteName(MagicData md)
+    {
+        if (md == null) return null;
+        string prereqId = ResearchRules.PrerequisiteId(md.name);
+        if (string.IsNullOrEmpty(prereqId)) return null;
+        MagicData prereq;
+        return byId.TryGetValue(prereqId, out prereq) && prereq != null ? prereq.magicName : prereqId;
     }
 
     public bool CanUnlock(MagicData md)

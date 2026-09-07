@@ -42,12 +42,14 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
-        public void PrerequisiteId_PassiveStages()
+        public void PrerequisiteId_FollowsSkillTree()
         {
             Assert.AreEqual("BuffAtkPassiveLv1", ResearchRules.PrerequisiteId("BuffAtkPassiveLv2"));
             Assert.AreEqual("BuffAtkPassiveLv2", ResearchRules.PrerequisiteId("BuffAtkPassiveLv3"));
-            Assert.IsNull(ResearchRules.PrerequisiteId("BuffAtkPassiveLv1"));
-            Assert.IsNull(ResearchRules.PrerequisiteId("MegaFire"));
+            Assert.AreEqual("BuffAtk", ResearchRules.PrerequisiteId("BuffAtkPassiveLv1"));
+            Assert.AreEqual("Fire", ResearchRules.PrerequisiteId("MegaFire"));
+            Assert.AreEqual("MegaFire", ResearchRules.PrerequisiteId("GigaFire"));
+            Assert.IsNull(ResearchRules.PrerequisiteId("Fire")); // 根
             Assert.IsNull(ResearchRules.PrerequisiteId(null));
         }
 
@@ -75,12 +77,23 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
-        public void CanUnlock_NoPrereq_DependsOnAfford()
+        public void CanUnlock_PrereqMet_DependsOnAfford()
         {
+            // MegaFire は Fire（基本・初期解放）が前提。前提充足時は afford 次第。
             MagicData mega = Magic("MegaFire", Small(3));
             HashSet<string> set = new HashSet<string>();
-            Assert.IsTrue(ResearchRules.CanUnlock(mega, set, id => false, c => true));
-            Assert.IsFalse(ResearchRules.CanUnlock(mega, set, id => false, c => false));
+            Assert.IsTrue(ResearchRules.CanUnlock(mega, set, id => id == "Fire", c => true));
+            Assert.IsFalse(ResearchRules.CanUnlock(mega, set, id => id == "Fire", c => false));
+        }
+
+        [Test]
+        public void CanUnlock_PrereqNotMet_AlwaysFalse()
+        {
+            // GigaFire は MegaFire が前提。未解放なら afford できても不可。
+            MagicData giga = Magic("GigaFire", Small(3));
+            HashSet<string> set = new HashSet<string>();
+            Assert.IsFalse(ResearchRules.CanUnlock(giga, set, id => false, c => true));
+            Assert.IsTrue(ResearchRules.CanUnlock(giga, set, id => id == "MegaFire", c => true));
         }
 
         [Test]
@@ -94,6 +107,12 @@ namespace GridsAndGrimoires.EditModeTests
 
             // Lv1 解放済み → 可
             Assert.IsTrue(ResearchRules.CanUnlock(lv2, set, id => id == "BuffAtkPassiveLv1", c => true));
+        }
+
+        [Test]
+        public void PrerequisiteMet_RootMagic_AlwaysTrue()
+        {
+            Assert.IsTrue(ResearchRules.PrerequisiteMet(Magic("Fire"), id => false));
         }
     }
 }
