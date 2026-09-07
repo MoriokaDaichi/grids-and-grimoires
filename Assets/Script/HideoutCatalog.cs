@@ -59,6 +59,9 @@ public static class HideoutCatalog
     private static void Ensure()
     {
         if (_all != null) return;
+        // 建造コストのモンスター素材は「Lv1=tier1（浅層）のみ / Lv2=tier1〜2 / Lv3=tier2〜3」に揃える。
+        // 深層(tier4-5)素材の使い道は装備tier3・研究の深部ノード・オルカの依頼側に寄せる。
+        // （HideoutCatalogTests がこの上限を検証する）
         _all = new List<FacilityDef>
         {
             new FacilityDef
@@ -69,7 +72,7 @@ public static class HideoutCatalog
                 {
                     new List<MaterialCost> { S(12), Part("スライムゼリー", 4) },
                     new List<MaterialCost> { M(6), Part("鉄の兜", 3) },
-                    new List<MaterialCost> { L(1), M(12), Part("巨神の核", 1) },
+                    new List<MaterialCost> { L(1), M(12), Part("オーガの牙", 3) },
                 },
             },
             new FacilityDef
@@ -78,9 +81,9 @@ public static class HideoutCatalog
                 blurb = "研究（スキルツリー）を行う作業場。",
                 costByStep = new List<List<MaterialCost>>
                 {
-                    new List<MaterialCost> { S(20), Part("番人の樹皮", 2) },
+                    new List<MaterialCost> { S(20), Part("胞子嚢", 3) },
                     new List<MaterialCost> { M(8), Frag(MagicAttribute.Light, 2), Part("古びた骨", 4) },
-                    new List<MaterialCost> { L(2), M(20), Part("世界樹の若枝", 2) },
+                    new List<MaterialCost> { L(2), M(20), Part("呪われた指輪", 2) },
                 },
             },
             new FacilityDef
@@ -90,7 +93,7 @@ public static class HideoutCatalog
                 costByStep = new List<List<MaterialCost>>
                 {
                     new List<MaterialCost> { S(16), Part("大ネズミの尾", 4) },
-                    new List<MaterialCost> { M(7), Part("古木の芯", 2), Part("トロルの生皮", 2) },
+                    new List<MaterialCost> { M(7), Part("剛毛", 3), Part("古木の芯", 2) },
                     new List<MaterialCost> { L(1), Frag(MagicAttribute.Wind, 3), Part("魔石の欠片", 3) },
                 },
             },
@@ -102,7 +105,7 @@ public static class HideoutCatalog
                 {
                     new List<MaterialCost> { S(24), Part("ゴブリンの牙", 4) },
                     new List<MaterialCost> { M(10), Frag(MagicAttribute.Fire, 2), Part("竜人の鱗", 3) },
-                    new List<MaterialCost> { L(2), Frag(MagicAttribute.Dark, 3), Part("竜のうろこ", 2) },
+                    new List<MaterialCost> { L(2), Frag(MagicAttribute.Dark, 3), Part("焦げた牙", 3) },
                 },
             },
             new FacilityDef
@@ -113,7 +116,7 @@ public static class HideoutCatalog
                 {
                     new List<MaterialCost> { S(30), Part("スライムゼリー", 6) },
                     new List<MaterialCost> { M(12), Frag(MagicAttribute.Thunder, 2), Part("風切羽", 3) },
-                    new List<MaterialCost> { L(3), Part("古木の芯", 3), Part("命の宝珠", 1) },
+                    new List<MaterialCost> { L(3), Part("古木の芯", 3), Part("石化の眼", 2) },
                 },
             },
         };

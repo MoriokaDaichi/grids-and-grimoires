@@ -92,5 +92,25 @@ namespace GridsAndGrimoires.EditModeTests
                             Assert.IsTrue(MonsterPartCatalog.IsKnown(c.specialItemName),
                                 d.kind + " のコストに未登録の固有アイテム「" + c.specialItemName + "」");
         }
+
+        [Test]
+        public void BuildCosts_StayWithinDepthBudget_PerStep()
+        {
+            // Lv1(step0)=tier1のみ / Lv2(step1)=tier1〜2 / Lv3(step2)=tier2〜3。深層(tier4-5)素材は使わない。
+            foreach (FacilityDef d in HideoutCatalog.Facilities)
+            {
+                for (int step = 0; step < d.costByStep.Count; step++)
+                {
+                    int maxTier = step + 1;
+                    foreach (MaterialCost c in d.costByStep[step])
+                    {
+                        if (c == null || c.materialType != MaterialType.SpecialItem) continue;
+                        int tier = MonsterPartCatalog.TierOf(c.specialItemName);
+                        Assert.LessOrEqual(tier, maxTier,
+                            d.kind + " Lv" + (step + 1) + " のコスト「" + c.specialItemName + "」が tier" + tier + "（上限 tier" + maxTier + "）");
+                    }
+                }
+            }
+        }
     }
 }
