@@ -26,7 +26,11 @@ public class SaveData
     public List<MaterialStack> materials = new List<MaterialStack>();
 
     // 研究で解放済みの魔法ID（= MagicData のアセット名）。コスト0の魔法は常に解放扱いなので含めない。
+    // allocatedResearchNodes の魔法サブセットと同期。他システムの互換用に残す。
     public List<string> unlockedMagicIds = new List<string>();
+
+    // 研究スキルツリーで割り当て済みのノードID（魔法ノード＋"node_..."のステータスノード）。
+    public List<string> allocatedResearchNodes = new List<string>();
 
     // トレーダーのタスク進捗
     public List<string> completedTaskIds = new List<string>();

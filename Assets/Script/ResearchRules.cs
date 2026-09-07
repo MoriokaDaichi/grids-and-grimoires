@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 // 研究解放の判定ロジック（純粋関数）。MonoBehaviour / インベントリ実体に依存しないので
 // EditModeテストで検証できる。ResearchManager がこれを実インベントリと結線する。
-// 前提関係は ResearchTree（スキルツリー）が既定。
+// 前提関係は ResearchGraph（放射状スキルツリー）が既定。
 public static class ResearchRules
 {
     // コスト0の魔法（各属性の単体/全体Tier1）は最初から解放扱い＝木の根。
@@ -22,7 +22,7 @@ public static class ResearchRules
     // 前提の魔法ID（既定のスキルツリー）。前提が無ければ null。
     public static string PrerequisiteId(string magicId)
     {
-        return PrerequisiteId(magicId, ResearchTree.Prerequisites);
+        return PrerequisiteId(magicId, ResearchGraph.Prerequisites);
     }
 
     public static string PrerequisiteId(string magicId, IReadOnlyDictionary<string, string> prereqs)
@@ -34,7 +34,7 @@ public static class ResearchRules
     // 前提が満たされているか（前提が無ければ常に true）。
     public static bool PrerequisiteMet(MagicData md, Func<string, bool> isIdUnlocked)
     {
-        return PrerequisiteMet(md, isIdUnlocked, ResearchTree.Prerequisites);
+        return PrerequisiteMet(md, isIdUnlocked, ResearchGraph.Prerequisites);
     }
 
     public static bool PrerequisiteMet(MagicData md, Func<string, bool> isIdUnlocked, IReadOnlyDictionary<string, string> prereqs)
@@ -52,7 +52,7 @@ public static class ResearchRules
         Func<string, bool> isIdUnlocked,
         Func<IEnumerable<MaterialCost>, bool> canAfford)
     {
-        return CanUnlock(md, unlockedIds, isIdUnlocked, canAfford, ResearchTree.Prerequisites);
+        return CanUnlock(md, unlockedIds, isIdUnlocked, canAfford, ResearchGraph.Prerequisites);
     }
 
     public static bool CanUnlock(

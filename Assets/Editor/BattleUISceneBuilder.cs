@@ -443,18 +443,76 @@ public static class BattleUISceneBuilder
 
     private static GameObject BuildHideoutRoot(Transform canvas)
     {
-        RectTransform listRoot;
-        Button closeBtn;
-        GameObject root = BuildScrollPanel(canvas, "HideoutRoot", "研究 — 隠れ家", out listRoot, out closeBtn);
+        RectTransform root = NewUI("HideoutRoot", canvas);
+        Stretch(root);
+        AddImage(root, new Color(0.06f, 0.07f, 0.10f, 1f), true);
 
-        HideoutPanel panel = root.AddComponent<HideoutPanel>();
-        SerializedObject so = new SerializedObject(panel);
-        so.FindProperty("listRoot").objectReferenceValue = listRoot;
-        so.FindProperty("entryPrefab").objectReferenceValue = Load("HideoutEntry");
+        TMP_Text title = AddText(root, "Title", "研究 — 深淵のスキルツリー", 30, TextAlignmentOptions.Center);
+        Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(820f, 52f));
+
+        // 表示領域（マスク＋ドラッグ受け）
+        RectTransform viewport = NewUI("TreeViewport", root);
+        Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-150f, 6f), new Vector2(980f, 640f));
+        AddImage(viewport, new Color(0f, 0f, 0f, 0.25f), true); // raycast でドラッグ／ホイールを拾う
+        viewport.gameObject.AddComponent<RectMask2D>();
+
+        RectTransform content = NewUI("TreeContent", viewport);
+        content.anchorMin = content.anchorMax = new Vector2(0.5f, 0.5f);
+        content.pivot = new Vector2(0.5f, 0.5f);
+        content.sizeDelta = new Vector2(2600f, 2600f);
+        content.anchoredPosition = Vector2.zero;
+
+        RectTransform edgeLayer = NewUI("Edges", content);
+        Stretch(edgeLayer);
+        RectTransform nodeLayer = NewUI("Nodes", content);
+        Stretch(nodeLayer);
+
+        // 詳細サイドバー（右）
+        RectTransform side = NewUI("DetailPanel", root);
+        Frame(side, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-160f, 6f), new Vector2(300f, 440f));
+        AddImage(side, new Color(0f, 0f, 0f, 0.5f), true);
+
+        TMP_Text detailTitle = AddText(side, "DetailTitle", "ノードを選択", 22, TextAlignmentOptions.Top);
+        Frame(detailTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(276f, 64f));
+
+        TMP_Text detailBody = AddText(side, "DetailBody", "", 15, TextAlignmentOptions.TopLeft);
+        Frame(detailBody.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -88f), new Vector2(272f, 268f));
+
+        RectTransform allocRt = NewUI("AllocateButton", side);
+        Frame(allocRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 22f), new Vector2(224f, 54f));
+        Image allocImg = AddImage(allocRt, new Color(0.25f, 0.4f, 0.7f, 1f), true);
+        Button allocBtn = allocRt.gameObject.AddComponent<Button>();
+        allocBtn.targetGraphic = allocImg;
+        TMP_Text allocLabel = AddText(allocRt.gameObject.transform, "Label", "取得", 22, TextAlignmentOptions.Center);
+        Stretch(allocLabel.rectTransform);
+
+        TMP_Text legend = AddText(root, "Legend", "", 14, TextAlignmentOptions.Center);
+        Frame(legend.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-150f, 118f), new Vector2(980f, 24f));
+        legend.color = new Color(1f, 1f, 1f, 0.6f);
+
+        RectTransform closeRt = NewUI("CloseButton", root);
+        Frame(closeRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(220f, 52f));
+        Image closeImg = AddImage(closeRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
+        Button closeBtn = closeRt.gameObject.AddComponent<Button>();
+        closeBtn.targetGraphic = closeImg;
+        TMP_Text closeLbl = AddText(closeRt.gameObject.transform, "Label", "戻る", 22, TextAlignmentOptions.Center);
+        Stretch(closeLbl.rectTransform);
+
+        ResearchTreeView view = viewport.gameObject.AddComponent<ResearchTreeView>();
+        SerializedObject so = new SerializedObject(view);
+        so.FindProperty("content").objectReferenceValue = content;
+        so.FindProperty("edgeLayer").objectReferenceValue = edgeLayer;
+        so.FindProperty("nodeLayer").objectReferenceValue = nodeLayer;
+        so.FindProperty("nodeWidgetPrefab").objectReferenceValue = Load("ResearchNode");
+        so.FindProperty("detailTitle").objectReferenceValue = detailTitle;
+        so.FindProperty("detailBody").objectReferenceValue = detailBody;
+        so.FindProperty("allocateButton").objectReferenceValue = allocBtn;
+        so.FindProperty("allocateLabel").objectReferenceValue = allocLabel;
         so.FindProperty("closeButton").objectReferenceValue = closeBtn;
+        so.FindProperty("legendText").objectReferenceValue = legend;
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        return root;
+        return root.gameObject;
     }
 
     private static GameObject BuildTradeRoot(Transform canvas)
@@ -497,6 +555,7 @@ public static class BattleUISceneBuilder
         SavePrefabIfMissing("BuffIndicator", BuildBuffIndicatorTemplate);
         SavePrefabIfMissing("DropRow", BuildDropRowTemplate);
         SavePrefabIfMissing("HideoutEntry", BuildHideoutEntryTemplate);
+        SavePrefabIfMissing("ResearchNode", BuildResearchNodeTemplate);
         AssetDatabase.SaveAssets();
     }
 
@@ -582,6 +641,24 @@ public static class BattleUISceneBuilder
         SetPrivate(comp, "icon", icon);
         SetPrivate(comp, "nameLabel", nameLabel);
         SetPrivate(comp, "amountLabel", amountLabel);
+        return rt.gameObject;
+    }
+
+    private static GameObject BuildResearchNodeTemplate()
+    {
+        RectTransform rt = NewUI("ResearchNode", null);
+        rt.sizeDelta = new Vector2(92f, 92f);
+        Image bg = AddImage(rt, new Color(0.32f, 0.34f, 0.40f, 1f), false);
+        Button btn = rt.gameObject.AddComponent<Button>();
+        btn.targetGraphic = bg;
+
+        TMP_Text label = AddText(rt.gameObject.transform, "Label", "◆", 13, TextAlignmentOptions.Center);
+        Stretch(label.rectTransform);
+
+        ResearchNodeWidget comp = rt.gameObject.AddComponent<ResearchNodeWidget>();
+        SetPrivate(comp, "background", bg);
+        SetPrivate(comp, "label", label);
+        SetPrivate(comp, "button", btn);
         return rt.gameObject;
     }
 

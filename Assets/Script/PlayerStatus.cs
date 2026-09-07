@@ -93,6 +93,31 @@ public class PlayerStatus : MonoBehaviour
         OnStatusChanged?.Invoke();
     }
 
+    // 研究スキルツリーの小ノードによる恒久ボーナス。ResearchManager が割り当て時／起動時に呼ぶ。
+    public void ApplyResearchDelta(ResearchStat stat, float amount)
+    {
+        switch (stat)
+        {
+            case ResearchStat.Hp:
+                hp += Mathf.RoundToInt(amount);
+                currentHp += Mathf.RoundToInt(amount);
+                break;
+            case ResearchStat.Atk: atk += Mathf.RoundToInt(amount); break;
+            case ResearchStat.Def: def += Mathf.RoundToInt(amount); break;
+            case ResearchStat.Spd: spd += Mathf.RoundToInt(amount); break;
+            case ResearchStat.Luc: luc += Mathf.RoundToInt(amount); break;
+            case ResearchStat.ManaMax:
+                maxMana += Mathf.RoundToInt(amount);
+                currentMana = Mathf.Min(maxMana, currentMana + amount);
+                break;
+            case ResearchStat.ManaRegen:
+                manaRegenPerSecond += amount;
+                break;
+        }
+        OnStatusChanged?.Invoke();
+        OnManaChanged?.Invoke();
+    }
+
     public void AddStat(string type)
     {
         if (statsPoint <= 0) return;
