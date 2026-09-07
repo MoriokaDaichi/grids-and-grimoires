@@ -2,16 +2,37 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// トレーダーとの素材交換。シーンにシングルトンで1つ。
-// 交換メニューは TradeCatalog（固定の変換群）。実消費・付与は PlayerInventory 経由。
+// 複数トレーダーとの取引・タスクを管理する。シーンにシングルトンで1つ。
+// トレーダー定義は TraderCatalog（専門分野ごとの交換メニュー＋タスク）。
+// 実消費・付与は PlayerInventory / PlayerStatus 経由。タスク進捗は SaveData に永続化。
 public class TradeManager : MonoBehaviour
 {
     public static TradeManager Instance { get; private set; }
 
     public Action OnTraded;
+    public Action OnTasksChanged;
 
-    private readonly List<TradeOffer> offers = TradeCatalog.StandardOffers();
-    public IReadOnlyList<TradeOffer> Offers { get { return offers; } }
+    private readonly List<Trader> traders = TraderCatalog.BuildTraders();
+    public IReadOnlyList<Trader> Traders { get { return traders; } }
+
+    // 全トレーダーの交換メニューを平坦化（旧APIの互換用）
+    public IEnumerable<TradeOffer> Offers
+    {
+        get
+        {
+            foreach (Trader t in traders)
+                foreach (TradeOffer o in t.offers)
+                    yield return o;
+        }
+    }
+
+    // --- タスク進捗（SaveData に永続化）---
+    private readonly HashSet<string> completedTaskIds = new HashSet<string>();
+    private readonly Dictionary<string, int> killsByName = new Dictionary<string, int>();
+    private int lifetimeKills;
+    private int bestDepth;
+
+    private DungeonManager dungeon;
 
     void Awake()
     {
@@ -21,12 +42,35 @@ public class TradeManager : MonoBehaviour
             return;
         }
         Instance = this;
+
+        dungeon = UnityEngine.Object.FindFirstObjectByType<DungeonManager>();
+        LoadProgress();
+    }
+
+    void OnEnable()
+    {
+        if (dungeon != null)
+        {
+            dungeon.OnEnemyDefeated += HandleEnemyDefeated;
+            dungeon.OnWaveChanged += HandleWaveChanged;
+        }
+    }
+
+    void OnDisable()
+    {
+        if (dungeon != null)
+        {
+            dungeon.OnEnemyDefeated -= HandleEnemyDefeated;
+            dungeon.OnWaveChanged -= HandleWaveChanged;
+        }
     }
 
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
     }
+
+    // ---------------------------------------------------------------- 交換
 
     public bool CanTrade(TradeOffer offer)
     {
@@ -42,10 +86,7 @@ public class TradeManager : MonoBehaviour
         PlayerInventory inv = PlayerInventory.Instance;
         if (!inv.TrySpend(offer.give)) return false;
 
-        if (offer.receive != null && offer.receive.Count > 0)
-        {
-            inv.Add(offer.receive);
-        }
+        if (offer.receive != null && offer.receive.Count > 0) inv.Add(offer.receive);
 
         if (offer.bonusStatPoints > 0)
         {
@@ -56,5 +97,124 @@ public class TradeManager : MonoBehaviour
         OnTraded?.Invoke();
         Debug.Log($"[トレード] {offer.label} を交換した。");
         return true;
+    }
+
+    // ---------------------------------------------------------------- タスク
+
+    public TaskProgress BuildProgress()
+    {
+        return new TaskProgress
+        {
+            enemiesDefeated = lifetimeKills,
+            bestDepth = bestDepth,
+            enemyKills = KillsOf,
+            inventoryCount = InventoryCountOf,
+        };
+    }
+
+    private int KillsOf(string enemyName)
+    {
+        if (string.IsNullOrEmpty(enemyName)) return 0;
+        return killsByName.TryGetValue(enemyName, out int n) ? n : 0;
+    }
+
+    private static int InventoryCountOf(MaterialCost c)
+    {
+        PlayerInventory inv = PlayerInventory.Instance;
+        return inv != null && c != null ? inv.GetCount(c) : 0;
+    }
+
+    public bool IsTaskCompleted(TraderTask task)
+    {
+        return task != null && completedTaskIds.Contains(task.id);
+    }
+
+    public string TaskProgressText(TraderTask task)
+    {
+        return TaskRules.ProgressText(task, BuildProgress());
+    }
+
+    public bool CanClaim(TraderTask task)
+    {
+        if (task == null || completedTaskIds.Contains(task.id)) return false;
+        return TaskRules.IsComplete(task, BuildProgress());
+    }
+
+    public bool ClaimTask(TraderTask task)
+    {
+        if (!CanClaim(task)) return false;
+
+        PlayerInventory inv = PlayerInventory.Instance;
+
+        // 納品タスクは受取と引き換えに素材を消費する
+        if (task.kind == TraderTaskKind.DeliverItems)
+        {
+            if (inv == null || !inv.TrySpend(task.deliverItems)) return false;
+        }
+
+        if (inv != null && task.rewardItems != null && task.rewardItems.Count > 0) inv.Add(task.rewardItems);
+
+        if (task.rewardStatPoints > 0)
+        {
+            PlayerStatus ps = UnityEngine.Object.FindFirstObjectByType<PlayerStatus>();
+            if (ps != null) ps.AddStatsPoint(task.rewardStatPoints);
+        }
+
+        completedTaskIds.Add(task.id);
+        SaveProgress();
+        OnTasksChanged?.Invoke();
+        Debug.Log($"[タスク] 「{task.title}」を達成した。");
+        return true;
+    }
+
+    // ---------------------------------------------------------------- 進捗フック
+
+    private void HandleEnemyDefeated(EnemyData enemy)
+    {
+        if (enemy == null) return;
+        lifetimeKills++;
+        string name = enemy.enemyName;
+        killsByName[name] = (killsByName.TryGetValue(name, out int n) ? n : 0) + 1;
+        SaveProgress();
+        OnTasksChanged?.Invoke();
+    }
+
+    private void HandleWaveChanged(int depth, int total, string label)
+    {
+        if (depth <= bestDepth) return;
+        bestDepth = depth;
+        SaveProgress();
+        OnTasksChanged?.Invoke();
+    }
+
+    // ---------------------------------------------------------------- 永続化
+
+    private void LoadProgress()
+    {
+        SaveData data = SaveManager.Load();
+        completedTaskIds.Clear();
+        foreach (string id in data.completedTaskIds)
+            if (!string.IsNullOrEmpty(id)) completedTaskIds.Add(id);
+
+        killsByName.Clear();
+        foreach (StringIntPair kv in data.enemyKillCounts)
+            if (kv != null && !string.IsNullOrEmpty(kv.key)) killsByName[kv.key] = kv.value;
+
+        lifetimeKills = data.lifetimeEnemyKills;
+        bestDepth = data.bestDungeonDepth;
+    }
+
+    private void SaveProgress()
+    {
+        SaveData data = SaveManager.Load();
+        data.completedTaskIds = new List<string>(completedTaskIds);
+        data.lifetimeEnemyKills = lifetimeKills;
+        data.bestDungeonDepth = bestDepth;
+
+        data.enemyKillCounts = new List<StringIntPair>();
+        foreach (KeyValuePair<string, int> kv in killsByName)
+            data.enemyKillCounts.Add(new StringIntPair { key = kv.Key, value = kv.Value });
+
+        SaveManager.Save(data);
     }
 }
