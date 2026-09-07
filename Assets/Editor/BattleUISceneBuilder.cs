@@ -66,10 +66,10 @@ public static class BattleUISceneBuilder
         GameObject hideoutRoot = BuildHideoutRoot(canvasT);
         GameObject tradeRoot = BuildTradeRoot(canvasT);
 
-        // シーンの MenuPanel に既にあるボタンを使う（左下のコーナーボタンは作らない）
-        // Button (2) = トレード / Button (3) = ハイドアウト
-        Button tradeButton = BindMenuButton(canvasT, "MenuPanel/Button (2)", "トレード");
-        Button hideoutButton = BindMenuButton(canvasT, "MenuPanel/Button (3)", "ハイドアウト");
+        // シーンの MenuPanel に既にあるボタンを使う（左下のコーナーボタンは作らない）。
+        // Button (2) = トレード / Button (3) = ハイドアウト。ラベルはシーン側の指定を尊重して触らない。
+        Button tradeButton = BindMenuButton(canvasT, "MenuPanel/Button (2)", null);
+        Button hideoutButton = BindMenuButton(canvasT, "MenuPanel/Button (3)", null);
 
         GameObject gpmGo = new GameObject("GamePhaseManager");
         GamePhaseManager gpm = gpmGo.AddComponent<GamePhaseManager>();
@@ -632,8 +632,8 @@ public static class BattleUISceneBuilder
         return root.gameObject;
     }
 
-    // シーンに既にあるボタン（MenuPanel の子など）を探し、ラベルを差し替えて返す。
-    // onClick の配線は GamePhaseManager が Awake で行うのでここでは触らない。
+    // シーンに既にあるボタン（MenuPanel の子など）を探して返す。label を渡したときだけ
+    // 子テキストを差し替える（null/空なら触らない）。onClick の配線は GamePhaseManager が Awake で行う。
     private static Button BindMenuButton(Transform canvas, string path, string label)
     {
         Transform t = canvas.Find(path);
