@@ -17,6 +17,17 @@ public static class EnemyDataGenerator
         public int Atk;
         public int Def_;
         public float AttackInterval;
+        public List<MaterialCost> Drops = new List<MaterialCost>();
+    }
+
+    private static MaterialCost Mat(MaterialType type, int amount)
+    {
+        return new MaterialCost { materialType = type, amount = amount };
+    }
+
+    private static MaterialCost Frag(MagicAttribute attribute, int amount)
+    {
+        return new MaterialCost { materialType = MaterialType.ElementFragment, attribute = attribute, amount = amount };
     }
 
     [MenuItem("Grimoire/Generate Enemy Data")]
@@ -29,10 +40,14 @@ public static class EnemyDataGenerator
 
         var defs = new List<Def>
         {
-            new Def { FileId = "Slime",       Name = "スライム",     MaxHp = 60,  Atk = 6,  Def_ = 2, AttackInterval = 4f },
-            new Def { FileId = "Goblin",      Name = "ゴブリン",     MaxHp = 90,  Atk = 9,  Def_ = 4, AttackInterval = 3.5f },
-            new Def { FileId = "GiantRat",    Name = "大ネズミ",     MaxHp = 80,  Atk = 11, Def_ = 3, AttackInterval = 3f },
-            new Def { FileId = "ForestGuard", Name = "森の番人",     MaxHp = 180, Atk = 14, Def_ = 6, AttackInterval = 3f },
+            new Def { FileId = "Slime",       Name = "スライム",     MaxHp = 60,  Atk = 6,  Def_ = 2, AttackInterval = 4f,
+                Drops = new List<MaterialCost> { Mat(MaterialType.SmallManaCrystal, 2) } },
+            new Def { FileId = "Goblin",      Name = "ゴブリン",     MaxHp = 90,  Atk = 9,  Def_ = 4, AttackInterval = 3.5f,
+                Drops = new List<MaterialCost> { Mat(MaterialType.SmallManaCrystal, 3) } },
+            new Def { FileId = "GiantRat",    Name = "大ネズミ",     MaxHp = 80,  Atk = 11, Def_ = 3, AttackInterval = 3f,
+                Drops = new List<MaterialCost> { Mat(MaterialType.SmallManaCrystal, 2), Frag(MagicAttribute.Wind, 1) } },
+            new Def { FileId = "ForestGuard", Name = "森の番人",     MaxHp = 180, Atk = 14, Def_ = 6, AttackInterval = 3f,
+                Drops = new List<MaterialCost> { Mat(MaterialType.MediumManaCrystal, 1), Frag(MagicAttribute.Light, 1) } },
         };
 
         int created = 0, updated = 0;
@@ -56,6 +71,7 @@ public static class EnemyDataGenerator
             asset.atk = d.Atk;
             asset.def = d.Def_;
             asset.attackInterval = d.AttackInterval;
+            asset.drops = d.Drops;
 
             EditorUtility.SetDirty(asset);
         }

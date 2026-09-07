@@ -17,3 +17,13 @@ MonoBehaviour:
   atk: 11
   def: 3
   attackInterval: 3
+  drops:
+  - materialType: 0
+    attribute: 0
+    specialItemName: 
+    amount: 2
+  - materialType: 3
+    attribute: 3
+    specialItemName: 
+    amount: 1
+  sprite: {fileID: 0}

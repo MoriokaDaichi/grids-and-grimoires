@@ -20,6 +20,12 @@ public class EnemyStatus : MonoBehaviour
     public Action OnStatusChanged;
     public Action OnDefeated;
 
+    // 戦闘UI（BattleHUD）向けの通知。ロジックには影響しない
+    public Action<int, int> OnDamaged;            // (被ダメージ量, 残りHP)
+    public Action<StatusEffectType> OnStatusApplied;   // 新規に状態異常が付与された
+    public Action<StatusEffectType> OnStatusExpired;   // 状態異常が期限切れで解除された
+    public Action<StatusEffectType, int> OnStatusTick; // 継続ダメージのtick (種別, ダメージ)
+
     private readonly StatusEffectController statusEffects = new StatusEffectController();
 
     // Tick() の結果受け取り用（毎フレーム使い回す）
@@ -65,6 +71,7 @@ public class EnemyStatus : MonoBehaviour
 
         hp = Mathf.Max(0, hp - amount);
         OnStatusChanged?.Invoke();
+        OnDamaged?.Invoke(amount, hp);
 
         if (hp <= 0) OnDefeated?.Invoke();
     }
@@ -77,6 +84,7 @@ public class EnemyStatus : MonoBehaviour
         if (statusEffects.Apply(type))
         {
             OnStatusChanged?.Invoke();
+            OnStatusApplied?.Invoke(type);
         }
     }
 
@@ -92,7 +100,7 @@ public class EnemyStatus : MonoBehaviour
         foreach (StatusEffectController.StatusTickResult tick in tickBuffer)
         {
             // 直前のtickでの撃破が次の敵への切り替えを連鎖させていたら、残りのtickは適用しない
-            if (hp <= 0 || battleGeneration != gen) return;
+            if (hp <= 0 || battleGeneration != gen) break;
 
             // TakeDamageが撃破→次の敵のSetup()を連鎖させると、この呼び出しの後でenemyName/hpが
             // 次の敵のものに差し替わってしまうため、ログに使う値は呼び出し前にスナップショットしておく
@@ -101,8 +109,16 @@ public class EnemyStatus : MonoBehaviour
             int hpAfterTick = Mathf.Max(0, hp - tickDamage);
 
             TakeDamage(tickDamage);
+            OnStatusTick?.Invoke(tick.Type, tickDamage);
             Debug.Log($"{name} は{StatusEffectLabel(tick.Type)}のダメージ！ {tickDamage} ダメージ（残りHP: {hpAfterTick}）");
             if (hpAfterTick <= 0) Debug.Log($"{name} を倒した！");
+        }
+
+        // 次の敵へ切り替わっていたら、この敵向けの期限切れ通知は出さない（新しい敵の状態はリセット済み）
+        if (battleGeneration != gen) return;
+        foreach (StatusEffectType expiredType in expiredBuffer)
+        {
+            OnStatusExpired?.Invoke(expiredType);
         }
     }
 

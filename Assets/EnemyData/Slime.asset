@@ -17,3 +17,9 @@ MonoBehaviour:
   atk: 6
   def: 2
   attackInterval: 4
+  drops:
+  - materialType: 0
+    attribute: 0
+    specialItemName: 
+    amount: 2
+  sprite: {fileID: 0}

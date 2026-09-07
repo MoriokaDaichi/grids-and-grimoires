@@ -24,6 +24,7 @@ public class PlayerStatus : MonoBehaviour
     // UI更新用のイベント（UI側に通知するため）
     public Action OnStatusChanged;
     public Action OnDefeated;
+    public Action<int, int> OnDamaged; // (被ダメージ量, 残りcurrentHp)
 
     void Awake()
     {
@@ -43,6 +44,7 @@ public class PlayerStatus : MonoBehaviour
 
         currentHp = Mathf.Max(0, currentHp - amount);
         OnStatusChanged?.Invoke();
+        OnDamaged?.Invoke(amount, currentHp);
 
         if (currentHp <= 0) OnDefeated?.Invoke();
     }

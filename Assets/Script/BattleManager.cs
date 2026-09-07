@@ -36,6 +36,15 @@ public class BattleManager : MonoBehaviour
     private float enemyAttackTimer;
     private bool battleActive;
 
+    // 現在この敵との戦闘が進行中か（DungeonManagerが空杖出撃を検知するのに使う）
+    public bool BattleActive { get { return battleActive; } }
+
+    // 戦闘UI（BattleHUD）向けの通知。ロジックには影響しない
+    public System.Action<MagicData> OnCastFired;          // 魔法が発動した（種別問わず）
+    public System.Action<MagicData, int> OnAttackHit;     // 攻撃魔法が敵に命中した (魔法, ダメージ)
+    public System.Action<BuffStat, float> OnBuffApplied;  // アクティブバフが発動/更新された (対象, 効果時間)
+    public System.Action<BuffStat> OnBuffExpired;         // アクティブバフが切れた
+
     // 補助魔法(アッドスペル/デュアルスペル)が「直前に発動した魔法」として参照する対象。
     // Attack魔法が実際に発動したときだけ更新する（補助魔法自身やバフでは更新しない）
     private MagicData lastCastAttackSpell;
@@ -186,7 +195,12 @@ public class BattleManager : MonoBehaviour
         for (int i = activeBuffs.Count - 1; i >= 0; i--)
         {
             activeBuffs[i].remaining -= Time.deltaTime;
-            if (activeBuffs[i].remaining <= 0f) activeBuffs.RemoveAt(i);
+            if (activeBuffs[i].remaining <= 0f)
+            {
+                BuffStat expiredStat = activeBuffs[i].stat;
+                activeBuffs.RemoveAt(i);
+                OnBuffExpired?.Invoke(expiredStat);
+            }
         }
 
         if (!battleActive) return; // このフレームで倒し切って戦闘が終わっていたら、敵の反撃は処理しない
@@ -201,6 +215,8 @@ public class BattleManager : MonoBehaviour
 
     private void ExecuteCast(MagicData data)
     {
+        OnCastFired?.Invoke(data);
+
         if (data.category == MagicCategory.Attack) CastAttack(data);
         else if (data.category == MagicCategory.StatusInflict) CastStatusInflict(data);
         else if (data.category == MagicCategory.BuffActive) CastBuff(data);
@@ -258,6 +274,7 @@ public class BattleManager : MonoBehaviour
         bool willDefeat = hpAfterThisHit <= 0;
 
         enemyStatus.TakeDamage(damage);
+        OnAttackHit?.Invoke(data, damage);
         Debug.Log($"{data.magicName} が発動！ {targetName} に {damage} ダメージ（残りHP: {hpAfterThisHit}）");
 
         if (willDefeat)
@@ -318,6 +335,7 @@ public class BattleManager : MonoBehaviour
         }
         if (!refreshed) activeBuffs.Add(new ActiveBuff { stat = data.buffStat, remaining = data.buffDuration });
 
+        OnBuffApplied?.Invoke(data.buffStat, data.buffDuration);
         Debug.Log($"{data.magicName} が発動！ {BuffStatLabel(data.buffStat)}を強化（残り{data.buffDuration}秒）");
     }
 
