@@ -102,8 +102,9 @@ public static class ResearchGraph
         _byId = new Dictionary<string, ResearchNodeDef>();
         _prereq = new Dictionary<string, string>();
 
-        // 中心から属性ラインの間へ放射する5本の「ステータス支柱」。小ノードだけの深いチェーン（各15段）。
-        // 総計 75 の小ノード。偶数段=主ステータス / 奇数段=副ステータスで全ステータス種を網羅する。
+        // 属性ラインの「間」の角度へ、小ノードだけの扇（15ノード×5＝75）を配置する。
+        // ライン枝と同じ ring7 までで収め、全体が円盤状になるように隙間を埋める（BuildSpoke）。
+        // 偶数index=主ステータス / 奇数index=副ステータスで全ステータス種を網羅する。
         BuildSpoke("ManaRegen", 36f, ResearchStat.ManaRegen, ResearchStat.ManaMax, "Fire");
         BuildSpoke("ManaMax", 108f, ResearchStat.ManaMax, ResearchStat.ManaRegen, "Thunder");
         BuildSpoke("Vitality", 180f, ResearchStat.Hp, ResearchStat.Def, "Wind");
@@ -115,8 +116,8 @@ public static class ResearchGraph
             float a = l.angle;
 
             // 根：単体基本 / 全体基本（コスト0・初期解放）
-            Magic(l.stem, null, 1, a - 12f);
-            Magic(l.aoe, null, 1, a + 12f);
+            Magic(l.stem, null, 1, a - 10f);
+            Magic(l.aoe, null, 1, a + 10f);
 
             // 枝の途中の小ノード（単体: e→a→[メガ]→c→[ギガ] / 全体: b→[メガ]→d→[ギガ]）
             ResearchStat s0 = StatFor(l.attr, 0);
@@ -125,34 +126,34 @@ public static class ResearchGraph
             ResearchStat s3 = StatFor(l.attr, 3);
             ResearchStat s4 = StatFor(l.attr, 4);
 
-            Stat("node_" + l.stem + "_e", s4, Amount(s4), l.stem, 2, a - 12f, Label(s4), Title(s4), Sm(2));
-            Stat("node_" + l.stem + "_a", s0, Amount(s0), "node_" + l.stem + "_e", 3, a - 12f, Label(s0), Title(s0), Sm(3), Sm(1));
-            Magic("Mega" + l.stem, "node_" + l.stem + "_a", 4, a - 12f);
-            Stat("node_" + l.stem + "_c", s2, Amount(s2), "Mega" + l.stem, 5, a - 12f, Label(s2), Title(s2), Md(1));
-            Magic("Giga" + l.stem, "node_" + l.stem + "_c", 6, a - 12f);
+            Stat("node_" + l.stem + "_e", s4, Amount(s4), l.stem, 2, a - 10f, Label(s4), Title(s4), Sm(2));
+            Stat("node_" + l.stem + "_a", s0, Amount(s0), "node_" + l.stem + "_e", 3, a - 10f, Label(s0), Title(s0), Sm(3), Sm(1));
+            Magic("Mega" + l.stem, "node_" + l.stem + "_a", 4, a - 10f);
+            Stat("node_" + l.stem + "_c", s2, Amount(s2), "Mega" + l.stem, 5, a - 10f, Label(s2), Title(s2), Md(1));
+            Magic("Giga" + l.stem, "node_" + l.stem + "_c", 6, a - 10f);
 
-            Stat("node_" + l.stem + "_b", s1, Amount(s1), l.aoe, 3, a + 12f, Label(s1), Title(s1), Sm(3));
-            Magic("Mega" + l.aoe, "node_" + l.stem + "_b", 4, a + 12f);
-            Stat("node_" + l.stem + "_d", s3, Amount(s3), "Mega" + l.aoe, 5, a + 12f, Label(s3), Title(s3), Md(1));
-            Magic("Giga" + l.aoe, "node_" + l.stem + "_d", 6, a + 12f);
+            Stat("node_" + l.stem + "_b", s1, Amount(s1), l.aoe, 3, a + 10f, Label(s1), Title(s1), Sm(3));
+            Magic("Mega" + l.aoe, "node_" + l.stem + "_b", 4, a + 10f);
+            Stat("node_" + l.stem + "_d", s3, Amount(s3), "Mega" + l.aoe, 5, a + 10f, Label(s3), Title(s3), Md(1));
+            Magic("Giga" + l.aoe, "node_" + l.stem + "_d", 6, a + 10f);
 
             // 状態異常特化 ← 単体メガ、付与率バフ ← 状態異常特化
-            Magic(l.status, "Mega" + l.stem, 5, a - 28f);
-            Magic("StatusRateBuff" + l.stem, l.status, 7, a - 28f);
+            Magic(l.status, "Mega" + l.stem, 5, a - 20f);
+            Magic("StatusRateBuff" + l.stem, l.status, 7, a - 20f);
 
             // 属性バフ ← 単体メガ
-            Magic("AttrBuff" + l.stem, "Mega" + l.stem, 6, a - 20f);
+            Magic("AttrBuff" + l.stem, "Mega" + l.stem, 6, a - 16f);
 
             // アクティブバフ ← 単体基本、パッシブ Lv1←バフ→Lv2→Lv3
-            Magic(l.buff, l.stem, 4, a + 28f);
-            Magic(l.buff + "PassiveLv1", l.buff, 5, a + 28f);
-            Magic(l.buff + "PassiveLv2", l.buff + "PassiveLv1", 6, a + 29f);
-            Magic(l.buff + "PassiveLv3", l.buff + "PassiveLv2", 7, a + 30f);
+            Magic(l.buff, l.stem, 4, a + 20f);
+            Magic(l.buff + "PassiveLv1", l.buff, 5, a + 20f);
+            Magic(l.buff + "PassiveLv2", l.buff + "PassiveLv1", 6, a + 21f);
+            Magic(l.buff + "PassiveLv3", l.buff + "PassiveLv2", 7, a + 22f);
         }
 
-        // 共通の補助魔法：マナリジェネ支柱の内側から伸ばす
-        Magic("AddSpell", "nsp_ManaRegen_2", 4, 44f);
-        Magic("DualSpell", "AddSpell", 6, 44f);
+        // 共通の補助魔法：マナリジェネ扇の中腹から、扇の空き角へ伸ばす
+        Magic("AddSpell", "nsp_ManaRegen_8", 5, 34f);
+        Magic("DualSpell", "AddSpell", 6, 34f);
     }
 
     private static void Magic(string id, string parentId, int ring, float angleDeg)
@@ -166,17 +167,24 @@ public static class ResearchGraph
         if (parentId != null) _prereq[id] = parentId;
     }
 
-    // 中心から角度 angle へ伸びる小ノードだけの15段チェーン。i=0 は ring0（親=属性基本魔法）、
-    // 以降 i 段目は ring=i で1つ手前を親にする。偶数段=primary / 奇数段=secondary ステータス。
-    private static void BuildSpoke(string key, float angle, ResearchStat primary, ResearchStat secondary, string rootParentMagic)
+    // 属性ラインの間へ広がる小ノード15個の「扇」。centerAngle を中心に ±10° の楔へ収め、
+    // ring0..ring7（ライン枝と同じ深さ）で末広がりに枝分かれさせる。index0 の親は属性基本魔法。
+    // 偶数index=primary / 奇数index=secondary ステータス。
+    private static readonly int[] SpokeRing = { 0, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7 };
+    private static readonly float[] SpokeAngleOffset = { 0f, 0f, -8f, 8f, -10f, 0f, 10f, -10f, 0f, 10f, -8f, 8f, -8f, 8f, 0f };
+    private static readonly int[] SpokeParentIndex = { -1, 0, 1, 1, 2, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12 };
+
+    private static void BuildSpoke(string key, float centerAngle, ResearchStat primary, ResearchStat secondary, string rootParentMagic)
     {
-        string prev = null;
-        for (int i = 0; i < 15; i++)
+        string[] ids = new string[SpokeRing.Length];
+        for (int i = 0; i < SpokeRing.Length; i++)
         {
             string id = "nsp_" + key + "_" + i;
+            ids[i] = id;
             ResearchStat st = (i % 2 == 0) ? primary : secondary;
-            Stat(id, st, Amount(st), i == 0 ? rootParentMagic : prev, i, angle, Label(st), Title(st), Sm(2 + i));
-            prev = id;
+            string parent = SpokeParentIndex[i] < 0 ? rootParentMagic : ids[SpokeParentIndex[i]];
+            Stat(id, st, Amount(st), parent, SpokeRing[i], centerAngle + SpokeAngleOffset[i],
+                Label(st), Title(st), Sm(2 + SpokeRing[i]));
         }
     }
 

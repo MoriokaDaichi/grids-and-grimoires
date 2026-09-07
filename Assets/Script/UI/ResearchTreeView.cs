@@ -29,8 +29,8 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
     private string selectedId;
     private bool built;
 
-    private const float MinZoom = 0.05f;
-    private const float MaxZoom = 1.2f;
+    private const float MinZoom = 0.08f;
+    private const float MaxZoom = 1.3f;
 
     void Awake()
     {
@@ -50,7 +50,7 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
         BuildOnce();
         if (content != null)
         {
-            content.localScale = Vector3.one * 0.13f;
+            content.localScale = Vector3.one * 0.16f;
             content.anchoredPosition = Vector2.zero;
         }
         if (legendText != null)

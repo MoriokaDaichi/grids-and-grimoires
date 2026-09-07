@@ -459,7 +459,7 @@ public static class BattleUISceneBuilder
         RectTransform content = NewUI("TreeContent", viewport);
         content.anchorMin = content.anchorMax = new Vector2(0.5f, 0.5f);
         content.pivot = new Vector2(0.5f, 0.5f);
-        content.sizeDelta = new Vector2(16000f, 16000f);
+        content.sizeDelta = new Vector2(10000f, 10000f);
         content.anchoredPosition = Vector2.zero;
 
         RectTransform edgeLayer = NewUI("Edges", content);
