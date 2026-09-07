@@ -71,6 +71,7 @@ public class BattleManager : MonoBehaviour
         foreach (MagicData data in gridManager.GetPlacedMagics())
         {
             bool isCastable = data.category == MagicCategory.Attack
+                || data.category == MagicCategory.StatusInflict
                 || data.category == MagicCategory.BuffActive
                 || data.category == MagicCategory.Support;
             if (!isCastable) continue;
@@ -201,8 +202,36 @@ public class BattleManager : MonoBehaviour
     private void ExecuteCast(MagicData data)
     {
         if (data.category == MagicCategory.Attack) CastAttack(data);
+        else if (data.category == MagicCategory.StatusInflict) CastStatusInflict(data);
         else if (data.category == MagicCategory.BuffActive) CastBuff(data);
         else if (data.category == MagicCategory.Support) CastSupport(data);
+    }
+
+    // 状態異常専用魔法(火あぶり/電磁波/かまいたち/目くらまし/目隠し)：
+    // ダメージは無く、高い付与率(企画書8章では80%)で対応する状態異常のみを与える。
+    // lastCastAttackSpell は更新しない ＝ アッド/デュアルスペルの再発動対象は攻撃魔法だけに限る。
+    private void CastStatusInflict(MagicData data)
+    {
+        if (enemyStatus.hp <= 0)
+        {
+            battleActive = false;
+            return;
+        }
+
+        if (data.statusEffect == StatusEffectType.None) return;
+
+        string targetName = enemyStatus.enemyName;
+        int chance = data.statusEffectChance + GetOrZeroInt(passiveStatusRateBonus, data.attribute);
+
+        if (Random.Range(0, 100) < chance)
+        {
+            enemyStatus.ApplyStatusEffect(data.statusEffect);
+            Debug.Log($"{data.magicName} が発動！ {targetName} は {StatusEffectLabel(data.statusEffect)} 状態になった！");
+        }
+        else
+        {
+            Debug.Log($"{data.magicName} が発動！ しかし {targetName} には効かなかった。");
+        }
     }
 
     private void CastAttack(MagicData data)
