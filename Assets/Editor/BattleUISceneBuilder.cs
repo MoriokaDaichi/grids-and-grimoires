@@ -40,6 +40,7 @@ public static class BattleUISceneBuilder
         Transform canvasT = canvas.transform;
 
         DestroyExisting(canvasT, "BattleRoot");
+        DestroyExisting(canvasT, "WaveClearRoot");
         DestroyExisting(canvasT, "RewardRoot");
         DestroyExisting(canvasT, "InventoryPanel");
         DestroyExisting(canvasT, "HideoutRoot");
@@ -56,6 +57,7 @@ public static class BattleUISceneBuilder
         RemoveStandaloneEnemyStatus();
 
         GameObject battleRoot = BuildBattleRoot(canvasT);
+        GameObject waveClearRoot = BuildWaveClearRoot(canvasT);
         GameObject rewardRoot = BuildRewardRoot(canvasT);
         GameObject inventoryPanel = BuildInventoryPanel(canvasT);
         GameObject hideoutRoot = BuildHideoutRoot(canvasT);
@@ -106,6 +108,7 @@ public static class BattleUISceneBuilder
         so.FindProperty("hideoutRoot").objectReferenceValue = hideoutRoot;
         so.FindProperty("tradeRoot").objectReferenceValue = tradeRoot;
         so.FindProperty("battleRoot").objectReferenceValue = battleRoot;
+        so.FindProperty("waveClearRoot").objectReferenceValue = waveClearRoot;
         so.FindProperty("rewardRoot").objectReferenceValue = rewardRoot;
         so.FindProperty("sortieButton").objectReferenceValue = sortie;
         so.FindProperty("hideoutButton").objectReferenceValue = hideoutButton.GetComponent<Button>();
@@ -115,6 +118,7 @@ public static class BattleUISceneBuilder
         hideoutRoot.SetActive(false);
         tradeRoot.SetActive(false);
         battleRoot.SetActive(false);
+        waveClearRoot.SetActive(false);
         rewardRoot.SetActive(false);
 
         EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
@@ -226,6 +230,65 @@ public static class BattleUISceneBuilder
         so.FindProperty("damageNumberPrefab").objectReferenceValue = Load("DamageNumber");
         so.FindProperty("statusIconPrefab").objectReferenceValue = Load("StatusEffectIcon");
         so.FindProperty("buffIndicatorPrefab").objectReferenceValue = Load("BuffIndicator");
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return root.gameObject;
+    }
+
+    // ---------------------------------------------------------------- WaveClearRoot
+
+    private static GameObject BuildWaveClearRoot(Transform canvas)
+    {
+        RectTransform root = NewUI("WaveClearRoot", canvas);
+        Stretch(root);
+        AddImage(root, new Color(0.07f, 0.10f, 0.11f, 0.96f), true);
+
+        TMP_Text depth = AddText(root, "DepthText", "深度 1 突破", 40, TextAlignmentOptions.Center);
+        Frame(depth.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -90f), new Vector2(760f, 70f));
+
+        TMP_Text hint = AddText(root, "HintText", "進むほど敵は強大に。脱出すれば戦利品を持ち帰れる。", 18, TextAlignmentOptions.Center);
+        Frame(hint.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(760f, 30f));
+        hint.color = new Color(1f, 1f, 1f, 0.7f);
+
+        RectTransform listPanel = NewUI("LootListPanel", root);
+        Frame(listPanel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 30f), new Vector2(420f, 280f));
+        AddImage(listPanel, new Color(0f, 0f, 0f, 0.35f), false);
+
+        RectTransform listRoot = NewUI("LootListRoot", listPanel);
+        Frame(listRoot, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(400f, 260f));
+        VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 6f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.padding = new RectOffset(6, 6, 6, 6);
+        ContentSizeFitter csf = listRoot.gameObject.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        RectTransform contRt = NewUI("ContinueButton", root);
+        Frame(contRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-140f, 80f), new Vector2(240f, 64f));
+        Image contImg = AddImage(contRt, new Color(0.6f, 0.35f, 0.2f, 1f), true);
+        Button contBtn = contRt.gameObject.AddComponent<Button>();
+        contBtn.targetGraphic = contImg;
+        TMP_Text contLabel = AddText(root, "Label", "深層へ進む", 24, TextAlignmentOptions.Center);
+        contLabel.transform.SetParent(contRt, false);
+        Stretch(contLabel.rectTransform);
+
+        RectTransform escRt = NewUI("EscapeButton", root);
+        Frame(escRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(140f, 80f), new Vector2(240f, 64f));
+        Image escImg = AddImage(escRt, new Color(0.25f, 0.4f, 0.7f, 1f), true);
+        Button escBtn = escRt.gameObject.AddComponent<Button>();
+        escBtn.targetGraphic = escImg;
+        TMP_Text escLabel = AddText(root, "Label", "脱出する", 24, TextAlignmentOptions.Center);
+        escLabel.transform.SetParent(escRt, false);
+        Stretch(escLabel.rectTransform);
+
+        WaveClearPanel panel = root.gameObject.AddComponent<WaveClearPanel>();
+        SerializedObject so = new SerializedObject(panel);
+        so.FindProperty("depthText").objectReferenceValue = depth;
+        so.FindProperty("hintText").objectReferenceValue = hint;
+        so.FindProperty("lootListRoot").objectReferenceValue = listRoot;
+        so.FindProperty("dropRowPrefab").objectReferenceValue = Load("DropRow");
+        so.FindProperty("continueButton").objectReferenceValue = contBtn;
+        so.FindProperty("escapeButton").objectReferenceValue = escBtn;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         return root.gameObject;

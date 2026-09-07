@@ -14,6 +14,9 @@ public class EnemyRoster : MonoBehaviour
     private readonly List<EnemyStatus> living = new List<EnemyStatus>();
     public IReadOnlyList<EnemyStatus> Living { get { return living; } }
 
+    // 同時に出せる敵の最大数（プールサイズ）
+    public int Capacity { get { return pool.Count; } }
+
     // ウェーブの敵構成が変わった / 全滅した通知
     public Action OnRosterChanged;
     public Action OnWaveDefeated;
@@ -68,6 +71,11 @@ public class EnemyRoster : MonoBehaviour
 
     public void SpawnWave(IList<EnemyData> enemies)
     {
+        SpawnWave(enemies, WaveScaling.None);
+    }
+
+    public void SpawnWave(IList<EnemyData> enemies, WaveScaling scaling)
+    {
         Generation++;
 
         foreach (EnemyStatus es in pool) es.gameObject.SetActive(false);
@@ -78,7 +86,7 @@ public class EnemyRoster : MonoBehaviour
         {
             EnemyStatus es = pool[i];
             es.gameObject.SetActive(true);
-            es.Setup(enemies[i]);
+            es.Setup(enemies[i], scaling);
             living.Add(es);
         }
 

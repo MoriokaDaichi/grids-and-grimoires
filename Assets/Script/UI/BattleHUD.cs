@@ -306,7 +306,7 @@ public class BattleHUD : MonoBehaviour
 
     private void HandleWaveChanged(int waveNo, int total, string label)
     {
-        if (waveText != null) waveText.text = waveNo + " / " + total;
+        if (waveText != null) waveText.text = total < 0 ? "深度 " + waveNo : waveNo + " / " + total;
         if (enemyNameText != null && primary != null) enemyNameText.text = primary.enemyName;
         if (primary != null) ApplyEnemySprite(primary.sprite);
         HandleRosterChanged();

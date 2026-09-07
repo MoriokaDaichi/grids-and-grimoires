@@ -38,6 +38,13 @@ public class BattleManager : MonoBehaviour
     // 現在戦闘が進行中か（DungeonManagerが空杖出撃を検知するのに使う）
     public bool BattleActive { get { return battleActive; } }
 
+    // ウェーブ突破後の「脱出／続行」選択待ちなど、外部から戦闘ループを止める。
+    // 次の StartBattle() で再開する。
+    public void EndBattle()
+    {
+        battleActive = false;
+    }
+
     // 戦闘UI（BattleHUD）向けの通知。ロジックには影響しない
     public System.Action<MagicData> OnCastFired;          // 魔法が発動した（種別問わず）
     public System.Action<MagicData, int> OnAttackHit;     // 攻撃魔法が敵に命中した (魔法, ダメージ)

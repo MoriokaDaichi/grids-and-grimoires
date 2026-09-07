@@ -22,6 +22,9 @@ public class EnemyStatus : MonoBehaviour
 
     public int hp { get; private set; }
 
+    // このインスタンスの元になった EnemyData（トレーダーのタスク進捗などで種類を参照する）
+    public EnemyData source { get; private set; }
+
     // 属性ごとの被ダメージ倍率（Setupで EnemyData から構築）。未登録の属性は 1.0。
     private readonly Dictionary<MagicAttribute, float> resistances = new Dictionary<MagicAttribute, float>();
 
@@ -57,10 +60,17 @@ public class EnemyStatus : MonoBehaviour
     // EnemyDataの数値を反映してHPを全回復する（ダンジョンの次の敵へ切り替える際に使用）
     public void Setup(EnemyData data)
     {
+        Setup(data, WaveScaling.None);
+    }
+
+    // 深度スケーリング倍率を掛けて反映する（エンドレスダンジョン用）
+    public void Setup(EnemyData data, WaveScaling scaling)
+    {
+        source = data;
         enemyName = data.enemyName;
-        maxHp = data.maxHp;
-        atk = data.atk;
-        def = data.def;
+        maxHp = Mathf.Max(1, Mathf.RoundToInt(data.maxHp * scaling.hpMult));
+        atk = Mathf.Max(0, Mathf.RoundToInt(data.atk * scaling.atkMult));
+        def = Mathf.Max(0, Mathf.RoundToInt(data.def * scaling.defMult));
         attackInterval = data.attackInterval;
         attribute = data.attribute;
         sprite = data.sprite;

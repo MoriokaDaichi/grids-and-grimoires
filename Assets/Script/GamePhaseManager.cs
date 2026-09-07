@@ -6,15 +6,16 @@ using UnityEngine.UI;
 // （企画書のTarkov型ホームハブ Character/Trade は後続フェーズ）
 public class GamePhaseManager : MonoBehaviour
 {
-    public enum GamePhase { Build, Hideout, Trade, Battle, Reward }
+    public enum GamePhase { Build, Hideout, Trade, Battle, WaveClear, Reward }
 
     [Header("構築フェーズで表示するオブジェクト（杖グリッド/魔法一覧/ステータス/出撃ボタン等）")]
     [SerializeField] private GameObject[] buildPhaseObjects;
 
-    [Header("研究・トレード・戦闘・報酬の画面ルート")]
+    [Header("研究・トレード・戦闘・ウェーブ突破・報酬の画面ルート")]
     [SerializeField] private GameObject hideoutRoot;
     [SerializeField] private GameObject tradeRoot;
     [SerializeField] private GameObject battleRoot;
+    [SerializeField] private GameObject waveClearRoot;
     [SerializeField] private GameObject rewardRoot;
 
     [Header("ボタン（Awakeでクリックを配線）")]
@@ -42,6 +43,7 @@ public class GamePhaseManager : MonoBehaviour
         {
             dungeon.OnDungeonCleared += HandleCleared;
             dungeon.OnDungeonFailed += HandleFailed;
+            dungeon.OnWaveCleared += HandleWaveCleared;
         }
     }
 
@@ -51,6 +53,7 @@ public class GamePhaseManager : MonoBehaviour
         {
             dungeon.OnDungeonCleared -= HandleCleared;
             dungeon.OnDungeonFailed -= HandleFailed;
+            dungeon.OnWaveCleared -= HandleWaveCleared;
         }
     }
 
@@ -73,6 +76,7 @@ public class GamePhaseManager : MonoBehaviour
         if (hideoutRoot != null) hideoutRoot.SetActive(phase == GamePhase.Hideout);
         if (tradeRoot != null) tradeRoot.SetActive(phase == GamePhase.Trade);
         if (battleRoot != null) battleRoot.SetActive(phase == GamePhase.Battle);
+        if (waveClearRoot != null) waveClearRoot.SetActive(phase == GamePhase.WaveClear);
         if (rewardRoot != null) rewardRoot.SetActive(phase == GamePhase.Reward);
 
         OnPhaseChanged?.Invoke(phase);
@@ -106,6 +110,26 @@ public class GamePhaseManager : MonoBehaviour
     public void ReturnToBuild()
     {
         GoTo(GamePhase.Build);
+    }
+
+    // ウェーブ突破画面の「深層へ進む」ボタンから呼ぶ
+    public void ContinueRun()
+    {
+        if (Current != GamePhase.WaveClear || dungeon == null) return;
+        GoTo(GamePhase.Battle);
+        dungeon.ContinueDeeper();
+    }
+
+    // ウェーブ突破画面の「脱出する」ボタンから呼ぶ（Escape が OnDungeonCleared を発火 → 報酬へ）
+    public void EscapeRun()
+    {
+        if (Current != GamePhase.WaveClear || dungeon == null) return;
+        dungeon.Escape();
+    }
+
+    private void HandleWaveCleared(int clearedDepth)
+    {
+        GoTo(GamePhase.WaveClear);
     }
 
     private void HandleCleared()

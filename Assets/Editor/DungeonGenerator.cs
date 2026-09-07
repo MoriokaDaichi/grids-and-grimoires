@@ -2,7 +2,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// 開いているシーンの DungeonManager.waves に、複数敵を含む仮のウェーブ構成を設定する。
+// 開いているシーンの DungeonManager.enemyPool に、エンドレスダンジョン用の敵プールを設定する。
+// 弱い順に並べる（EndlessWaveGenerator が深度に応じて先頭から除外していく）。
 // メニュー: Grimoire > Generate Dungeon
 public static class DungeonGenerator
 {
@@ -18,41 +19,38 @@ public static class DungeonGenerator
             return;
         }
 
-        EnemyData slime = Load("Slime");
-        EnemyData goblin = Load("Goblin");
-        EnemyData rat = Load("GiantRat");
-        EnemyData guard = Load("ForestGuard");
-        if (slime == null || goblin == null || rat == null || guard == null)
+        // 弱い → 強い の順
+        string[] order = { "Slime", "GiantRat", "Goblin", "ForestGuard" };
+        EnemyData[] enemies = new EnemyData[order.Length];
+        for (int i = 0; i < order.Length; i++)
         {
-            Debug.LogError("[Grimoire] Assets/EnemyData の敵アセットが揃っていません。先に Generate Enemy Data を実行してください。");
-            return;
+            enemies[i] = Load(order[i]);
+            if (enemies[i] == null)
+            {
+                Debug.LogError($"[Grimoire] {order[i]}.asset が見つかりません。先に Generate Enemy Data を実行してください。");
+                return;
+            }
         }
 
         SerializedObject so = new SerializedObject(dm);
-        SerializedProperty waves = so.FindProperty("waves");
-        waves.arraySize = 0;
 
-        AddWave(waves, slime);
-        AddWave(waves, goblin, goblin);
-        AddWave(waves, rat, slime);
-        AddWave(waves, goblin, rat, slime);
-        AddWave(waves, guard);
+        // 旧・固定ウェーブはクリア（エンドレス経路を使う）
+        SerializedProperty waves = so.FindProperty("waves");
+        if (waves != null) waves.arraySize = 0;
+
+        SerializedProperty pool = so.FindProperty("enemyPool");
+        pool.arraySize = enemies.Length;
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            pool.GetArrayElementAtIndex(i).objectReferenceValue = enemies[i];
+        }
+
+        SerializedProperty seed = so.FindProperty("seed");
+        if (seed != null) seed.intValue = 0; // プレイごとにランダム
 
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorSceneManager.MarkSceneDirty(dm.gameObject.scene);
-        Debug.Log("[Grimoire] ダンジョン（5ウェーブ・敵グループ入り・仮バランス）を生成しました。シーンを保存してください。");
-    }
-
-    private static void AddWave(SerializedProperty waves, params EnemyData[] enemies)
-    {
-        int wi = waves.arraySize;
-        waves.arraySize = wi + 1;
-        SerializedProperty enemyList = waves.GetArrayElementAtIndex(wi).FindPropertyRelative("enemies");
-        enemyList.arraySize = enemies.Length;
-        for (int i = 0; i < enemies.Length; i++)
-        {
-            enemyList.GetArrayElementAtIndex(i).objectReferenceValue = enemies[i];
-        }
+        Debug.Log("[Grimoire] エンドレスダンジョンの敵プール（スライム/大ネズミ/ゴブリン/森の番人・仮バランス）を設定しました。シーンを保存してください。");
     }
 
     private static EnemyData Load(string fileId)

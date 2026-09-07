@@ -51,7 +51,10 @@ public class RewardScreen : MonoBehaviour
 
         if (resultText != null)
         {
-            resultText.text = cleared ? "ダンジョンクリア！" : "ダンジョンから撤退した…";
+            int reached = dungeon != null ? dungeon.Depth : 0;
+            resultText.text = cleared
+                ? "深度 " + reached + " まで到達して脱出した！"
+                : "深度 " + reached + " で力尽きた…";
         }
 
         if (dropListRoot != null)
