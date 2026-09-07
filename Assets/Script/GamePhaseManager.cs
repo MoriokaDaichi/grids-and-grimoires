@@ -6,19 +6,21 @@ using UnityEngine.UI;
 // （企画書のTarkov型ホームハブ Character/Trade は後続フェーズ）
 public class GamePhaseManager : MonoBehaviour
 {
-    public enum GamePhase { Build, Hideout, Battle, Reward }
+    public enum GamePhase { Build, Hideout, Trade, Battle, Reward }
 
     [Header("構築フェーズで表示するオブジェクト（杖グリッド/魔法一覧/ステータス/出撃ボタン等）")]
     [SerializeField] private GameObject[] buildPhaseObjects;
 
-    [Header("研究・戦闘・報酬の画面ルート")]
+    [Header("研究・トレード・戦闘・報酬の画面ルート")]
     [SerializeField] private GameObject hideoutRoot;
+    [SerializeField] private GameObject tradeRoot;
     [SerializeField] private GameObject battleRoot;
     [SerializeField] private GameObject rewardRoot;
 
     [Header("ボタン（Awakeでクリックを配線）")]
     [SerializeField] private Button sortieButton;
     [SerializeField] private Button hideoutButton;
+    [SerializeField] private Button tradeButton;
 
     public GamePhase Current { get; private set; }
     public bool LastRunCleared { get; private set; }
@@ -31,6 +33,7 @@ public class GamePhaseManager : MonoBehaviour
         dungeon = Object.FindFirstObjectByType<DungeonManager>();
         if (sortieButton != null) sortieButton.onClick.AddListener(StartSortie);
         if (hideoutButton != null) hideoutButton.onClick.AddListener(GoToHideout);
+        if (tradeButton != null) tradeButton.onClick.AddListener(GoToTrade);
     }
 
     void OnEnable()
@@ -68,6 +71,7 @@ public class GamePhaseManager : MonoBehaviour
             }
         }
         if (hideoutRoot != null) hideoutRoot.SetActive(phase == GamePhase.Hideout);
+        if (tradeRoot != null) tradeRoot.SetActive(phase == GamePhase.Trade);
         if (battleRoot != null) battleRoot.SetActive(phase == GamePhase.Battle);
         if (rewardRoot != null) rewardRoot.SetActive(phase == GamePhase.Reward);
 
@@ -78,6 +82,12 @@ public class GamePhaseManager : MonoBehaviour
     public void GoToHideout()
     {
         if (Current == GamePhase.Build) GoTo(GamePhase.Hideout);
+    }
+
+    // 「トレード」ボタンから呼ぶ
+    public void GoToTrade()
+    {
+        if (Current == GamePhase.Build) GoTo(GamePhase.Trade);
     }
 
     // 出撃ボタンから呼ぶ。杖に発動可能な魔法が無ければ構築画面に留まる。

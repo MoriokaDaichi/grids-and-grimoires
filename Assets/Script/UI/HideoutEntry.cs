@@ -13,18 +13,24 @@ public class HideoutEntry : MonoBehaviour
 
     public void Bind(string displayName, string costText, bool unlocked, bool canUnlock, Action onUnlockClicked)
     {
+        Bind(displayName, costText, unlocked ? "解放済" : "解放", !unlocked && canUnlock, unlocked ? null : onUnlockClicked);
+    }
+
+    // 汎用: 研究・トレードなどで使い回す
+    public void Bind(string displayName, string detailText, string buttonText, bool interactable, Action onClicked)
+    {
         if (nameLabel != null) nameLabel.text = displayName;
-        if (costLabel != null) costLabel.text = costText;
+        if (costLabel != null) costLabel.text = detailText;
 
         if (actionButton != null)
         {
             actionButton.onClick.RemoveAllListeners();
-            if (onUnlockClicked != null)
+            if (onClicked != null)
             {
-                actionButton.onClick.AddListener(() => onUnlockClicked());
+                actionButton.onClick.AddListener(() => onClicked());
             }
-            actionButton.interactable = !unlocked && canUnlock;
+            actionButton.interactable = interactable;
         }
-        if (actionLabel != null) actionLabel.text = unlocked ? "解放済" : "解放";
+        if (actionLabel != null) actionLabel.text = buttonText;
     }
 }

@@ -49,6 +49,14 @@ public class PlayerStatus : MonoBehaviour
         if (currentHp <= 0) OnDefeated?.Invoke();
     }
 
+    // トレード等でステータスポイントを増やす
+    public void AddStatsPoint(int amount)
+    {
+        if (amount <= 0) return;
+        statsPoint += amount;
+        OnStatusChanged?.Invoke();
+    }
+
     public void AddStat(string type)
     {
         if (statsPoint <= 0) return;

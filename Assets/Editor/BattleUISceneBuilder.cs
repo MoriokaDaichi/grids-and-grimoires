@@ -44,17 +44,22 @@ public static class BattleUISceneBuilder
         DestroyExisting(canvasT, "InventoryPanel");
         DestroyExisting(canvasT, "HideoutRoot");
         DestroyExisting(canvasT, "HideoutButton");
+        DestroyExisting(canvasT, "TradeRoot");
+        DestroyExisting(canvasT, "TradeButton");
         GameObject oldGpm = GameObject.Find("GamePhaseManager");
         if (oldGpm != null) Object.DestroyImmediate(oldGpm);
 
         EnsureSingleton<PlayerInventory>("PlayerInventory");
         EnsureSingleton<ResearchManager>("ResearchManager");
+        EnsureSingleton<TradeManager>("TradeManager");
 
         GameObject battleRoot = BuildBattleRoot(canvasT);
         GameObject rewardRoot = BuildRewardRoot(canvasT);
         GameObject inventoryPanel = BuildInventoryPanel(canvasT);
         GameObject hideoutRoot = BuildHideoutRoot(canvasT);
-        GameObject hideoutButton = BuildHideoutButton(canvasT);
+        GameObject tradeRoot = BuildTradeRoot(canvasT);
+        GameObject hideoutButton = BuildCornerButton(canvasT, "HideoutButton", "研究", 16f, new Color(0.30f, 0.26f, 0.45f, 1f));
+        GameObject tradeButton = BuildCornerButton(canvasT, "TradeButton", "トレード", 188f, new Color(0.26f, 0.40f, 0.42f, 1f));
 
         GameObject gpmGo = new GameObject("GamePhaseManager");
         GamePhaseManager gpm = gpmGo.AddComponent<GamePhaseManager>();
@@ -89,6 +94,7 @@ public static class BattleUISceneBuilder
         }
         buildObjs.Add(inventoryPanel);
         buildObjs.Add(hideoutButton);
+        buildObjs.Add(tradeButton);
 
         SerializedObject so = new SerializedObject(gpm);
         SerializedProperty arr = so.FindProperty("buildPhaseObjects");
@@ -96,13 +102,16 @@ public static class BattleUISceneBuilder
         for (int i = 0; i < buildObjs.Count; i++)
             arr.GetArrayElementAtIndex(i).objectReferenceValue = buildObjs[i];
         so.FindProperty("hideoutRoot").objectReferenceValue = hideoutRoot;
+        so.FindProperty("tradeRoot").objectReferenceValue = tradeRoot;
         so.FindProperty("battleRoot").objectReferenceValue = battleRoot;
         so.FindProperty("rewardRoot").objectReferenceValue = rewardRoot;
         so.FindProperty("sortieButton").objectReferenceValue = sortie;
         so.FindProperty("hideoutButton").objectReferenceValue = hideoutButton.GetComponent<Button>();
+        so.FindProperty("tradeButton").objectReferenceValue = tradeButton.GetComponent<Button>();
         so.ApplyModifiedPropertiesWithoutUndo();
 
         hideoutRoot.SetActive(false);
+        tradeRoot.SetActive(false);
         battleRoot.SetActive(false);
         rewardRoot.SetActive(false);
 
@@ -286,26 +295,27 @@ public static class BattleUISceneBuilder
 
     // ---------------------------------------------------------------- HideoutRoot（研究画面）
 
-    private static GameObject BuildHideoutRoot(Transform canvas)
+    // スクロール可能なリストパネル（研究・トレード共通）を組む。listRoot と closeBtn を out で返す。
+    private static GameObject BuildScrollPanel(Transform canvas, string rootName, string titleText,
+        out RectTransform listRoot, out Button closeBtn)
     {
-        RectTransform root = NewUI("HideoutRoot", canvas);
+        RectTransform root = NewUI(rootName, canvas);
         Stretch(root);
         AddImage(root, new Color(0.10f, 0.11f, 0.14f, 1f), true);
 
-        TMP_Text title = AddText(root, "Title", "研究 — 隠れ家", 34, TextAlignmentOptions.Center);
+        TMP_Text title = AddText(root, "Title", titleText, 34, TextAlignmentOptions.Center);
         Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(700f, 60f));
 
-        // スクロールビュー
         RectTransform viewport = NewUI("Viewport", root);
         Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(760f, 520f));
-        Image vpImg = AddImage(viewport, new Color(0f, 0f, 0f, 0.3f), true);
+        AddImage(viewport, new Color(0f, 0f, 0f, 0.3f), true);
         Mask mask = viewport.gameObject.AddComponent<Mask>();
         mask.showMaskGraphic = true;
         ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
         scroll.horizontal = false;
         scroll.vertical = true;
 
-        RectTransform listRoot = NewUI("ListRoot", viewport);
+        listRoot = NewUI("ListRoot", viewport);
         listRoot.anchorMin = new Vector2(0f, 1f);
         listRoot.anchorMax = new Vector2(1f, 1f);
         listRoot.pivot = new Vector2(0.5f, 1f);
@@ -324,29 +334,54 @@ public static class BattleUISceneBuilder
         RectTransform closeRt = NewUI("CloseButton", root);
         Frame(closeRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(220f, 56f));
         Image closeImg = AddImage(closeRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
-        Button closeBtn = closeRt.gameObject.AddComponent<Button>();
+        closeBtn = closeRt.gameObject.AddComponent<Button>();
         closeBtn.targetGraphic = closeImg;
         TMP_Text closeLbl = AddText(closeRt.gameObject.transform, "Label", "戻る", 24, TextAlignmentOptions.Center);
         Stretch(closeLbl.rectTransform);
 
-        HideoutPanel panel = root.gameObject.AddComponent<HideoutPanel>();
+        return root.gameObject;
+    }
+
+    private static GameObject BuildHideoutRoot(Transform canvas)
+    {
+        RectTransform listRoot;
+        Button closeBtn;
+        GameObject root = BuildScrollPanel(canvas, "HideoutRoot", "研究 — 隠れ家", out listRoot, out closeBtn);
+
+        HideoutPanel panel = root.AddComponent<HideoutPanel>();
         SerializedObject so = new SerializedObject(panel);
         so.FindProperty("listRoot").objectReferenceValue = listRoot;
         so.FindProperty("entryPrefab").objectReferenceValue = Load("HideoutEntry");
         so.FindProperty("closeButton").objectReferenceValue = closeBtn;
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        return root.gameObject;
+        return root;
     }
 
-    private static GameObject BuildHideoutButton(Transform canvas)
+    private static GameObject BuildTradeRoot(Transform canvas)
     {
-        RectTransform rt = NewUI("HideoutButton", canvas);
-        Frame(rt, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(16f, 16f), new Vector2(160f, 52f));
-        Image img = AddImage(rt, new Color(0.30f, 0.26f, 0.45f, 1f), true);
+        RectTransform listRoot;
+        Button closeBtn;
+        GameObject root = BuildScrollPanel(canvas, "TradeRoot", "トレード", out listRoot, out closeBtn);
+
+        TradePanel panel = root.AddComponent<TradePanel>();
+        SerializedObject so = new SerializedObject(panel);
+        so.FindProperty("listRoot").objectReferenceValue = listRoot;
+        so.FindProperty("entryPrefab").objectReferenceValue = Load("HideoutEntry");
+        so.FindProperty("closeButton").objectReferenceValue = closeBtn;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return root;
+    }
+
+    private static GameObject BuildCornerButton(Transform canvas, string name, string label, float xOffset, Color color)
+    {
+        RectTransform rt = NewUI(name, canvas);
+        Frame(rt, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(xOffset, 16f), new Vector2(160f, 52f));
+        Image img = AddImage(rt, color, true);
         Button btn = rt.gameObject.AddComponent<Button>();
         btn.targetGraphic = img;
-        TMP_Text lbl = AddText(rt.gameObject.transform, "Label", "研究", 22, TextAlignmentOptions.Center);
+        TMP_Text lbl = AddText(rt.gameObject.transform, "Label", label, 22, TextAlignmentOptions.Center);
         Stretch(lbl.rectTransform);
         return rt.gameObject;
     }
