@@ -2,7 +2,10 @@
     "name": "GridsAndGrimoires.Editor",
     "rootNamespace": "",
     "references": [
-        "GridsAndGrimoires.Runtime"
+        "GridsAndGrimoires.Runtime",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "UnityEditor.UI"
     ],
     "includePlatforms": [
         "Editor"
