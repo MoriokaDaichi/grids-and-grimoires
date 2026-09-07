@@ -18,6 +18,7 @@ MonoBehaviour:
   range: 2
   interval: 7
   damage: 6
+  manaCost: 24
   statusEffect: 1
   statusEffectChance: 10
   buffStat: 0

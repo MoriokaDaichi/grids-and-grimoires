@@ -43,6 +43,7 @@ public class BattleManager : MonoBehaviour
     public System.Action<MagicData, int> OnAttackHit;     // 攻撃魔法が敵に命中した (魔法, ダメージ)
     public System.Action<BuffStat, float> OnBuffApplied;  // アクティブバフが発動/更新された (対象, 効果時間)
     public System.Action<BuffStat> OnBuffExpired;         // アクティブバフが切れた
+    public System.Action<MagicData> OnManaStarved;        // マナ不足で発動を見送った
 
     // 補助魔法(アッドスペル/デュアルスペル)が参照する「直前に発動した攻撃魔法」
     private MagicData lastCastAttackSpell;
@@ -184,6 +185,9 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
+        // マナの自然回復（戦闘中のみ）
+        playerStatus.RegenMana(Time.deltaTime);
+
         // ループ中にStartBattle()が呼ばれてもcastsは新リストに差し替わるだけなので、スナップショットは安全に回せる
         List<CastState> currentCasts = casts;
         foreach (CastState cast in currentCasts)
@@ -191,6 +195,16 @@ public class BattleManager : MonoBehaviour
             cast.timer -= Time.deltaTime;
             if (cast.timer <= 0f)
             {
+                int manaCost = ManaRules.CastCost(cast.data);
+                if (!playerStatus.HasMana(manaCost))
+                {
+                    // マナ不足：発動間隔は消費せず、少し待ってから再試行する
+                    cast.timer = ManaRules.StarvedRetryDelay;
+                    OnManaStarved?.Invoke(cast.data);
+                    continue;
+                }
+                playerStatus.SpendMana(manaCost);
+
                 ExecuteCast(cast.data);
                 if (casts != currentCasts) return; // ウェーブが切り替わった
                 if (!battleActive) return;          // 最終ウェーブ全滅 or 敗北

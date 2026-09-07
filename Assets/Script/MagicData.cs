@@ -78,6 +78,7 @@ public class MagicData : ScriptableObject
     public MagicRange range = MagicRange.Single;
     public float interval;          // 発動間隔（秒）
     public int damage;              // ダメージ
+    public int manaCost;            // 発動に必要なマナ（0で自動算出＝ManaRules.CastCost。生成時に確定値を書き込む）
 
     [Header("状態異常")]
     public StatusEffectType statusEffect = StatusEffectType.None;

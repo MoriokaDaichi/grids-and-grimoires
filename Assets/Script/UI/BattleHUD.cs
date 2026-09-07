@@ -19,6 +19,8 @@ public class BattleHUD : MonoBehaviour
     [Header("プレイヤー")]
     [SerializeField] private Image playerHpFill;
     [SerializeField] private TMP_Text playerHpText;
+    [SerializeField] private Image playerManaFill;
+    [SerializeField] private TMP_Text playerManaText;
 
     [Header("バフ")]
     [SerializeField] private RectTransform buffIconRoot;
@@ -64,6 +66,7 @@ public class BattleHUD : MonoBehaviour
         {
             player.OnStatusChanged += RefreshPlayerHp;
             player.OnDamaged += HandlePlayerDamaged;
+            player.OnManaChanged += RefreshPlayerMana;
         }
         if (battle != null)
         {
@@ -71,6 +74,7 @@ public class BattleHUD : MonoBehaviour
             battle.OnCastFired += HandleCastFired;
             battle.OnBuffApplied += HandleBuffApplied;
             battle.OnBuffExpired += HandleBuffExpired;
+            battle.OnManaStarved += HandleManaStarved;
         }
         if (dungeon != null)
         {
@@ -79,6 +83,7 @@ public class BattleHUD : MonoBehaviour
 
         HandleRosterChanged();
         RefreshPlayerHp();
+        RefreshPlayerMana();
         if (castLogText != null) castLogText.text = "";
     }
 
@@ -91,6 +96,7 @@ public class BattleHUD : MonoBehaviour
         {
             player.OnStatusChanged -= RefreshPlayerHp;
             player.OnDamaged -= HandlePlayerDamaged;
+            player.OnManaChanged -= RefreshPlayerMana;
         }
         if (battle != null)
         {
@@ -98,6 +104,7 @@ public class BattleHUD : MonoBehaviour
             battle.OnCastFired -= HandleCastFired;
             battle.OnBuffApplied -= HandleBuffApplied;
             battle.OnBuffExpired -= HandleBuffExpired;
+            battle.OnManaStarved -= HandleManaStarved;
         }
         if (dungeon != null)
         {
@@ -181,6 +188,22 @@ public class BattleHUD : MonoBehaviour
         float ratio = player.hp > 0 ? (float)player.currentHp / player.hp : 0f;
         if (playerHpFill != null) playerHpFill.fillAmount = Mathf.Clamp01(ratio);
         if (playerHpText != null) playerHpText.text = Mathf.Max(0, player.currentHp) + " / " + player.hp;
+    }
+
+    private void RefreshPlayerMana()
+    {
+        if (player == null) return;
+        float ratio = player.maxMana > 0 ? player.currentMana / player.maxMana : 0f;
+        if (playerManaFill != null) playerManaFill.fillAmount = Mathf.Clamp01(ratio);
+        if (playerManaText != null)
+            playerManaText.text = Mathf.FloorToInt(Mathf.Max(0f, player.currentMana)) + " / " + player.maxMana;
+    }
+
+    private void HandleManaStarved(MagicData spell)
+    {
+        if (castLogText == null) return;
+        castLogText.text = "マナ不足…";
+        castLogHideAt = Time.time + castLogVisibleSeconds;
     }
 
     // --- 状態異常（代表個体） ---

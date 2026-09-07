@@ -416,6 +416,10 @@ public static class MagicDataGenerator
             asset.range = d.Range;
             asset.interval = d.Interval;
             asset.damage = d.Damage;
+
+            // マナコストは ManaRules を単一の真実源とし、確定値をアセットへ焼き込む（0 に戻してから再算出）
+            asset.manaCost = 0;
+            asset.manaCost = ManaRules.CastCost(asset);
             asset.statusEffect = d.StatusEffect;
             asset.statusEffectChance = d.StatusChance;
             asset.buffStat = d.BuffStat;

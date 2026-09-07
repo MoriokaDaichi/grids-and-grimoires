@@ -184,6 +184,18 @@ public static class BattleUISceneBuilder
         TMP_Text playerHpText = AddText(root, "PlayerHpText", "100 / 100", 18, TextAlignmentOptions.Center);
         Frame(playerHpText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 64f), new Vector2(560f, 30f));
 
+        // プレイヤーマナ（HPバーの下）
+        RectTransform playerManaBg = NewUI("PlayerManaBarBG", root);
+        Frame(playerManaBg, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(560f, 22f));
+        AddImage(playerManaBg, new Color(0f, 0f, 0f, 0.55f), false);
+        RectTransform playerManaFillRt = NewUI("PlayerManaFill", playerManaBg);
+        Stretch(playerManaFillRt);
+        Image playerManaFill = AddImage(playerManaFillRt, new Color(0.30f, 0.55f, 0.95f, 1f), false);
+        MakeHorizontalFill(playerManaFill);
+
+        TMP_Text playerManaText = AddText(root, "PlayerManaText", "100 / 100", 14, TextAlignmentOptions.Center);
+        Frame(playerManaText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(560f, 22f));
+
         // ダメージ数字レイヤー
         RectTransform dmgRoot = NewUI("DamageNumberRoot", root);
         Stretch(dmgRoot);
@@ -203,6 +215,8 @@ public static class BattleUISceneBuilder
         so.FindProperty("enemyCountText").objectReferenceValue = enemyCount;
         so.FindProperty("playerHpFill").objectReferenceValue = playerHpFill;
         so.FindProperty("playerHpText").objectReferenceValue = playerHpText;
+        so.FindProperty("playerManaFill").objectReferenceValue = playerManaFill;
+        so.FindProperty("playerManaText").objectReferenceValue = playerManaText;
         so.FindProperty("buffIconRoot").objectReferenceValue = buffRoot;
         so.FindProperty("waveText").objectReferenceValue = wave;
         so.FindProperty("castLogText").objectReferenceValue = castLog;
