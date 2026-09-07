@@ -6,13 +6,14 @@ using UnityEngine.UI;
 // （企画書のTarkov型ホームハブ Character/Trade は後続フェーズ）
 public class GamePhaseManager : MonoBehaviour
 {
-    public enum GamePhase { Build, Hideout, Trade, Battle, WaveClear, Reward }
+    public enum GamePhase { Build, Hideout, Research, Trade, Battle, WaveClear, Reward }
 
     [Header("構築フェーズで表示するオブジェクト（杖グリッド/魔法一覧/ステータス/出撃ボタン等）")]
     [SerializeField] private GameObject[] buildPhaseObjects;
 
-    [Header("研究・トレード・戦闘・ウェーブ突破・報酬の画面ルート")]
-    [SerializeField] private GameObject hideoutRoot;
+    [Header("ハイドアウト・研究・トレード・戦闘・ウェーブ突破・報酬の画面ルート")]
+    [SerializeField] private GameObject hideoutRoot;    // 設備ハブ
+    [SerializeField] private GameObject researchRoot;   // スキルツリー（ハブの研究机から入る）
     [SerializeField] private GameObject tradeRoot;
     [SerializeField] private GameObject battleRoot;
     [SerializeField] private GameObject waveClearRoot;
@@ -74,6 +75,7 @@ public class GamePhaseManager : MonoBehaviour
             }
         }
         if (hideoutRoot != null) hideoutRoot.SetActive(phase == GamePhase.Hideout);
+        if (researchRoot != null) researchRoot.SetActive(phase == GamePhase.Research);
         if (tradeRoot != null) tradeRoot.SetActive(phase == GamePhase.Trade);
         if (battleRoot != null) battleRoot.SetActive(phase == GamePhase.Battle);
         if (waveClearRoot != null) waveClearRoot.SetActive(phase == GamePhase.WaveClear);
@@ -82,10 +84,22 @@ public class GamePhaseManager : MonoBehaviour
         OnPhaseChanged?.Invoke(phase);
     }
 
-    // 「研究」ボタンから呼ぶ
+    // 「ハイドアウト」ボタンから呼ぶ
     public void GoToHideout()
     {
-        if (Current == GamePhase.Build) GoTo(GamePhase.Hideout);
+        if (Current == GamePhase.Build || Current == GamePhase.Research) GoTo(GamePhase.Hideout);
+    }
+
+    // ハブの研究机「研究する」から呼ぶ
+    public void GoToResearch()
+    {
+        if (Current == GamePhase.Hideout) GoTo(GamePhase.Research);
+    }
+
+    // スキルツリーの「戻る」から呼ぶ（ハブに戻る）
+    public void CloseResearch()
+    {
+        if (Current == GamePhase.Research) GoTo(GamePhase.Hideout);
     }
 
     // 「トレード」ボタンから呼ぶ

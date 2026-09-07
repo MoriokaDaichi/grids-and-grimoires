@@ -145,7 +145,7 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
 
     private void OnClose()
     {
-        if (phaseManager != null) phaseManager.ReturnToBuild();
+        if (phaseManager != null) phaseManager.CloseResearch();
     }
 
     private void RefreshAll()

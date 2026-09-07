@@ -44,6 +44,7 @@ public static class BattleUISceneBuilder
         DestroyExisting(canvasT, "RewardRoot");
         DestroyExisting(canvasT, "InventoryPanel");
         DestroyExisting(canvasT, "HideoutRoot");
+        DestroyExisting(canvasT, "ResearchRoot");
         DestroyExisting(canvasT, "HideoutButton");
         DestroyExisting(canvasT, "TradeRoot");
         DestroyExisting(canvasT, "TradeButton");
@@ -52,6 +53,7 @@ public static class BattleUISceneBuilder
 
         EnsureSingleton<PlayerInventory>("PlayerInventory");
         EnsureSingleton<ResearchManager>("ResearchManager");
+        EnsureSingleton<HideoutManager>("HideoutManager");
         EnsureSingleton<TradeManager>("TradeManager");
         EnsureSingleton<EnemyRoster>("EnemyRoster");
         RemoveStandaloneEnemyStatus();
@@ -60,9 +62,10 @@ public static class BattleUISceneBuilder
         GameObject waveClearRoot = BuildWaveClearRoot(canvasT);
         GameObject rewardRoot = BuildRewardRoot(canvasT);
         GameObject inventoryPanel = BuildInventoryPanel(canvasT);
+        GameObject researchRoot = BuildResearchRoot(canvasT);
         GameObject hideoutRoot = BuildHideoutRoot(canvasT);
         GameObject tradeRoot = BuildTradeRoot(canvasT);
-        GameObject hideoutButton = BuildCornerButton(canvasT, "HideoutButton", "研究", 16f, new Color(0.30f, 0.26f, 0.45f, 1f));
+        GameObject hideoutButton = BuildCornerButton(canvasT, "HideoutButton", "ハイドアウト", 16f, new Color(0.30f, 0.26f, 0.45f, 1f));
         GameObject tradeButton = BuildCornerButton(canvasT, "TradeButton", "トレード", 188f, new Color(0.26f, 0.40f, 0.42f, 1f));
 
         GameObject gpmGo = new GameObject("GamePhaseManager");
@@ -106,6 +109,7 @@ public static class BattleUISceneBuilder
         for (int i = 0; i < buildObjs.Count; i++)
             arr.GetArrayElementAtIndex(i).objectReferenceValue = buildObjs[i];
         so.FindProperty("hideoutRoot").objectReferenceValue = hideoutRoot;
+        so.FindProperty("researchRoot").objectReferenceValue = researchRoot;
         so.FindProperty("tradeRoot").objectReferenceValue = tradeRoot;
         so.FindProperty("battleRoot").objectReferenceValue = battleRoot;
         so.FindProperty("waveClearRoot").objectReferenceValue = waveClearRoot;
@@ -116,6 +120,7 @@ public static class BattleUISceneBuilder
         so.ApplyModifiedPropertiesWithoutUndo();
 
         hideoutRoot.SetActive(false);
+        researchRoot.SetActive(false);
         tradeRoot.SetActive(false);
         battleRoot.SetActive(false);
         waveClearRoot.SetActive(false);
@@ -441,9 +446,10 @@ public static class BattleUISceneBuilder
         return root.gameObject;
     }
 
-    private static GameObject BuildHideoutRoot(Transform canvas)
+    // 研究（放射状スキルツリー）画面。ハイドアウトのハブ（研究机）から入る。
+    private static GameObject BuildResearchRoot(Transform canvas)
     {
-        RectTransform root = NewUI("HideoutRoot", canvas);
+        RectTransform root = NewUI("ResearchRoot", canvas);
         Stretch(root);
         AddImage(root, new Color(0.06f, 0.07f, 0.10f, 1f), true);
 
@@ -510,6 +516,80 @@ public static class BattleUISceneBuilder
         so.FindProperty("allocateLabel").objectReferenceValue = allocLabel;
         so.FindProperty("closeButton").objectReferenceValue = closeBtn;
         so.FindProperty("legendText").objectReferenceValue = legend;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return root.gameObject;
+    }
+
+    // ハイドアウトのハブ画面（5設備の建造/強化＋各機能を1スクロールに動的生成）。
+    private static GameObject BuildHideoutRoot(Transform canvas)
+    {
+        RectTransform root = NewUI("HideoutRoot", canvas);
+        Stretch(root);
+        AddImage(root, new Color(0.07f, 0.07f, 0.09f, 1f), true);
+
+        TMP_Text title = AddText(root, "Title", "ハイドアウト", 34, TextAlignmentOptions.Center);
+        Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(700f, 52f));
+
+        // 上部：魔力炉の燃料バー
+        RectTransform fuelBg = NewUI("FuelBarBG", root);
+        Frame(fuelBg, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(760f, 26f));
+        AddImage(fuelBg, new Color(0f, 0f, 0f, 0.5f), false);
+        RectTransform fuelFillRt = NewUI("FuelFill", fuelBg);
+        Stretch(fuelFillRt);
+        Image fuelFill = AddImage(fuelFillRt, new Color(0.30f, 0.55f, 0.95f, 1f), false);
+        MakeHorizontalFill(fuelFill);
+        TMP_Text fuelText = AddText(root, "FuelText", "魔力炉 —", 15, TextAlignmentOptions.Center);
+        Frame(fuelText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(760f, 26f));
+
+        // 中央：縦スクロール
+        RectTransform viewport = NewUI("Viewport", root);
+        Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -6f), new Vector2(820f, 560f));
+        AddImage(viewport, new Color(0f, 0f, 0f, 0.25f), true);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false; scroll.vertical = true; scroll.scrollSensitivity = 26f;
+
+        RectTransform listRoot = NewUI("ListRoot", viewport);
+        listRoot.anchorMin = new Vector2(0f, 1f);
+        listRoot.anchorMax = new Vector2(1f, 1f);
+        listRoot.pivot = new Vector2(0.5f, 1f);
+        listRoot.offsetMin = new Vector2(8f, 0f);
+        listRoot.offsetMax = new Vector2(-8f, 0f);
+        VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 8f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.padding = new RectOffset(6, 6, 6, 6);
+        listRoot.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.content = listRoot;
+        scroll.viewport = viewport;
+
+        // 研究するボタン（研究机が建っていれば有効）
+        RectTransform researchRt = NewUI("ResearchButton", root);
+        Frame(researchRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-140f, 40f), new Vector2(240f, 54f));
+        Image researchImg = AddImage(researchRt, new Color(0.25f, 0.4f, 0.7f, 1f), true);
+        Button researchBtn = researchRt.gameObject.AddComponent<Button>();
+        researchBtn.targetGraphic = researchImg;
+        TMP_Text researchLbl = AddText(researchRt.gameObject.transform, "Label", "研究する", 22, TextAlignmentOptions.Center);
+        Stretch(researchLbl.rectTransform);
+
+        RectTransform closeRt = NewUI("CloseButton", root);
+        Frame(closeRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(140f, 40f), new Vector2(240f, 54f));
+        Image closeImg = AddImage(closeRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
+        Button closeBtn = closeRt.gameObject.AddComponent<Button>();
+        closeBtn.targetGraphic = closeImg;
+        TMP_Text closeLbl = AddText(closeRt.gameObject.transform, "Label", "戻る", 22, TextAlignmentOptions.Center);
+        Stretch(closeLbl.rectTransform);
+
+        HideoutHubPanel panel = root.gameObject.AddComponent<HideoutHubPanel>();
+        SerializedObject so = new SerializedObject(panel);
+        so.FindProperty("listRoot").objectReferenceValue = listRoot;
+        so.FindProperty("fuelText").objectReferenceValue = fuelText;
+        so.FindProperty("fuelFill").objectReferenceValue = fuelFill;
+        so.FindProperty("researchButton").objectReferenceValue = researchBtn;
+        so.FindProperty("researchButtonLabel").objectReferenceValue = researchLbl;
+        so.FindProperty("closeButton").objectReferenceValue = closeBtn;
+        if (JpFont != null) so.FindProperty("font").objectReferenceValue = JpFont;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         return root.gameObject;
