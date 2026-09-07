@@ -53,7 +53,8 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
             content.localScale = Vector3.one * 0.62f;
             content.anchoredPosition = Vector2.zero;
         }
-        if (legendText != null) legendText.text = "緑=取得済 / 金=取得可 / 灰=前提未取得　ドラッグで移動・ホイールで拡大縮小";
+        if (legendText != null)
+            legendText.text = "金=取得可（クリックで選択、もう一度クリックで取得） / 緑=取得済 / 灰=前提なし    ドラッグで移動・ホイールで拡大縮小";
         Select(null);
         RefreshAll();
     }
@@ -120,6 +121,12 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
 
     private void OnNodeClicked(string id)
     {
+        // 1回目のクリックで選択＋詳細表示、選択済みの取得可能ノードをもう一度クリックで取得。
+        if (id == selectedId && research != null && research.CanAllocate(id))
+        {
+            research.Allocate(id); // 成功すれば OnUnlocksChanged → RefreshAll
+            return;
+        }
         Select(id);
     }
 
@@ -173,12 +180,12 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
         if (detailTitle != null) detailTitle.text = research.NodeTitle(selectedId);
         if (detailBody != null)
         {
-            string stateText = state == ResearchNodeState.Allocated ? "取得済"
-                : state == ResearchNodeState.Allocatable ? "取得可能"
-                : "前提未取得 または 素材不足";
+            string stateText = state == ResearchNodeState.Allocated ? "取得済み"
+                : state == ResearchNodeState.Allocatable ? "取得できます（もう一度クリック、または下の[取得]ボタン）"
+                : "前提ノードが未取得、または素材が足りません";
             detailBody.text = research.NodeDetail(selectedId)
                 + "\n\nコスト: " + research.NodeCostText(selectedId)
-                + "\n状態: " + stateText;
+                + "\n\n" + stateText;
         }
         if (allocateButton != null) allocateButton.interactable = research.CanAllocate(selectedId);
         if (allocateLabel != null) allocateLabel.text = state == ResearchNodeState.Allocated ? "取得済" : "取得";

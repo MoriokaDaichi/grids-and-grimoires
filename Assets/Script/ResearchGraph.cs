@@ -103,7 +103,7 @@ public static class ResearchGraph
         _prereq = new Dictionary<string, string>();
 
         // 中心付近の小ノード（マナ・汎用ステータス）。親は各属性の単体基本魔法。
-        Stat("node_core_manaRegen", ResearchStat.ManaRegen, 1.5f, "Fire", 0, 36f, "MP回復+1.5", "マナ自然回復速度 +1.5/秒", Sm(2), Sm(1));
+        Stat("node_core_manaRegen", ResearchStat.ManaRegen, 1.5f, "Fire", 0, 36f, "MPリジェネ+1.5", "マナのリジェネ速度 +1.5/秒", Sm(2), Sm(1));
         Stat("node_core_manaMax", ResearchStat.ManaMax, 20f, "Thunder", 0, 108f, "MP上限+20", "最大マナ +20", Sm(3));
         Stat("node_core_hp", ResearchStat.Hp, 15f, "Wind", 0, 180f, "HP+15", "最大HP +15", Sm(2), Sm(1));
         Stat("node_core_spd", ResearchStat.Spd, 1f, "Light", 0, 252f, "速さ+1", "速さ +1（発動間隔が縮む）", Sm(2));
@@ -216,7 +216,7 @@ public static class ResearchGraph
             case ResearchStat.Spd: return "速+1";
             case ResearchStat.Luc: return "運+1";
             case ResearchStat.ManaMax: return "MP上限+20";
-            case ResearchStat.ManaRegen: return "MP回復+1.5";
+            case ResearchStat.ManaRegen: return "MPリジェネ+1.5";
             default: return "";
         }
     }
@@ -231,7 +231,7 @@ public static class ResearchGraph
             case ResearchStat.Spd: return "速さ +1（発動間隔が縮む）";
             case ResearchStat.Luc: return "運 +1（会心率が上がる）";
             case ResearchStat.ManaMax: return "最大マナ +20";
-            case ResearchStat.ManaRegen: return "マナ自然回復速度 +1.5/秒";
+            case ResearchStat.ManaRegen: return "マナのリジェネ速度 +1.5/秒";
             default: return "";
         }
     }

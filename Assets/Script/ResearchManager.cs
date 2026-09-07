@@ -124,18 +124,38 @@ public class ResearchManager : MonoBehaviour
 
     // ---------------------------------------------------------------- 表示ヘルパー（ビュー用）
 
+    // ノードに載せる短いラベル。大ノードは魔法名の切り出しではなく、系統が一目で分かる
+    // コンパクトなタグを生成する（フォントアトラス未収録の漢字も避けられる）。
     public string NodeShortLabel(string id)
     {
         ResearchNodeDef def = ResearchGraph.Get(id);
         if (def == null) return id;
         if (!def.isMagic) return def.shortLabel;
+
         MagicData md;
-        if (byId.TryGetValue(id, out md) && md != null)
+        if (!byId.TryGetValue(id, out md) || md == null) return id;
+
+        string attr = AttrKanji(md.attribute);
+        string tier = id.StartsWith("Giga") ? "III" : id.StartsWith("Mega") ? "II" : "I";
+
+        switch (md.category)
         {
-            string n = md.magicName;
-            return n.Length > 5 ? n.Substring(0, 5) : n;
+            case MagicCategory.Attack:
+                return attr + (md.range == MagicRange.AoE ? "全" : "") + tier;
+            case MagicCategory.StatusInflict:
+                return attr + "異常";
+            case MagicCategory.BuffActive:
+                return attr + "バフ";
+            case MagicCategory.BuffPassive:
+                if (id.Contains("PassiveLv")) return attr + "P" + id.Substring(id.Length - 1);
+                if (id.StartsWith("AttrBuff")) return attr + "強化";
+                if (id.StartsWith("StatusRateBuff")) return attr + "付与";
+                return attr + "P";
+            case MagicCategory.Support:
+                return id == "DualSpell" ? "デュアル" : "アッド";
+            default:
+                return md.magicName.Length > 4 ? md.magicName.Substring(0, 4) : md.magicName;
         }
-        return id;
     }
 
     public string NodeTitle(string id)
@@ -144,7 +164,7 @@ public class ResearchManager : MonoBehaviour
         if (def == null) return id;
         if (!def.isMagic) return def.title;
         MagicData md;
-        return byId.TryGetValue(id, out md) && md != null ? md.magicName : id;
+        return byId.TryGetValue(id, out md) && md != null ? Sanitize(md.magicName) : id;
     }
 
     public string NodeDetail(string id)
@@ -154,8 +174,28 @@ public class ResearchManager : MonoBehaviour
         if (!def.isMagic) return def.title;
         MagicData md;
         if (byId.TryGetValue(id, out md) && md != null)
-            return string.IsNullOrEmpty(md.effectDescription) ? md.category.ToString() : md.effectDescription;
+            return Sanitize(string.IsNullOrEmpty(md.effectDescription) ? md.category.ToString() : md.effectDescription);
         return "";
+    }
+
+    private static string AttrKanji(MagicAttribute a)
+    {
+        switch (a)
+        {
+            case MagicAttribute.Fire: return "炎";
+            case MagicAttribute.Thunder: return "雷";
+            case MagicAttribute.Wind: return "風";
+            case MagicAttribute.Light: return "光";
+            case MagicAttribute.Dark: return "闇";
+            default: return "無";
+        }
+    }
+
+    // フォントアトラス未収録の漢字（態/電/復）を読める字に置換する表示専用ヘルパー。
+    private static string Sanitize(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s;
+        return s.Replace("状態異常", "異常").Replace("電磁波", "雷撃波").Replace("回復", "リジェネ");
     }
 
     public string NodeCostText(string id)
