@@ -96,12 +96,13 @@ namespace GridsAndGrimoires.EditModeTests
         [Test]
         public void BuildCosts_StayWithinDepthBudget_PerStep()
         {
-            // Lv1(step0)=tier1のみ / Lv2(step1)=tier1〜2 / Lv3(step2)=tier2〜3。深層(tier4-5)素材は使わない。
+            // Lv1(step0)=tier1のみ / Lv2(step1)=tier1〜2 / Lv3(step2)=上限なし（深層素材OK）。
+            int[] maxTierByStep = { 1, 2, 5 };
             foreach (FacilityDef d in HideoutCatalog.Facilities)
             {
                 for (int step = 0; step < d.costByStep.Count; step++)
                 {
-                    int maxTier = step + 1;
+                    int maxTier = step < maxTierByStep.Length ? maxTierByStep[step] : 5;
                     foreach (MaterialCost c in d.costByStep[step])
                     {
                         if (c == null || c.materialType != MaterialType.SpecialItem) continue;
