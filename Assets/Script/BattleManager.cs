@@ -1,9 +1,9 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-// 最小オートバトルループ：グリッドに配置済みの攻撃魔法(MagicCategory.Attack)を
-// 各々のinterval間隔で自動発動し、ダミー敵にdamageと状態異常(statusEffect)を与える。
-// バフ(BuffActive/BuffPassive)、補助魔法(Support: アッドスペル/デュアルスペル)も実装済み。
+// オートバトルループ：グリッドに配置済みの魔法を各々のinterval間隔で自動発動する。
+// 攻撃(単体/全体)、状態異常専用、補助(アッド/デュアル)、アクティブ/パッシブバフに対応。
+// 敵は EnemyRoster が管理する複数体。単体魔法は先頭の生存個体、全体(AoE)魔法は生存個体すべてに当たる。
 public class BattleManager : MonoBehaviour
 {
     // バフの倍率は企画書に数値の記載が無いため仮決め（要バランス調整）
@@ -13,11 +13,10 @@ public class BattleManager : MonoBehaviour
     private const int PassiveStatusRateBonus = 15;          // 状態異常付与率バフ(パッシブ)1枚につき対応属性の付与率+15pt
 
     // Spd = 発動間隔の短縮（BattleFormula.SpdCastMultiplier）、Luc = 会心発生率（BattleFormula.LucCritChance）。
-    // どちらも Spd/Luc バフ(%)が乗る。倍率・発生率は企画書に記載が無いため仮決め。
-    // 攻撃魔法は敵の属性耐性倍率（EnemyStatus.ResistanceTo）も掛かる。
+    // どちらも Spd/Luc バフ(%)が乗る。攻撃魔法は敵の属性耐性倍率（EnemyStatus.ResistanceTo）も掛かる。
 
     private PlayerStatus playerStatus;
-    private EnemyStatus enemyStatus;
+    private EnemyRoster roster;
     private MagicGridManager gridManager;
 
     private class CastState
@@ -34,10 +33,9 @@ public class BattleManager : MonoBehaviour
 
     private List<CastState> casts = new List<CastState>();
     private List<ActiveBuff> activeBuffs = new List<ActiveBuff>();
-    private float enemyAttackTimer;
     private bool battleActive;
 
-    // 現在この敵との戦闘が進行中か（DungeonManagerが空杖出撃を検知するのに使う）
+    // 現在戦闘が進行中か（DungeonManagerが空杖出撃を検知するのに使う）
     public bool BattleActive { get { return battleActive; } }
 
     // 戦闘UI（BattleHUD）向けの通知。ロジックには影響しない
@@ -46,11 +44,9 @@ public class BattleManager : MonoBehaviour
     public System.Action<BuffStat, float> OnBuffApplied;  // アクティブバフが発動/更新された (対象, 効果時間)
     public System.Action<BuffStat> OnBuffExpired;         // アクティブバフが切れた
 
-    // 補助魔法(アッドスペル/デュアルスペル)が「直前に発動した魔法」として参照する対象。
-    // Attack魔法が実際に発動したときだけ更新する（補助魔法自身やバフでは更新しない）
+    // 補助魔法(アッドスペル/デュアルスペル)が参照する「直前に発動した攻撃魔法」
     private MagicData lastCastAttackSpell;
 
-    // パッシブバフの集計結果（ダンジョン中は編成固定のため、敵が切り替わるたびに集計し直すだけでよい）
     private Dictionary<BuffStat, float> passiveStatPercent = new Dictionary<BuffStat, float>();
     private Dictionary<MagicAttribute, float> passiveAttrDamagePercent = new Dictionary<MagicAttribute, float>();
     private Dictionary<MagicAttribute, int> passiveStatusRateBonus = new Dictionary<MagicAttribute, int>();
@@ -58,25 +54,24 @@ public class BattleManager : MonoBehaviour
     void Awake()
     {
         playerStatus = Object.FindFirstObjectByType<PlayerStatus>();
-        enemyStatus = Object.FindFirstObjectByType<EnemyStatus>();
+        roster = Object.FindFirstObjectByType<EnemyRoster>();
         gridManager = Object.FindFirstObjectByType<MagicGridManager>();
     }
 
-    // 次の敵との戦闘を開始する。DungeonManagerが敵を切り替えるたびに呼ぶ想定
-    // （プレイヤーHP・アクティブバフの残り時間はダンジョン内で持ち越すため、ここではリセットしない）
+    // ウェーブの敵をセットアップした後に DungeonManager が呼ぶ。
+    // プレイヤーHP・アクティブバフの残り時間はダンジョン内で持ち越すためリセットしない。
     public void StartBattle()
     {
-        if (playerStatus == null || enemyStatus == null || gridManager == null)
+        if (playerStatus == null || roster == null || gridManager == null)
         {
-            Debug.LogWarning("BattleManager: PlayerStatus / EnemyStatus / MagicGridManager がシーン内に見つかりません。");
+            Debug.LogWarning("BattleManager: PlayerStatus / EnemyRoster / MagicGridManager がシーン内に見つかりません。");
             return;
         }
 
         ComputePassiveBonuses();
 
-        // Clear()で使い回すと、敵撃破→DungeonManagerが同フレーム内でStartBattle()を再帰的に呼んだ際に
-        // Update()側のforeachが列挙中のリストを書き換えてしまう(InvalidOperationException)ため、
-        // 新しいリストへの差し替えにしている
+        // Clear()で使い回すと、ウェーブ全滅→同フレーム内でStartBattle()が再帰的に呼ばれた際に
+        // Update()側のforeachが列挙中のリストを書き換えてしまう(InvalidOperationException)ため、新リストへ差し替える
         List<CastState> newCasts = new List<CastState>();
         foreach (MagicData data in gridManager.GetPlacedMagics())
         {
@@ -89,16 +84,19 @@ public class BattleManager : MonoBehaviour
         }
         casts = newCasts;
 
-        enemyAttackTimer = enemyStatus.attackInterval * enemyStatus.AttackIntervalMultiplier;
-        battleActive = casts.Count > 0;
+        foreach (EnemyStatus e in roster.Living)
+        {
+            if (e != null) e.attackTimer = e.attackInterval * e.AttackIntervalMultiplier;
+        }
 
-        if (!battleActive)
+        battleActive = casts.Count > 0 && roster.AliveCount() > 0;
+
+        if (casts.Count == 0)
         {
             Debug.LogWarning("BattleManager: 攻撃魔法が配置されていないため戦闘を開始できません。");
         }
     }
 
-    // グリッドに配置中のBuffPassiveの魔法を集計する（対応ステータスの強化 / 属性威力強化 / 状態異常付与率強化の3種）
     private void ComputePassiveBonuses()
     {
         PassiveBonuses bonuses = PassiveBonusCalculator.Aggregate(
@@ -114,7 +112,6 @@ public class BattleManager : MonoBehaviour
         LogPassiveSummary();
     }
 
-    // パッシブは発動ログが無く画面上で効いているか分からないため、敵が切り替わるたびに集計結果を1行にまとめて出す
     private void LogPassiveSummary()
     {
         List<string> parts = new List<string>();
@@ -151,7 +148,6 @@ public class BattleManager : MonoBehaviour
         return dict.TryGetValue(key, out int v) ? v : 0;
     }
 
-    // 指定ステータスの合計強化率（パッシブ＋発動中のアクティブバフ）を%で返す
     private float TotalStatPercent(BuffStat stat)
     {
         float percent = GetOrZero(passiveStatPercent, stat);
@@ -172,7 +168,6 @@ public class BattleManager : MonoBehaviour
         return Mathf.RoundToInt(playerStatus.luc * (1f + TotalStatPercent(BuffStat.Luc) / 100f));
     }
 
-    // 素早さによる発動間隔の倍率
     private float CastIntervalScale()
     {
         return BattleFormula.SpdCastMultiplier(EffectiveSpd());
@@ -182,18 +177,14 @@ public class BattleManager : MonoBehaviour
     {
         if (!battleActive) return;
 
-        // EnemyStatus側の継続ダメージ(火傷/裂傷)は自身のUpdate()で独立に敵を倒しうる。
-        // 最終ウェーブでの撃破だとDungeonManagerが次のSetup()/StartBattle()を呼ばないため、
-        // battleActiveをここで検知して止めないと、死んだ敵がいつまでも反撃してしまう
-        if (enemyStatus.hp <= 0)
+        // 継続ダメージ等で全滅していたら決着。最終ウェーブだとDungeonManagerがStartBattleを再度呼ばないため、ここで止める
+        if (roster.AliveCount() == 0)
         {
             battleActive = false;
             return;
         }
 
-        // このフレームで列挙するリストをスナップショットしておく。
-        // ループ中にStartBattle()が呼ばれてもcastsは新しいリストに差し替わるだけなので、
-        // currentCastsの列挙自体は安全に最後まで回せる
+        // ループ中にStartBattle()が呼ばれてもcastsは新リストに差し替わるだけなので、スナップショットは安全に回せる
         List<CastState> currentCasts = casts;
         foreach (CastState cast in currentCasts)
         {
@@ -201,10 +192,8 @@ public class BattleManager : MonoBehaviour
             if (cast.timer <= 0f)
             {
                 ExecuteCast(cast.data);
-                // 敵撃破により次の戦闘へ切り替わっていたら、古いキャスト情報の処理はここで打ち切る
-                if (casts != currentCasts) return;
-                // 最終ウェーブでの撃破はcastsが差し替わらないため、上と別にここでも決着を検知して打ち切る
-                if (!battleActive) return;
+                if (casts != currentCasts) return; // ウェーブが切り替わった
+                if (!battleActive) return;          // 最終ウェーブ全滅 or 敗北
                 cast.timer += cast.data.interval * CastIntervalScale();
             }
         }
@@ -220,13 +209,21 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        if (!battleActive) return; // このフレームで倒し切って戦闘が終わっていたら、敵の反撃は処理しない
+        if (!battleActive) return;
 
-        enemyAttackTimer -= Time.deltaTime;
-        if (enemyAttackTimer <= 0f)
+        // 各生存個体が自分のタイマーで反撃する
+        int gen = roster.Generation;
+        List<EnemyStatus> attackers = new List<EnemyStatus>(roster.Living);
+        foreach (EnemyStatus e in attackers)
         {
-            EnemyAttack();
-            enemyAttackTimer += enemyStatus.attackInterval * enemyStatus.AttackIntervalMultiplier;
+            if (e == null || e.hp <= 0) continue;
+            e.attackTimer -= Time.deltaTime;
+            if (e.attackTimer <= 0f)
+            {
+                EnemyAttackFrom(e);
+                if (roster.Generation != gen || !battleActive) return;
+                e.attackTimer += e.attackInterval * e.AttackIntervalMultiplier;
+            }
         }
     }
 
@@ -240,25 +237,24 @@ public class BattleManager : MonoBehaviour
         else if (data.category == MagicCategory.Support) CastSupport(data);
     }
 
-    // 状態異常専用魔法(火あぶり/電磁波/かまいたち/目くらまし/目隠し)：
-    // ダメージは無く、高い付与率(企画書8章では80%)で対応する状態異常のみを与える。
-    // lastCastAttackSpell は更新しない ＝ アッド/デュアルスペルの再発動対象は攻撃魔法だけに限る。
+    // 状態異常専用魔法：ダメージ0、高付与率で状態異常のみ。先頭の生存個体を対象にする。
+    // lastCastAttackSpell は更新しない（アッド/デュアルの再発動対象は攻撃魔法だけ）。
     private void CastStatusInflict(MagicData data)
     {
-        if (enemyStatus.hp <= 0)
+        EnemyStatus target = roster.FirstAlive();
+        if (target == null)
         {
             battleActive = false;
             return;
         }
-
         if (data.statusEffect == StatusEffectType.None) return;
 
-        string targetName = enemyStatus.enemyName;
+        string targetName = target.enemyName;
         int chance = data.statusEffectChance + GetOrZeroInt(passiveStatusRateBonus, data.attribute);
 
         if (Random.Range(0, 100) < chance)
         {
-            enemyStatus.ApplyStatusEffect(data.statusEffect);
+            target.ApplyStatusEffect(data.statusEffect);
             Debug.Log($"{data.magicName} が発動！ {targetName} は {StatusEffectLabel(data.statusEffect)} 状態になった！");
         }
         else
@@ -269,33 +265,55 @@ public class BattleManager : MonoBehaviour
 
     private void CastAttack(MagicData data)
     {
-        // 同フレーム内で既に(火傷等の継続ダメージや他のキャストで)倒れている対象には追撃しない。
-        // ここを素通りすると、既に0HPの相手に「発動！を倒した！」が二重に出てしまう
-        if (enemyStatus.hp <= 0)
+        if (roster.AliveCount() == 0)
         {
             battleActive = false;
             return;
         }
 
-        // 撃破がダンジョンの次の敵へのSetup()を連鎖させると、この呼び出しの後でenemyStatusの
-        // 中身（名前・HP）が次の敵のものに差し替わってしまう。ログ表示・状態異常付与の対象を
-        // 誤らないよう、ダメージを与える前に対象の情報をスナップショットしておく
-        string targetName = enemyStatus.enemyName;
-        int hpBefore = enemyStatus.hp;
+        if (data.range == MagicRange.AoE)
+        {
+            int gen = roster.Generation;
+            List<EnemyStatus> targets = new List<EnemyStatus>(roster.Living);
+            foreach (EnemyStatus t in targets)
+            {
+                if (t == null || t.hp <= 0) continue;
+                HitOne(data, t);
+                if (roster.Generation != gen) return; // ウェーブ切り替わり
+            }
+        }
+        else
+        {
+            EnemyStatus t = roster.FirstAlive();
+            if (t != null) HitOne(data, t);
+        }
+
+        lastCastAttackSpell = data;
+
+        if (roster.AliveCount() == 0) battleActive = false;
+    }
+
+    // 攻撃魔法1発を1体に当てる。
+    private void HitOne(MagicData data, EnemyStatus target)
+    {
+        if (target == null || target.hp <= 0) return;
+
+        // TakeDamage が撃破→ウェーブ切り替えを連鎖させると target の中身が差し替わるため、先にスナップショット
+        string targetName = target.enemyName;
+        int hpBefore = target.hp;
 
         float effectiveAtk = playerStatus.atk * (1f + TotalStatPercent(BuffStat.Atk) / 100f);
         float damagePercent = TotalStatPercent(BuffStat.Damage) + GetOrZero(passiveAttrDamagePercent, data.attribute);
-        float resist = enemyStatus.ResistanceTo(data.attribute);
-        int damage = BattleFormula.AttackDamage(data.damage, effectiveAtk, damagePercent, enemyStatus.def, resist);
+        float resist = target.ResistanceTo(data.attribute);
+        int damage = BattleFormula.AttackDamage(data.damage, effectiveAtk, damagePercent, target.def, resist);
 
-        // 運による会心
         bool crit = Random.Range(0, 100) < BattleFormula.LucCritChance(EffectiveLuc());
         if (crit) damage = Mathf.RoundToInt(damage * BattleFormula.CritMultiplier);
 
         int hpAfterThisHit = Mathf.Max(0, hpBefore - damage);
         bool willDefeat = hpAfterThisHit <= 0;
 
-        enemyStatus.TakeDamage(damage);
+        target.TakeDamage(damage);
         OnAttackHit?.Invoke(data, damage);
         string critText = crit ? "（会心！）" : "";
         Debug.Log($"{data.magicName} が発動！ {targetName} に {damage} ダメージ{critText}（残りHP: {hpAfterThisHit}）");
@@ -309,20 +327,13 @@ public class BattleManager : MonoBehaviour
             int chance = data.statusEffectChance + GetOrZeroInt(passiveStatusRateBonus, data.attribute);
             if (Random.Range(0, 100) < chance)
             {
-                enemyStatus.ApplyStatusEffect(data.statusEffect);
+                target.ApplyStatusEffect(data.statusEffect);
                 Debug.Log($"{targetName} は {StatusEffectLabel(data.statusEffect)} 状態になった！");
             }
         }
-
-        lastCastAttackSpell = data; // 補助魔法(アッドスペル/デュアルスペル)が参照する「直前に発動した魔法」を更新
-
-        if (enemyStatus.hp <= 0)
-        {
-            battleActive = false;
-        }
     }
 
-    // アッドスペル(1回)/デュアルスペル(2回)：直前に発動した攻撃魔法をもう一度(もしくは2回)発動させる
+    // アッドスペル(1回)/デュアルスペル(2回)：直前に発動した攻撃魔法をもう一度発動させる
     private void CastSupport(MagicData data)
     {
         if (lastCastAttackSpell == null)
@@ -339,7 +350,6 @@ public class BattleManager : MonoBehaviour
         for (int i = 0; i < data.supportRepeatCount; i++)
         {
             CastAttack(repeatTarget);
-            // 追加発動が撃破→次の敵への切り替えや戦闘終了を引き起こしていたら、残りの追加発動は行わない
             if (casts != castsSnapshot || !battleActive) return;
         }
     }
@@ -362,18 +372,20 @@ public class BattleManager : MonoBehaviour
         Debug.Log($"{data.magicName} が発動！ {BuffStatLabel(data.buffStat)}を強化（残り{data.buffDuration}秒）");
     }
 
-    private void EnemyAttack()
+    private void EnemyAttackFrom(EnemyStatus e)
     {
-        if (enemyStatus.IsStunned)
+        if (e == null || e.hp <= 0) return;
+
+        if (e.IsStunned)
         {
-            Debug.Log($"{enemyStatus.enemyName} は状態異常で動けない！");
+            Debug.Log($"{e.enemyName} は状態異常で動けない！");
             return;
         }
 
         float effectiveDef = playerStatus.def * (1f + TotalStatPercent(BuffStat.Def) / 100f);
-        int damage = BattleFormula.EnemyAttackDamage(enemyStatus.atk, enemyStatus.AtkMultiplier, effectiveDef);
+        int damage = BattleFormula.EnemyAttackDamage(e.atk, e.AtkMultiplier, effectiveDef);
         playerStatus.TakeDamage(damage);
-        Debug.Log($"{enemyStatus.enemyName} の攻撃！ プレイヤーに {damage} ダメージ（残りHP: {playerStatus.currentHp}）");
+        Debug.Log($"{e.enemyName} の攻撃！ プレイヤーに {damage} ダメージ（残りHP: {playerStatus.currentHp}）");
 
         if (playerStatus.currentHp <= 0)
         {

@@ -3,15 +3,17 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 戦闘画面の表示専用コンポーネント。ゲームロジックは持たず、既存のイベントを購読して
+// 戦闘画面の表示専用コンポーネント。ゲームロジックは持たず、イベントを購読して
 // 敵/プレイヤーのHPバー、ダメージ数字、状態異常アイコン、バフインジケータ、ウェーブ表示を更新する。
+// 複数敵ウェーブでは「先頭の生存個体」を代表として表示し、残り体数を別途表示する（N体分の個別ウィジェットは今後）。
 public class BattleHUD : MonoBehaviour
 {
-    [Header("敵")]
+    [Header("敵（代表個体）")]
     [SerializeField] private Image enemySpriteImage;
     [SerializeField] private TMP_Text enemyNameText;
     [SerializeField] private Image enemyHpFill;
     [SerializeField] private TMP_Text enemyHpText;
+    [SerializeField] private TMP_Text enemyCountText;
     [SerializeField] private RectTransform enemyStatusIconRoot;
 
     [Header("プレイヤー")]
@@ -37,9 +39,11 @@ public class BattleHUD : MonoBehaviour
     [SerializeField] private GameObject buffIndicatorPrefab;
 
     private PlayerStatus player;
-    private EnemyStatus enemy;
+    private EnemyRoster roster;
     private BattleManager battle;
     private DungeonManager dungeon;
+
+    private EnemyStatus primary; // 現在表示中の代表個体
 
     private readonly Dictionary<StatusEffectType, StatusEffectIcon> statusIcons = new Dictionary<StatusEffectType, StatusEffectIcon>();
     private readonly Dictionary<BuffStat, BuffIndicator> buffIndicators = new Dictionary<BuffStat, BuffIndicator>();
@@ -48,20 +52,14 @@ public class BattleHUD : MonoBehaviour
     void Awake()
     {
         player = Object.FindFirstObjectByType<PlayerStatus>();
-        enemy = Object.FindFirstObjectByType<EnemyStatus>();
+        roster = Object.FindFirstObjectByType<EnemyRoster>();
         battle = Object.FindFirstObjectByType<BattleManager>();
         dungeon = Object.FindFirstObjectByType<DungeonManager>();
     }
 
     void OnEnable()
     {
-        if (enemy != null)
-        {
-            enemy.OnStatusChanged += RefreshEnemyHp;
-            enemy.OnStatusApplied += HandleStatusApplied;
-            enemy.OnStatusExpired += HandleStatusExpired;
-            enemy.OnStatusTick += HandleStatusTick;
-        }
+        if (roster != null) roster.OnRosterChanged += HandleRosterChanged;
         if (player != null)
         {
             player.OnStatusChanged += RefreshPlayerHp;
@@ -79,20 +77,16 @@ public class BattleHUD : MonoBehaviour
             dungeon.OnWaveChanged += HandleWaveChanged;
         }
 
-        RefreshEnemyHp();
+        HandleRosterChanged();
         RefreshPlayerHp();
         if (castLogText != null) castLogText.text = "";
     }
 
     void OnDisable()
     {
-        if (enemy != null)
-        {
-            enemy.OnStatusChanged -= RefreshEnemyHp;
-            enemy.OnStatusApplied -= HandleStatusApplied;
-            enemy.OnStatusExpired -= HandleStatusExpired;
-            enemy.OnStatusTick -= HandleStatusTick;
-        }
+        if (roster != null) roster.OnRosterChanged -= HandleRosterChanged;
+        BindPrimary(null);
+
         if (player != null)
         {
             player.OnStatusChanged -= RefreshPlayerHp;
@@ -122,14 +116,63 @@ public class BattleHUD : MonoBehaviour
         }
     }
 
+    // --- 代表個体のバインド ---
+
+    private void HandleRosterChanged()
+    {
+        EnemyStatus next = roster != null ? roster.FirstAlive() : null;
+        BindPrimary(next);
+
+        int alive = roster != null ? roster.AliveCount() : 0;
+        if (enemyCountText != null)
+        {
+            bool show = alive > 1;
+            enemyCountText.gameObject.SetActive(show);
+            if (show) enemyCountText.text = "残り " + alive + " 体";
+        }
+    }
+
+    private void BindPrimary(EnemyStatus next)
+    {
+        if (next == primary) return;
+
+        if (primary != null)
+        {
+            primary.OnStatusChanged -= RefreshEnemyHp;
+            primary.OnStatusApplied -= HandleStatusApplied;
+            primary.OnStatusExpired -= HandleStatusExpired;
+            primary.OnStatusTick -= HandleStatusTick;
+        }
+
+        primary = next;
+        ClearStatusIcons();
+
+        if (primary != null)
+        {
+            primary.OnStatusChanged += RefreshEnemyHp;
+            primary.OnStatusApplied += HandleStatusApplied;
+            primary.OnStatusExpired += HandleStatusExpired;
+            primary.OnStatusTick += HandleStatusTick;
+
+            if (enemyNameText != null) enemyNameText.text = primary.enemyName;
+            ApplyEnemySprite(primary.sprite);
+        }
+        RefreshEnemyHp();
+    }
+
     // --- HP ---
 
     private void RefreshEnemyHp()
     {
-        if (enemy == null) return;
-        float ratio = enemy.maxHp > 0 ? (float)enemy.hp / enemy.maxHp : 0f;
+        if (primary == null)
+        {
+            if (enemyHpFill != null) enemyHpFill.fillAmount = 0f;
+            if (enemyHpText != null) enemyHpText.text = "";
+            return;
+        }
+        float ratio = primary.maxHp > 0 ? (float)primary.hp / primary.maxHp : 0f;
         if (enemyHpFill != null) enemyHpFill.fillAmount = Mathf.Clamp01(ratio);
-        if (enemyHpText != null) enemyHpText.text = Mathf.Max(0, enemy.hp) + " / " + enemy.maxHp;
+        if (enemyHpText != null) enemyHpText.text = Mathf.Max(0, primary.hp) + " / " + primary.maxHp;
     }
 
     private void RefreshPlayerHp()
@@ -140,7 +183,7 @@ public class BattleHUD : MonoBehaviour
         if (playerHpText != null) playerHpText.text = Mathf.Max(0, player.currentHp) + " / " + player.hp;
     }
 
-    // --- 状態異常 ---
+    // --- 状態異常（代表個体） ---
 
     private void HandleStatusApplied(StatusEffectType type)
     {
@@ -177,6 +220,7 @@ public class BattleHUD : MonoBehaviour
         Color c = spell != null ? spell.pieceColor : Color.white;
         c.a = 1f;
         SpawnDamageNumber(damage, c, enemyDamageAnchor);
+        RefreshEnemyHp();
     }
 
     private void HandlePlayerDamaged(int amount, int currentHpAfter)
@@ -237,35 +281,29 @@ public class BattleHUD : MonoBehaviour
 
     // --- ウェーブ ---
 
-    private void HandleWaveChanged(int waveNo, int total, string enemyName)
+    private void HandleWaveChanged(int waveNo, int total, string label)
     {
         if (waveText != null) waveText.text = waveNo + " / " + total;
-        if (enemyNameText != null) enemyNameText.text = enemyName;
-
-        if (enemySpriteImage != null)
-        {
-            Sprite s = null;
-            int idx = waveNo - 1;
-            if (dungeon != null && idx >= 0 && idx < dungeon.encounters.Count && dungeon.encounters[idx] != null)
-            {
-                s = dungeon.encounters[idx].sprite;
-            }
-
-            if (s != null)
-            {
-                enemySpriteImage.sprite = s;
-                enemySpriteImage.color = Color.white;
-            }
-            else
-            {
-                enemySpriteImage.sprite = null;
-                enemySpriteImage.color = new Color(0.5f, 0.5f, 0.55f); // アート未設定時のグレー矩形
-            }
-            enemySpriteImage.enabled = true;
-        }
-
-        ClearStatusIcons();
+        if (enemyNameText != null && primary != null) enemyNameText.text = primary.enemyName;
+        if (primary != null) ApplyEnemySprite(primary.sprite);
+        HandleRosterChanged();
         RefreshEnemyHp();
+    }
+
+    private void ApplyEnemySprite(Sprite s)
+    {
+        if (enemySpriteImage == null) return;
+        if (s != null)
+        {
+            enemySpriteImage.sprite = s;
+            enemySpriteImage.color = Color.white;
+        }
+        else
+        {
+            enemySpriteImage.sprite = null;
+            enemySpriteImage.color = new Color(0.5f, 0.5f, 0.55f); // アート未設定時のグレー矩形
+        }
+        enemySpriteImage.enabled = true;
     }
 
     private void ClearStatusIcons()

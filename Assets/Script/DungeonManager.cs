@@ -1,57 +1,74 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-// ダンジョン1回分の進行を管理する。encountersに並べたEnemyDataを順番に戦わせ、
-// 全滅させればクリア、プレイヤーが倒れれば失敗とする。プレイヤーHPは道中持ち越し（波ごとの全回復はしない）。
+// ダンジョン1回分の進行を管理する。waves に並べた EnemyWave（敵グループ）を順番に戦わせ、
+// 全ウェーブ突破でクリア、プレイヤーが倒れれば失敗。プレイヤーHPは道中持ち越し（波ごとの全回復はしない）。
 //
 // 出撃は GamePhaseManager.StartSortie() 経由でのみ開始する（シーンロード時に自動開始はしない）。
 public class DungeonManager : MonoBehaviour
 {
+    [Header("ウェーブ構成（敵グループの並び）。Grimoire > Generate Dungoen で生成")]
+    public List<EnemyWave> waves = new List<EnemyWave>();
+
+    [Header("旧: 単体ウェーブ用（waves が空のとき 1体ずつのウェーブとして使う）")]
     public List<EnemyData> encounters = new List<EnemyData>();
 
     [Header("失敗時もドロップを与えるか（既定: 与えない＝死亡は没収）")]
     public bool grantLootOnFailure = false;
 
     // 進行状況の通知（戦闘UI・フェーズ管理向け）
-    public System.Action<int, int, string> OnWaveChanged; // (現在ウェーブ 1始まり, 総数, 敵名)
+    public System.Action<int, int, string> OnWaveChanged; // (現在ウェーブ 1始まり, 総数, 表示名)
     public System.Action OnDungeonCleared;
     public System.Action OnDungeonFailed;
 
     private PlayerStatus playerStatus;
-    private EnemyStatus enemyStatus;
+    private EnemyRoster roster;
     private BattleManager battleManager;
     private int waveIndex;
     private bool dungeonActive;
 
-    // この出撃で実際に倒した敵（報酬の対象）。失敗した場合は死ぬ前に倒したぶんだけ入る。
     private readonly List<EnemyData> defeatedEnemies = new List<EnemyData>();
     public IReadOnlyList<EnemyData> DefeatedEnemies { get { return defeatedEnemies; } }
 
     void Awake()
     {
         playerStatus = Object.FindFirstObjectByType<PlayerStatus>();
-        enemyStatus = Object.FindFirstObjectByType<EnemyStatus>();
+        roster = Object.FindFirstObjectByType<EnemyRoster>();
         battleManager = Object.FindFirstObjectByType<BattleManager>();
     }
 
     void OnEnable()
     {
         if (playerStatus != null) playerStatus.OnDefeated += HandlePlayerDefeated;
-        if (enemyStatus != null) enemyStatus.OnDefeated += HandleEnemyDefeated;
+        if (roster != null) roster.OnWaveDefeated += HandleWaveDefeated;
     }
 
     void OnDisable()
     {
         if (playerStatus != null) playerStatus.OnDefeated -= HandlePlayerDefeated;
-        if (enemyStatus != null) enemyStatus.OnDefeated -= HandleEnemyDefeated;
+        if (roster != null) roster.OnWaveDefeated -= HandleWaveDefeated;
     }
 
-    // 出撃開始。開始できた（少なくとも1ウェーブ戦闘に入った）場合のみ true。
+    // 実効ウェーブリスト（waves が無ければ encounters を1体ずつのウェーブに変換）
+    private List<EnemyWave> EffectiveWaves()
+    {
+        if (waves != null && waves.Count > 0) return waves;
+
+        List<EnemyWave> converted = new List<EnemyWave>();
+        foreach (EnemyData e in encounters)
+        {
+            EnemyWave w = new EnemyWave();
+            w.enemies.Add(e);
+            converted.Add(w);
+        }
+        return converted;
+    }
+
     public bool StartDungeon()
     {
-        if (playerStatus == null || enemyStatus == null || battleManager == null || encounters.Count == 0)
+        if (playerStatus == null || roster == null || battleManager == null || EffectiveWaves().Count == 0)
         {
-            Debug.LogWarning("DungeonManager: PlayerStatus / EnemyStatus / BattleManager / encounters の設定を確認してください。");
+            Debug.LogWarning("DungeonManager: PlayerStatus / EnemyRoster / BattleManager / waves の設定を確認してください。");
             return false;
         }
 
@@ -64,7 +81,9 @@ public class DungeonManager : MonoBehaviour
 
     private bool SpawnNextWave()
     {
-        if (waveIndex >= encounters.Count)
+        List<EnemyWave> ws = EffectiveWaves();
+
+        if (waveIndex >= ws.Count)
         {
             dungeonActive = false;
             Debug.Log("ダンジョンクリア！ すべての敵を倒した。");
@@ -72,34 +91,45 @@ public class DungeonManager : MonoBehaviour
             return true;
         }
 
-        EnemyData next = encounters[waveIndex];
+        EnemyWave wave = ws[waveIndex];
         waveIndex++;
 
-        enemyStatus.Setup(next);
+        roster.SpawnWave(wave.enemies);
         battleManager.StartBattle();
 
         if (!battleManager.BattleActive)
         {
-            // 杖に発動可能な魔法が無い＝出撃を成立させられない。呼び出し側(GamePhaseManager)が構築画面に戻す。
             dungeonActive = false;
             Debug.LogWarning("DungeonManager: 杖に発動可能な魔法が無いため出撃を中止しました。");
             return false;
         }
 
-        OnWaveChanged?.Invoke(waveIndex, encounters.Count, next.enemyName);
-        Debug.Log($"{next.enemyName} が現れた！（{waveIndex}/{encounters.Count}）");
+        string label = DescribeWave(wave);
+        OnWaveChanged?.Invoke(waveIndex, ws.Count, label);
+        Debug.Log($"{label} が現れた！（{waveIndex}/{ws.Count}）");
         return true;
     }
 
-    private void HandleEnemyDefeated()
+    private static string DescribeWave(EnemyWave wave)
+    {
+        if (wave == null || wave.enemies.Count == 0) return "敵";
+        string first = wave.enemies[0] != null ? wave.enemies[0].enemyName : "敵";
+        return wave.enemies.Count > 1 ? first + " ×" + wave.enemies.Count : first;
+    }
+
+    private void HandleWaveDefeated()
     {
         if (!dungeonActive) return;
 
-        // いま表示中のウェーブは encounters[waveIndex - 1]（SpawnNextWaveでインクリメント済み）
+        // いま表示中のウェーブは EffectiveWaves()[waveIndex - 1]（SpawnNextWaveでインクリメント済み）
+        List<EnemyWave> ws = EffectiveWaves();
         int justCleared = waveIndex - 1;
-        if (justCleared >= 0 && justCleared < encounters.Count)
+        if (justCleared >= 0 && justCleared < ws.Count)
         {
-            defeatedEnemies.Add(encounters[justCleared]);
+            foreach (EnemyData e in ws[justCleared].enemies)
+            {
+                if (e != null) defeatedEnemies.Add(e);
+            }
         }
 
         SpawnNextWave();

@@ -15,6 +15,10 @@ public class EnemyStatus : MonoBehaviour
     public int def = 2;
     public float attackInterval = 4f;
     public MagicAttribute attribute = MagicAttribute.None;
+    public Sprite sprite;
+
+    // BattleManager が管理するこの敵の次回攻撃までの残り時間
+    public float attackTimer;
 
     public int hp { get; private set; }
 
@@ -59,6 +63,7 @@ public class EnemyStatus : MonoBehaviour
         def = data.def;
         attackInterval = data.attackInterval;
         attribute = data.attribute;
+        sprite = data.sprite;
 
         resistances.Clear();
         if (data.resistances != null)

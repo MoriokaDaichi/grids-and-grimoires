@@ -52,6 +52,8 @@ public static class BattleUISceneBuilder
         EnsureSingleton<PlayerInventory>("PlayerInventory");
         EnsureSingleton<ResearchManager>("ResearchManager");
         EnsureSingleton<TradeManager>("TradeManager");
+        EnsureSingleton<EnemyRoster>("EnemyRoster");
+        RemoveStandaloneEnemyStatus();
 
         GameObject battleRoot = BuildBattleRoot(canvasT);
         GameObject rewardRoot = BuildRewardRoot(canvasT);
@@ -154,6 +156,12 @@ public static class BattleUISceneBuilder
         Frame(statusIconRoot, new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.5f), new Vector2(0f, -190f), new Vector2(360f, 48f));
         AddHorizontalLayout(statusIconRoot, 6f);
 
+        // 残り体数（複数敵ウェーブ時のみ表示）
+        TMP_Text enemyCount = AddText(root, "EnemyCountText", "残り 3 体", 20, TextAlignmentOptions.Center);
+        Frame(enemyCount.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(300f, 32f));
+        enemyCount.color = new Color(1f, 0.8f, 0.5f, 1f);
+        enemyCount.gameObject.SetActive(false);
+
         // キャストログ（中央）
         TMP_Text castLog = AddText(root, "CastLogText", "", 26, TextAlignmentOptions.Center);
         Frame(castLog.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -20f), new Vector2(600f, 50f));
@@ -192,6 +200,7 @@ public static class BattleUISceneBuilder
         so.FindProperty("enemyHpFill").objectReferenceValue = enemyHpFill;
         so.FindProperty("enemyHpText").objectReferenceValue = enemyHpText;
         so.FindProperty("enemyStatusIconRoot").objectReferenceValue = statusIconRoot;
+        so.FindProperty("enemyCountText").objectReferenceValue = enemyCount;
         so.FindProperty("playerHpFill").objectReferenceValue = playerHpFill;
         so.FindProperty("playerHpText").objectReferenceValue = playerHpText;
         so.FindProperty("buffIconRoot").objectReferenceValue = buffRoot;
@@ -291,6 +300,19 @@ public static class BattleUISceneBuilder
         if (Object.FindFirstObjectByType<T>() != null) return;
         GameObject go = new GameObject(goName);
         go.AddComponent<T>();
+    }
+
+    // 旧: シーンに直置きの単体 EnemyStatus を除去（敵は EnemyRoster がプール管理するようになったため）
+    private static void RemoveStandaloneEnemyStatus()
+    {
+        EnemyStatus[] all = Object.FindObjectsByType<EnemyStatus>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (EnemyStatus es in all)
+        {
+            if (es.GetComponentInParent<EnemyRoster>() == null)
+            {
+                Object.DestroyImmediate(es.gameObject);
+            }
+        }
     }
 
     // ---------------------------------------------------------------- HideoutRoot（研究画面）
