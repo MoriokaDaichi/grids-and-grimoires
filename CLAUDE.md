@@ -76,8 +76,8 @@ EditMode テストが `Assets/Tests/EditMode/`（asmdef: `GridsAndGrimoires.Edit
 ### インベントリパズル（杖のグリッド配置）
 3つのスクリプトが協調して動く：
 
-- [MagicGridManager.cs](Assets/Script/MagicGridManager.cs): グリッド（既定5×5）の状態を2次元配列で保持し、スクリーン/ワールド座標⇔グリッド座標の変換、配置可否判定（`CanPlace`）、はみ出し補正（`ClampToGrid`）を提供する。**座標系の注意**: グリッドはY上方向が正だが、`Docs/`の8章データは行が下方向に増加する座標系なので符号が逆になっている（`MagicDataGenerator.cs`の`Shape()`ヘルパーで変換済み）。
-- [MagicSpawner.cs](Assets/Script/MagicSpawner.cs): 魔法一覧ボタン（`MagicGeneratorButton`）の生成と、クリックで生成されるピース（`MagicPieceUI`）のライフサイクル（配置/キャンセル/取り外し時のボタン復元）を仲介する。
+- [MagicGridManager.cs](Assets/Script/MagicGridManager.cs): グリッドの状態を2次元配列で保持し、スクリーン/ワールド座標⇔グリッド座標の変換、配置可否判定（`CanPlace`）、はみ出し補正（`ClampToGrid`）を提供する。**グリッドサイズは杖の tier で可変**: `HideoutManager.OwnedGear` から所持している杖（`GearSlot.Wand`）の最上位 tier を取り、`minGridSize + tier`（クランプ `maxGridSize`）を1辺にする＝未製作2×2 / 作業台Lv1の杖3×3 / Lv2の杖4×4 / Lv3の杖5×5（数値は仮）。`Start` と `GamePhaseManager.OnPhaseChanged`（Build入場）で `ApplyWandTierSize()` を呼び、`SetGridSize` が配列を作り直し、`RectTransform.sizeDelta` / `GridLayoutGroup.constraintCount` / 直下のマス目背景の表示数（`w*h` 個だけ active）を更新する。サイズが変わったときだけ `MagicSpawner.ResetBoard()` で盤面を一掃（配置ピース破棄＋ボタン復元）＋`OnGridResized` 発火。同サイズなら盤面は維持（戦闘往復で消えない）。**座標系の注意**: グリッドはY上方向が正だが、`Docs/`の8章データは行が下方向に増加する座標系なので符号が逆になっている（`MagicDataGenerator.cs`の`Shape()`ヘルパーで変換済み）。
+- [MagicSpawner.cs](Assets/Script/MagicSpawner.cs): 魔法一覧ボタン（`MagicGeneratorButton`）の生成と、クリックで生成されるピース（`MagicPieceUI`）のライフサイクル（配置/キャンセル/取り外し時のボタン復元）を仲介する。`ResetBoard()` は生成済みピースを全破棄してボタン一覧を作り直す（グリッドサイズ変更時に `MagicGridManager` から呼ばれる）。
 - [MagicPieceUI.cs](Assets/Script/MagicPieceUI.cs): ドラッグ配置・クリック配置・Rキー回転（形状データを直接90度回転）・グリッド範囲内への自動補正を行う。ピース選択時は元の`MagicData`アセットを書き換えないよう`Instantiate`でコピーしてから使う。
 
 3者はシーン内で `FindFirstObjectByType` により互いを参照するため、シーン上に `MagicGridManager` と `MagicSpawner` が単一ずつ存在する前提になっている。

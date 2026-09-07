@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
 
 public class MagicGridManager : MonoBehaviour
@@ -7,12 +8,127 @@ public class MagicGridManager : MonoBehaviour
     public int height = 5;
     public float cellSize = 50f;
 
+    [Header("杖のグリッド1辺（作業台で作る杖の tier で決まる。数値は仮）")]
+    [Tooltip("杖 未製作(tier0) のときの1辺。tier1 で +1、tier2 で +2 … と広がる")]
+    public int minGridSize = 2;
+    [Tooltip("最大の1辺（作業台Lv3の杖）")]
+    public int maxGridSize = 5;
+
+    // グリッドの1辺が変わったときに発火（新 width, height）。
+    public System.Action<int, int> OnGridResized;
+
     // どのマスに何の魔法があるかを保持する2次元配列
     private MagicData[,] grid;
+
+    private RectTransform cachedRect;
+    private GridLayoutGroup cachedLayout;
+    private GamePhaseManager phase;
 
     void Awake()
     {
         grid = new MagicData[width, height];
+    }
+
+    void Start()
+    {
+        phase = Object.FindFirstObjectByType<GamePhaseManager>();
+        if (phase != null) phase.OnPhaseChanged += HandlePhaseChanged;
+        ApplyWandTierSize();
+    }
+
+    void OnDestroy()
+    {
+        if (phase != null) phase.OnPhaseChanged -= HandlePhaseChanged;
+    }
+
+    private void HandlePhaseChanged(GamePhaseManager.GamePhase p)
+    {
+        // 構築フェーズに入るたびに、いま所持している杖に合わせてグリッドを作り直す。
+        if (p == GamePhaseManager.GamePhase.Build) ApplyWandTierSize();
+    }
+
+    // ---------------------------------------------------------------- 杖 tier → グリッドサイズ
+
+    // 現在所持している杖のうち最上位の tier を返す（作業台未製作／杖なしは 0）。
+    public static int CurrentWandTier()
+    {
+        HideoutManager h = HideoutManager.Instance;
+        if (h == null) return 0;
+
+        int best = 0;
+        foreach (string id in h.OwnedGear)
+        {
+            GearDef g = GearCatalog.Get(id);
+            if (g != null && g.slot == GearSlot.Wand && g.tier > best) best = g.tier;
+        }
+        return best;
+    }
+
+    public int WandTierToSize(int tier)
+    {
+        return Mathf.Clamp(minGridSize + Mathf.Max(0, tier), minGridSize, maxGridSize);
+    }
+
+    // いま所持している杖の tier からグリッドサイズを決めて適用する。
+    public void ApplyWandTierSize()
+    {
+        int s = WandTierToSize(CurrentWandTier());
+        SetGridSize(s, s);
+    }
+
+    // ---------------------------------------------------------------- リサイズ
+
+    // グリッドを w×h に作り替える。サイズが変わったときは盤面のピースを一旦すべて取り外す
+    // （はみ出し・座標ズレ防止）。同じサイズなら盤面はそのまま維持する。
+    public void SetGridSize(int w, int h)
+    {
+        w = Mathf.Clamp(w, 1, 12);
+        h = Mathf.Clamp(h, 1, 12);
+
+        bool changed = grid == null || width != w || height != h;
+
+        width = w;
+        height = h;
+
+        // サイズが変わったときだけ配列を作り直す（同じサイズなら盤面を維持）。
+        if (changed) grid = new MagicData[w, h];
+
+        ApplyVisualSize();
+
+        if (changed)
+        {
+            MagicSpawner spawner = Object.FindFirstObjectByType<MagicSpawner>();
+            if (spawner != null) spawner.ResetBoard();
+            OnGridResized?.Invoke(w, h);
+        }
+    }
+
+    // RectTransform／GridLayoutGroup／セル背景の見た目を現在の width×height に合わせる。
+    private void ApplyVisualSize()
+    {
+        if (cachedRect == null) cachedRect = GetComponent<RectTransform>();
+        if (cachedLayout == null) cachedLayout = GetComponent<GridLayoutGroup>();
+
+        if (cachedRect != null)
+            cachedRect.sizeDelta = new Vector2(width * cellSize, height * cellSize);
+
+        if (cachedLayout != null)
+        {
+            cachedLayout.cellSize = new Vector2(cellSize, cellSize);
+            cachedLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            cachedLayout.constraintCount = width;
+        }
+
+        // 直下の子（グリッドのマス目背景）を w*h 個だけ表示する。
+        int need = width * height;
+        int shown = 0;
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            GameObject cell = transform.GetChild(i).gameObject;
+            bool on = shown < need;
+            if (cell.activeSelf != on) cell.SetActive(on);
+            if (on) shown++;
+        }
     }
 
     // スクリーン座標（マウス位置）をグリッド座標（0,0〜4,4）に変換

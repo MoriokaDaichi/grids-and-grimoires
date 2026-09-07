@@ -106,4 +106,23 @@ public class MagicSpawner : MonoBehaviour
     {
         CreateButton(data);
     }
+
+    // 盤面をまっさらにする（グリッドのサイズが変わったときに MagicGridManager から呼ぶ）。
+    // 生成済みのピース（追従中・配置済みを問わず）をすべて破棄し、ボタン一覧を作り直す。
+    public void ResetBoard()
+    {
+        MagicPieceUI[] pieces = Object.FindObjectsByType<MagicPieceUI>(FindObjectsSortMode.None);
+        foreach (MagicPieceUI p in pieces)
+        {
+            if (p == null) continue;
+            p.transform.SetParent(null, false); // Destroy はフレーム末尾まで遅延するので先に外す
+            Destroy(p.gameObject);
+        }
+
+        activePiece = null;
+        lastClickedButton = null;
+        if (scrollRect != null) scrollRect.enabled = true;
+
+        RebuildButtons();
+    }
 }
