@@ -193,8 +193,9 @@ public static class HideoutCatalog
     // 魔力炉を初めて建てた（Lv0→Lv1）ときに与える初期燃料。再検証5 R2：
     // 魔力炉＋錬金釜＋作業台＋アクセを建てた直後に $30／小結晶20／燃料0 になり、
     // craft/research/transmute/upgrade が全部止まる「燃料デッドロック」への対策。
-    // これだけあれば「錬金釜を建てる→最初の数個を変換して結晶を回収」に入れる（数値は仮）。
-    public const int FurnaceBuildBonusFuel = 12;
+    // これだけあれば「錬金釜を建てる→杖を打つ→最初の十数個を変換して結晶を回収」の初動が
+    // 一通り回る（＝結晶エンジンが自走に入るまでのブートストラップ分。数値は仮）。
+    public const int FurnaceBuildBonusFuel = 25;
 
     // 魔力炉：設備アクション1回あたりの燃料消費（燃料は魔力結晶の価値で測る）
     // 再検証3（cold start 5周）D1/D4：Lv1=2 だと錬金釜Lv1 の tier1 変換（part+小2→小2）が
