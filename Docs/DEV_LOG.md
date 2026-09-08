@@ -7,11 +7,10 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 
 ---
 
-## 現在の状態（2026-09-08 時点）
+## 現在の状態（2026-09-09 時点）
 
-- **ブランチ**: `feat/battle-ui-core-loop` の全 40 コミットを **PR #1 で `master` にマージ済み**
-  （マージコミット `7ff60e3`）。`master` と `feat` は差分ゼロ。feat ブランチは残置。
-- **EditMode テスト**: 147/147 グリーン（`GridsAndGrimoires.EditModeTests`）。
+- **ブランチ**: `master`。`feat/battle-ui-core-loop` は PR #1 マージ済み（`7ff60e3`）で残置。
+- **EditMode テスト**: 152/152 グリーン（`GridsAndGrimoires.EditModeTests`）。
 - **Unity**: 6000.3.9f1 / URL シーン `Assets/Scenes/SampleScene.unity`。
 - アセンブリ分割済み: `GridsAndGrimoires.Runtime`（Assets/Script）/ `.Editor`（Assets/Editor）/
   `.EditModeTests`（Assets/Tests/EditMode）。
@@ -32,6 +31,24 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 ---
 
 ## このセッションで実装したこと（新しい順）
+
+### -1. WIP のコミット整理 ＋ 手動ステータス振り分けの永続化（2026-09-09）
+- **未コミットだった WIP を検証して 3 コミットに整理**（EditMode 147/147 で確認）:
+  - `fix: 日本語フォントの欠字を動的フォールバックで補完` — `Assets/Fonts/NotoSansJP-Light Dynamic SDF.asset`
+    を追加し TMP Settings の `m_fallbackFontAssets` へ登録。静的アトラス未収録の漢字（商/傭/態/電/復/秒 等）が
+    □ にならず動的ラスタライズで出る。`HideoutHubPanel` の ✓/✎ 記号を素の「（所持済）」「（レシピ未取得）」に。
+  - `fix: 戦闘終了時にダメージ数字が画面へ残る不具合` — `DamageNumber.OnDisable` で自己 Destroy、
+    `BattleHUD` が戦闘開始/終了で `damageNumberRoot` 配下を掃除（auto memory `gg-phase-root-coroutine-orphan`）。
+  - `feat: 画面下部バーの「トレーダー」「隠れ家」ボタンを遷移に配線` — `GamePhaseManager` に
+    `extraHideoutButtons` / `extraTradeButtons`、`BattleUISceneBuilder` が下部バー `Image/Button (7)(8)` を配線。
+- **手動ステータス振り分けをセーブ対象化**（`af81af3`）:
+  - `SaveData`: `playerStatsSaved` / `savedStatsPoint` / `manualStat{Hp,Atk,Def,Spd,Luc}`。研究の小ノード・
+    製作装備ぶんは含めない（各 Manager が起動時に `ApplyResearchDelta` で再適用するため。含めると二重加算）。
+  - **[PlayerStatSave.cs](../Assets/Script/PlayerStatSave.cs)（新規・純ロジック）**: `SaveData` の当該領域だけを
+    読み書きする `Read` / `Write`。`PlayerStatSaveTests` 5 本（round-trip・他フィールド非破壊・JSON 経由）。
+  - `PlayerStatus`: `AddStat` / `AddStatsPoint` で手動加算量を積算し `Persist`（Load→自領域→Save）、
+    `Start` でシーン初期値へ加算して復元。`AddStat("HP")` は `currentHp` も追随（`ApplyResearchDelta` と挙動統一）。
+  - テスト 147→152 グリーン。
 
 ### 0. トレーダーのタスクライン ＋ お金（ゴールド）経済
 - **お金（ゴールド）**: `MoneyManager`（シーンシングルトン、`PlayerInventory` と同型）。`SaveData.money` /
@@ -153,6 +170,7 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 | `TradeCatalog` | 旧・交換メニュー（`StandardOffers`） |
 | `TraderCatalog` / `TaskRules` | 複数トレーダーとタスクライン（`requires` 連鎖・報酬に素材/お金/装備/レシピ/ステP） |
 | `DungeonEconomy` | ダンジョン入場料 |
+| **`PlayerStatSave`** | 手動ステータス振り分けの `SaveData` 読み書き（研究/装備ぶんは含めない） |
 
 ---
 
@@ -161,7 +179,8 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 - 新 36 体それぞれ個別のトレーダー変換オファー（今は代表選定にとどめている）。
 - 深部（深度 15+ で基本魔法だけ）の実バランス調整 ＝ 研究/装備/グリッド拡大の出番。
 - トレーダーの顔アイコン Sprite を `TradePanel.traderIcons` にインスペクタで割り当て（枠は用意済み）。
-- フォントアトラス欠字（商/傭/態/電/復/秒 等）が □ 表示になる箇所がある。
-- 戦闘 HUD の N 体個別ウィジェット、`PlayerStatus` の手動振り分けのセーブ対象化、
-  スキルツリーのレイアウト整形、ハイドアウトの見た目（配置図・アイコン・演出）、
-  装備スロット UI・入替、マジックサークルの実時間経過の可視化、Character 画面、AoE 以外の範囲パターン。
+- フォント欠字は動的フォールバック（NotoSansJP-Light Dynamic SDF）で補完済み。未収録漢字が
+  出た場合はフォールバック未適用の TMP か、フォールバック側にも無い字。要現物確認。
+- 戦闘 HUD の N 体個別ウィジェット、スキルツリーのレイアウト整形、
+  ハイドアウトの見た目（配置図・アイコン・演出）、装備スロット UI・入替、
+  マジックサークルの実時間経過の可視化、Character 画面、AoE 以外の範囲パターン。
