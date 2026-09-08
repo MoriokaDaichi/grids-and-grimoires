@@ -85,6 +85,38 @@ public class ResearchGraphTests
         }
     }
 
+    // 再検証3〜5 D6：min-max プレイでも Atk が伸びるよう、小結晶だけで（＝中/大結晶ゲート無しで）
+    // たどれる Atk 小ノードが十分な本数あること。親チェーンを根までさかのぼり、通り道の小ノードが
+    // 全て小結晶コストのみなら「小結晶だけで到達可能」とみなす。
+    [Test]
+    public void EnoughAtkStatNodes_ReachableWithSmallCrystalsOnly()
+    {
+        int reachable = 0;
+        foreach (ResearchNodeDef d in ResearchGraph.Nodes)
+        {
+            if (d.isMagic || d.stat != ResearchStat.Atk) continue;
+
+            bool ok = true;
+            string cur = d.id;
+            int guard = 0;
+            while (cur != null && guard++ < 32)
+            {
+                ResearchNodeDef nd = ResearchGraph.Get(cur);
+                if (nd == null) { ok = false; break; }
+                if (!nd.isMagic)
+                {
+                    foreach (MaterialCost c in nd.cost)
+                        if (c != null && c.materialType != MaterialType.SmallManaCrystal) { ok = false; break; }
+                }
+                if (!ok) break;
+                cur = nd.parentId;
+            }
+            if (ok) reachable++;
+        }
+        Assert.GreaterOrEqual(reachable, 6,
+            "小結晶だけで到達できる Atk 小ノードが少なすぎる（D6：min-max で Atk が伸びない）");
+    }
+
     [Test]
     public void MagicNodesGatedBehindSmallNodes()
     {

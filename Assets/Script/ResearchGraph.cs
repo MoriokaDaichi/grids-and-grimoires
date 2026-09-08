@@ -111,7 +111,11 @@ public static class ResearchGraph
         BuildSpoke("ManaMax", 108f, ResearchStat.ManaMax, ResearchStat.ManaRegen, "Thunder");
         BuildSpoke("Vitality", 180f, ResearchStat.Hp, ResearchStat.Def, "Wind");
         BuildSpoke("Celerity", 252f, ResearchStat.Spd, ResearchStat.Luc, "Light");
-        BuildSpoke("Fortune", 324f, ResearchStat.Luc, ResearchStat.Atk, "Dark");
+        // 再検証3〜5 D6：Atk 小ノードが Fire 枝の2個＋この扇の“奇数index（＝副）”しか無く、
+        // しかも扇の Atk に辿り着くには Luc ノードを経由するので、min-max プレイでは Atk が
+        // ほぼ伸びない（3〜5周で +2〜3）。この扇を Atk 主・Luc 副に入れ替え、根（Dark 基本魔法・
+        // コスト0）直下から小結晶だけで Atk 小ノードを繋げられるようにする。
+        BuildSpoke("Fortune", 324f, ResearchStat.Atk, ResearchStat.Luc, "Dark");
 
         foreach (Line l in Lines)
         {
