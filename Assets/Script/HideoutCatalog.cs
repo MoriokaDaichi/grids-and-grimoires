@@ -104,9 +104,11 @@ public static class HideoutCatalog
                     // 錬金釜（＝素材→結晶の“エンジン”）が建たずに詰む。錬金釜Lv1 だけ中結晶払いにして、
                     // 最初のタスク報酬で建てられるようにする（M(2)=20 は S(16)=16 よりむしろ割高＝甘くはしない）。
                     new List<MaterialCost> { M(2), Part("大ネズミの尾", 4) },
-                    // 再検証3 D3：中結晶の中盤 faucet が無く、Lv2 の M(5) は「tier2素材を$146売って
-                    // $120の大結晶を買い glen で崩す」細い一本道でしか賄えなかった。M(3) に緩める。
-                    new List<MaterialCost> { M(3), Part("剛毛", 2), Part("蜘蛛の糸", 2) },
+                    // 再検証3 D3／再検証5 R3：錬金釜Lv2 は中盤の伸びしろ（tier2+ 変換→エレメント欠片→
+                    // 作業台Lv2/研究机Lv2）の起点なのに、cold-start 3周でも建たなかった。tier2 素材の要求を
+                    // 2種（剛毛 d8＋蜘蛛の糸 d10）→ 1種（剛毛 d8）に。壁が d10〜11 のプレイヤーが d10 debut の
+                    // 蜘蛛の糸 を待たずに建てられる。M(3) は据え置き（大結晶×2＝orca_2 を崩せば届く）。
+                    new List<MaterialCost> { M(3), Part("剛毛", 2) },
                     new List<MaterialCost> { L(1), Frag(MagicAttribute.Wind, 3), Part("魔石の欠片", 3) },
                 },
             },

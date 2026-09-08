@@ -177,6 +177,18 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
+        public void AlchemyCauldronLv2_UsesAtMostOneMonsterPartSpecies()
+        {
+            // 再検証5 R3：錬金釜Lv2 は中盤の伸びしろの起点。tier2 素材の“種類数”を1に抑えて
+            // 壁のプレイヤー（d10〜11）でも組めるようにする。
+            var species = new System.Collections.Generic.HashSet<string>();
+            foreach (MaterialCost c in HideoutCatalog.Get(FacilityKind.AlchemyCauldron).costByStep[1])
+                if (c != null && c.materialType == MaterialType.SpecialItem)
+                    species.Add(c.specialItemName);
+            Assert.LessOrEqual(species.Count, 1, "錬金釜Lv2 が複数種のモンスター素材を要求している（R3）");
+        }
+
+        [Test]
         public void AlchemyCauldronLv2_MediumCrystalCost_StaysModest()
         {
             // 再検証3 D3：中結晶の中盤 faucet が無いので Lv2 の中結晶要求は farm＋わずかな両替で
