@@ -22,6 +22,8 @@ public class PlaytestAutopilot : MonoBehaviour
     public float escapeHpFraction = 0.35f;   // ウェーブ突破時これ未満なら脱出
     public float perRunRealTimeout = 260f;   // 1周の実時間上限（保険。深部まで行く周でも“本当の死深度”を測れるよう長め）
     public bool runEconomy = true;           // 周のあいだに建造/杖製作/変換/交換/タスク受領を貪欲に回す
+    public int farmRuns = 2;                  // 最初の N 周は浅く回して低tier素材（スライムゼリー等）を確実に集める
+    public int shallowFarmCap = 4;            // farm 周の深度キャップ
 
     public Action<string> OnFinished;        // レポート文字列を受け取る（PlaytestDriver が書き出す）
 
@@ -127,6 +129,11 @@ public class PlaytestAutopilot : MonoBehaviour
                 break;
             }
 
+            // 最初の farmRuns 周は浅く回す（低tier素材を確実に集める＝経済の初動を安定させる）。
+            bool isFarm = r <= farmRuns;
+            int runCap = isFarm ? Mathf.Min(shallowFarmCap, depthCap) : depthCap;
+            float runEscHp = isFarm ? 0.45f : escapeHpFraction;
+
             var hpMin = new SortedDictionary<int, float>();
             Time.timeScale = timeScale;
             phase.StartSortie();
@@ -161,7 +168,7 @@ public class PlaytestAutopilot : MonoBehaviour
                     lastChoiceDepth = dungeon.Depth;
 
                     float frac = player.hp > 0 ? (float)player.currentHp / player.hp : 0f;
-                    bool escape = dungeon.Depth >= depthCap || frac < escapeHpFraction;
+                    bool escape = dungeon.Depth >= runCap || frac < runEscHp;
                     if (escape) phase.EscapeRun();
                     else phase.ContinueRun();
                     yield return null;
@@ -182,7 +189,8 @@ public class PlaytestAutopilot : MonoBehaviour
             if (hpMin != null)
             {
                 bool cleared = phase.LastRunCleared;
-                runs.Add(new RunResult { index = r, cleared = cleared, depth = dungeon.Depth, hpTrail = FormatTrail(hpMin), note = cleared ? "脱出" : "戦闘不能" });
+                string tag = isFarm ? "farm・" : "";
+                runs.Add(new RunResult { index = r, cleared = cleared, depth = dungeon.Depth, hpTrail = FormatTrail(hpMin), note = tag + (cleared ? "脱出" : "戦闘不能") });
             }
 
             // 報酬画面で帰還
