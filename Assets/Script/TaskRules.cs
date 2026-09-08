@@ -1,0 +1,91 @@
+using System;
+using System.Collections.Generic;
+
+// トレーダーのタスク種別。
+public enum TraderTaskKind
+{
+    DeliverItems,   // 指定素材の納品
+    DefeatEnemies,  // 敵の討伐（種類指定または累計）
+    ReachDepth,     // 指定深度への到達
+}
+
+// トレーダーが出す1件のタスク。TradeOffer と同じくプレーンクラス（SO化はしない）。
+public class TraderTask
+{
+    public string id;                                        // 一意ID（セーブの達成記録キー）
+    public string traderId;
+    public string title;
+    public string description;
+    public TraderTaskKind kind;
+    public List<MaterialCost> deliverItems = new List<MaterialCost>(); // DeliverItems: 納品物（達成時に消費）
+    public string targetEnemyName;                            // DefeatEnemies: 対象の敵名（空なら種類問わず）
+    public int targetCount;                                   // DefeatEnemies: 討伐数 / ReachDepth: 深度
+    public List<MaterialCost> rewardItems = new List<MaterialCost>();
+    public int rewardStatPoints;
+}
+
+// タスク進捗の判定に必要な値（純粋関数に渡す）。
+public struct TaskProgress
+{
+    public int enemiesDefeated;          // 累計撃破数
+    public int bestDepth;               // 到達最深
+    public Func<string, int> enemyKills; // 敵名 → 累計撃破数
+    public Func<MaterialCost, int> inventoryCount; // 素材 → 所持数
+}
+
+// タスクの達成判定と進捗テキスト（純粋関数）。シーン非依存で EditMode テストできる。
+public static class TaskRules
+{
+    // 現在の進捗でタスクの達成条件を満たしているか。
+    public static bool IsComplete(TraderTask task, TaskProgress p)
+    {
+        if (task == null) return false;
+
+        switch (task.kind)
+        {
+            case TraderTaskKind.DefeatEnemies:
+                if (!string.IsNullOrEmpty(task.targetEnemyName))
+                    return p.enemyKills != null && p.enemyKills(task.targetEnemyName) >= task.targetCount;
+                return p.enemiesDefeated >= task.targetCount;
+
+            case TraderTaskKind.ReachDepth:
+                return p.bestDepth >= task.targetCount;
+
+            case TraderTaskKind.DeliverItems:
+                if (task.deliverItems == null || task.deliverItems.Count == 0) return false;
+                if (p.inventoryCount == null) return false;
+                foreach (MaterialCost c in task.deliverItems)
+                    if (c != null && p.inventoryCount(c) < c.amount) return false;
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    // 一覧表示用の進捗テキスト（例: "討伐 7 / 10"、"深度 3 / 5"、"納品待ち"）。
+    public static string ProgressText(TraderTask task, TaskProgress p)
+    {
+        if (task == null) return "";
+
+        switch (task.kind)
+        {
+            case TraderTaskKind.DefeatEnemies:
+            {
+                int cur = !string.IsNullOrEmpty(task.targetEnemyName)
+                    ? (p.enemyKills != null ? p.enemyKills(task.targetEnemyName) : 0)
+                    : p.enemiesDefeated;
+                string who = string.IsNullOrEmpty(task.targetEnemyName) ? "討伐" : task.targetEnemyName + " 討伐";
+                return who + " " + Math.Min(cur, task.targetCount) + " / " + task.targetCount;
+            }
+            case TraderTaskKind.ReachDepth:
+                return "深度 " + Math.Min(p.bestDepth, task.targetCount) + " / " + task.targetCount;
+
+            case TraderTaskKind.DeliverItems:
+                return IsComplete(task, p) ? "納品可能" : "素材を集める";
+
+            default:
+                return "";
+        }
+    }
+}

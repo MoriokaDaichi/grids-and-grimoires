@@ -1,0 +1,187 @@
+using System.Collections.Generic;
+
+// ハイドアウトの5設備。素材で建造し、Lv3まで素材で強化できる。
+// ・研究机       … 研究(スキルツリー)を解禁。Lvで研究コスト減＋小ノードのボーナス増。
+// ・作業台       … 杖/防具/アクセサリーの製作を解禁。Lvで上位レシピ解禁。
+// ・マジックサークル … 手持ちアイテムを捧げて一定時間後にランダムなアイテムを得る。Lvで待ち時間短縮＋高レア率上昇。
+// ・錬金釜       … モンスター素材を魔力結晶/エレメントへ変換。Lvで効率上昇。
+// ・魔力炉       … 全設備へのエネルギー供給。魔力結晶を入れて消費する。Lvでスロット増＋燃費改善。
+public enum FacilityKind
+{
+    ResearchDesk = 0,
+    Workbench = 1,
+    MagicCircle = 2,
+    AlchemyCauldron = 3,
+    ManaFurnace = 4,
+}
+
+// アイテムのレア度（マジックサークルの待ち時間・抽選に使う）。
+public enum ItemRarity
+{
+    Common = 0,
+    Uncommon = 1,
+    Rare = 2,
+    Epic = 3,
+}
+
+public class FacilityDef
+{
+    public FacilityKind kind;
+    public string name;
+    public string blurb;
+
+    // costByStep[0] = 未建造 → Lv1、[1] = Lv1 → Lv2、[2] = Lv2 → Lv3
+    public List<List<MaterialCost>> costByStep = new List<List<MaterialCost>>();
+}
+
+// 設備の定義と、レベルごとの効果パラメータ（純粋データ。数値は全て仮）。
+public static class HideoutCatalog
+{
+    public const int MaxLevel = 3;
+
+    private static MaterialCost S(int n) { return new MaterialCost { materialType = MaterialType.SmallManaCrystal, amount = n }; }
+    private static MaterialCost M(int n) { return new MaterialCost { materialType = MaterialType.MediumManaCrystal, amount = n }; }
+    private static MaterialCost L(int n) { return new MaterialCost { materialType = MaterialType.LargeManaCrystal, amount = n }; }
+    private static MaterialCost Frag(MagicAttribute a, int n) { return new MaterialCost { materialType = MaterialType.ElementFragment, attribute = a, amount = n }; }
+    private static MaterialCost Part(string name, int n) { return new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = name, amount = n }; }
+
+    private static List<FacilityDef> _all;
+
+    public static IReadOnlyList<FacilityDef> Facilities { get { Ensure(); return _all; } }
+
+    public static FacilityDef Get(FacilityKind kind)
+    {
+        Ensure();
+        foreach (FacilityDef d in _all) if (d.kind == kind) return d;
+        return null;
+    }
+
+    private static void Ensure()
+    {
+        if (_all != null) return;
+        // 建造コストのモンスター素材は「Lv1=tier1（浅層）のみ / Lv2=tier1〜2 / Lv3=上限なし（深層可）」。
+        // （HideoutCatalogTests がこの上限を検証する）
+        _all = new List<FacilityDef>
+        {
+            new FacilityDef
+            {
+                kind = FacilityKind.ManaFurnace, name = "魔力炉",
+                blurb = "全設備の動力源。魔力結晶を入れて稼働させる。",
+                costByStep = new List<List<MaterialCost>>
+                {
+                    new List<MaterialCost> { S(12), Part("スライムゼリー", 4) },
+                    new List<MaterialCost> { M(6), Part("鉄の兜", 3) },
+                    new List<MaterialCost> { L(1), M(12), Part("巨神の核", 1) },
+                },
+            },
+            new FacilityDef
+            {
+                kind = FacilityKind.ResearchDesk, name = "研究机",
+                blurb = "研究（スキルツリー）を行う作業場。",
+                costByStep = new List<List<MaterialCost>>
+                {
+                    new List<MaterialCost> { S(20), Part("毒針", 4) },
+                    new List<MaterialCost> { M(8), Frag(MagicAttribute.Light, 2), Part("古びた骨", 4) },
+                    new List<MaterialCost> { L(2), M(20), Part("世界樹の若枝", 2) },
+                },
+            },
+            new FacilityDef
+            {
+                kind = FacilityKind.AlchemyCauldron, name = "錬金釜",
+                blurb = "モンスター素材を魔力結晶やエレメントに練り直す。",
+                costByStep = new List<List<MaterialCost>>
+                {
+                    new List<MaterialCost> { S(16), Part("大ネズミの尾", 4) },
+                    new List<MaterialCost> { M(7), Part("剛毛", 3), Part("古木の芯", 2) },
+                    new List<MaterialCost> { L(1), Frag(MagicAttribute.Wind, 3), Part("魔石の欠片", 3) },
+                },
+            },
+            new FacilityDef
+            {
+                kind = FacilityKind.Workbench, name = "作業台",
+                blurb = "杖・防具・アクセサリーを製作する。",
+                costByStep = new List<List<MaterialCost>>
+                {
+                    new List<MaterialCost> { S(24), Part("ゴブリンの牙", 4) },
+                    new List<MaterialCost> { M(10), Frag(MagicAttribute.Fire, 2), Part("竜人の鱗", 3) },
+                    new List<MaterialCost> { L(2), Frag(MagicAttribute.Dark, 3), Part("竜のうろこ", 2) },
+                },
+            },
+            new FacilityDef
+            {
+                kind = FacilityKind.MagicCircle, name = "マジックサークル",
+                blurb = "アイテムを捧げ、時をおいて別のアイテムへ変える。",
+                costByStep = new List<List<MaterialCost>>
+                {
+                    new List<MaterialCost> { S(30), Part("スライムゼリー", 6) },
+                    new List<MaterialCost> { M(12), Frag(MagicAttribute.Thunder, 2), Part("風切羽", 3) },
+                    new List<MaterialCost> { L(3), Part("古木の芯", 3), Part("命の宝珠", 1) },
+                },
+            },
+        };
+    }
+
+    // ---------------------------------------------------------------- レベル別の効果（level 0 = 未建造）
+
+    // 研究机：研究コスト倍率（1未満で軽減）
+    public static float ResearchCostMult(int level)
+    {
+        switch (level) { case 1: return 0.9f; case 2: return 0.78f; case 3: return 0.6f; default: return 1f; }
+    }
+
+    // 研究机：小ノードのボーナス倍率
+    public static float ResearchBonusMult(int level)
+    {
+        switch (level) { case 1: return 1f; case 2: return 1.3f; case 3: return 1.7f; default: return 1f; }
+    }
+
+    // マジックサークル：待ち時間の倍率（1未満で短縮）
+    public static float CircleDurationMult(int level)
+    {
+        switch (level) { case 1: return 1f; case 2: return 0.75f; case 3: return 0.5f; default: return 1f; }
+    }
+
+    // マジックサークル：抽選レア度への加算
+    public static int CircleRarityBonus(int level)
+    {
+        return level <= 1 ? 0 : level - 1; // Lv1:0 / Lv2:1 / Lv3:2
+    }
+
+    // 錬金釜：変換効率（産出量の倍率）
+    public static float CauldronYieldMult(int level)
+    {
+        switch (level) { case 1: return 1f; case 2: return 1.4f; case 3: return 1.9f; default: return 0f; }
+    }
+
+    // 錬金釜：変換できるモンスター素材の tier 上限（0 = 未建造）。Lv1:tier1 / Lv2:tier1〜3 / Lv3:tier1〜5
+    public static int CauldronMaxTier(int level)
+    {
+        switch (level) { case 1: return 1; case 2: return 3; case 3: return 5; default: return 0; }
+    }
+
+    // その tier のモンスター素材を変換するのに必要な錬金釜レベル（1〜3）。
+    public static int CauldronLevelForTier(int tier)
+    {
+        if (tier <= 1) return 1;
+        if (tier <= 3) return 2;
+        return 3;
+    }
+
+    // 魔力炉：スロット数（＝燃料バッファ上限は slots × 大結晶価値）
+    public static int FurnaceSlots(int level)
+    {
+        return level <= 0 ? 0 : level + 1; // Lv1:2 / Lv2:3 / Lv3:4
+    }
+
+    // 魔力炉：設備アクション1回あたりの燃料消費（燃料は魔力結晶の価値で測る）
+    public static int FurnaceFuelPerAction(int level)
+    {
+        switch (level) { case 1: return 2; case 2: return 1; case 3: return 1; default: return 0; }
+    }
+
+    // 作業台：解禁されるレシピ階層（0 = 未建造）
+    public static int WorkbenchTier(int level)
+    {
+        return level < 0 ? 0 : level;
+    }
+}

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f877b69129ce39a479fa4df5e8a9778c, type: 3}
+  m_Name: Wyvern
+  m_EditorClassIdentifier: GridsAndGrimoires.Runtime::EnemyData
+  enemyName: "\u30EF\u30A4\u30D0\u30FC\u30F3"
+  maxHp: 650
+  atk: 37
+  def: 15
+  attackInterval: 2.8
+  attribute: 3
+  resistances:
+  - attribute: 3
+    multiplier: 0.4
+  - attribute: 2
+    multiplier: 1.5
+  drops:
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u98DB\u7ADC\u306E\u7FFC\u819C"
+    amount: 2
+  sprite: {fileID: 0}

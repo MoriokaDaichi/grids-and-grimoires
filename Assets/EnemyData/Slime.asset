@@ -13,7 +13,15 @@ MonoBehaviour:
   m_Name: Slime
   m_EditorClassIdentifier: 
   enemyName: "\u30B9\u30E9\u30A4\u30E0"
-  maxHp: 60
-  atk: 6
-  def: 2
-  attackInterval: 4
+  maxHp: 28
+  atk: 3
+  def: 0
+  attackInterval: 4.2
+  attribute: 0
+  resistances: []
+  drops:
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u30B9\u30E9\u30A4\u30E0\u30BC\u30EA\u30FC"
+    amount: 2
+  sprite: {fileID: 0}

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f877b69129ce39a479fa4df5e8a9778c, type: 3}
+  m_Name: Skeleton
+  m_EditorClassIdentifier: GridsAndGrimoires.Runtime::EnemyData
+  enemyName: "\u30B9\u30B1\u30EB\u30C8\u30F3"
+  maxHp: 180
+  atk: 17
+  def: 5
+  attackInterval: 2.7
+  attribute: 5
+  resistances:
+  - attribute: 5
+    multiplier: 0.5
+  - attribute: 4
+    multiplier: 1.6
+  - attribute: 3
+    multiplier: 1.2
+  drops:
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u53E4\u3073\u305F\u9AA8"
+    amount: 2
+  sprite: {fileID: 0}

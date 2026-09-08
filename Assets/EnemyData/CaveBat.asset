@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f877b69129ce39a479fa4df5e8a9778c, type: 3}
+  m_Name: CaveBat
+  m_EditorClassIdentifier: GridsAndGrimoires.Runtime::EnemyData
+  enemyName: "\u6D1E\u7A9F\u30B3\u30A6\u30E2\u30EA"
+  maxHp: 34
+  atk: 4
+  def: 0
+  attackInterval: 3.4
+  attribute: 3
+  resistances:
+  - attribute: 3
+    multiplier: 0.7
+  drops:
+  - materialType: 5
+    attribute: 0
+    specialItemName: "\u8584\u3044\u7FFC\u819C"
+    amount: 2
+  sprite: {fileID: 0}

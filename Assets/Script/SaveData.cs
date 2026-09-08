@@ -1,0 +1,59 @@
+using System;
+using System.Collections.Generic;
+
+// JSONセーブの1レコード。JsonUtility は Dictionary を扱えないためリストで持つ。
+[Serializable]
+public class MaterialStack
+{
+    public int materialType;      // (int)MaterialType
+    public int attribute;         // (int)MagicAttribute（欠片/エレメントのみ意味を持つ）
+    public string specialItemName; // 固有アイテムのみ
+    public int count;
+}
+
+// JsonUtility は Dictionary を扱えないため、文字列→整数のペアをリストで持つ。
+[Serializable]
+public class StringIntPair
+{
+    public string key;
+    public int value;
+}
+
+// マジックサークルで進行中の「捧げもの」1件。
+[Serializable]
+public class BrewRecord
+{
+    public double startUnixSeconds; // 開始時刻（UTC, Unix秒）
+    public float hours;             // 完成までの時間
+    public int inputRarity;         // (int)ItemRarity（捧げたアイテムのレア度）
+    public string inputLabel;       // 表示用（捧げたアイテム名）
+}
+
+// セーブデータ全体。各システムは「読み込み→自分の領域だけ更新→書き込み」で他システムのフィールドを保つこと。
+[Serializable]
+public class SaveData
+{
+    public List<MaterialStack> materials = new List<MaterialStack>();
+
+    // 研究で解放済みの魔法ID（= MagicData のアセット名）。コスト0の魔法は常に解放扱いなので含めない。
+    // allocatedResearchNodes の魔法サブセットと同期。他システムの互換用に残す。
+    public List<string> unlockedMagicIds = new List<string>();
+
+    // 研究スキルツリーで割り当て済みのノードID（魔法ノード＋"node_..."のステータスノード）。
+    public List<string> allocatedResearchNodes = new List<string>();
+
+    // トレーダーのタスク進捗
+    public List<string> completedTaskIds = new List<string>();
+    public int lifetimeEnemyKills;
+    public int bestDungeonDepth;
+    public List<StringIntPair> enemyKillCounts = new List<StringIntPair>();
+
+    // ハイドアウト：設備レベル（key = (FacilityKind).ToString(), value = 0..3）
+    public List<StringIntPair> facilityLevels = new List<StringIntPair>();
+    // 魔力炉に溜まっている燃料（魔力結晶の価値換算）
+    public long furnaceFuel;
+    // マジックサークルで進行中の捧げもの
+    public List<BrewRecord> magicCircleBrews = new List<BrewRecord>();
+    // 作業台で製作済みの装備ID（所有で PlayerStatus に永続ボーナス）
+    public List<string> craftedGearIds = new List<string>();
+}
