@@ -32,6 +32,31 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 
 ## このセッションで実装したこと（新しい順）
 
+### -10. 改善ループ続行：モードB手動ディープラン → R1/R2/D6 対応（2026-09-09 その10）
+`gg-playtest` スキルのモードB（`execute_code` 手動ディープラン）で「-8.」の改善を再検証しながらの続行分。
+詳細は `Docs/検証レポート/2026-09-09_再検証4_*.md` `_再検証5_*.md` と `_改善ループ_進捗.md`（サイクル3〜6）。
+
+- **R1（フェイルステート消失）**（`BattleFormula` / `PlayerStatus` / `EndlessWaveGenerator`）:
+  モードB 1周目 push で「最弱キット（3×3・base2枚・杖なし・研究ゼロ）が深度18で無傷」を検出。
+  `D5(0.6クランプ)＋D6a(0.25テーパー)＋サステイン回復` が乗算で深部の被弾圧力を消していた。
+  対応: `WaveDamageCapFraction` 0.6→**0.85**、クランプを **ウェーブ開始HP≥`WaveClampMinStartFraction`(0.55)**
+  のときだけ有効化（`PlayerStatus.waveStartHpFraction` を `BeginWave` で記録）、`AtkScalingTaperSlope` 0.25→**0.35**。
+  再測: 最弱キット push が深度8で戦闘不能＝天井が戻った。テスト +2。
+- **R2（cold-start の燃料デッドロック）**（`HideoutCatalog` / `HideoutManager`）:
+  モードBで、魔力炉＋錬金釜＋作業台＋アクセ 建造直後に $30／小結晶20／燃料0 になり
+  craft/research/transmute/upgrade が全部止まる（貪欲では詰み）ことを検出。`FurnaceBuildBonusFuel`(=25)
+  を新設し `HideoutManager.Advance` で魔力炉 Lv0→Lv1 のとき `furnaceFuel` に加算。テスト +1。
+- **D6（Atk が伸びない）**（`ResearchGraph`）: Atk 小ノードが Fire 枝＋Fortune 扇の一部しか小結晶で辿れず
+  （他は Luc 経由か中結晶ゲート）、min-max でも実質4本で頭打ち（3〜5周で +2〜3）。
+  `BuildSpoke("Fortune", …, Luc, Atk, …)` → `(…, Atk, Luc, …)`（座標・ID 不変）＋ `Amount(Atk)` 1→**2**（ラベル「攻+2」）。
+  検証（無限結晶・min-max）: 研究による Atk 上昇 +4 → +8。テスト +1。
+- **ハーネス改良**（`PlaytestAutopilot`）: 経済パスに研究割当（魔法＋Atk>Def>Hp>Spd 貪欲、Luc/マナskip）を追加。
+  SKILL.md が挙げていた「研究未割当＝深度が低く出る主因」を解消。レポートに研究ノード数を追加。
+- **全改善の再測（Mode A ×5, `_ループ_2026-09-09_cycle6_*.md`）**: 到達深度 **7→8→11→12→16**（平均10.8）。
+  改善前の人力 再検証3（11→12→15→14→16）にほぼ一致＝ハーネスが人力並みの精度に。Atk 18・研究ステ27。
+  5周とも例外・ソフトロック・error/warning ゼロ、フェイルステート正常。
+- EditMode 190 → 192 グリーン。
+
 ### -9. 通しプレイ検証を Claude Code スキル化（2026-09-09 その9）
 `.claude/skills/gg-playtest/`（`SKILL.md` ＋ `references/manual-run.md`）。cold-start 通しプレイ検証の手順を
 スキルに固めた。モードA＝自動ハーネス（`Grimoire > Run Playtest` / `PlaytestDriver.Begin`、速い・回帰用・

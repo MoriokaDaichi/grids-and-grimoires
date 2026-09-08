@@ -626,7 +626,7 @@ public class PlaytestAutopilot : MonoBehaviour
         AppendSample(sb, "Warning 例", logWarnings);
         sb.AppendLine();
         sb.AppendLine("---");
-        sb.AppendLine("_ハーネスの限界: 経済は貪欲エージェント近似（人力の結晶配分・杖の手詰めより下手）。魔法配置は greedy first-fit で回転のみ。「脱出」判定はウェーブ間だけ（1ウェーブ内のバースト即死は拾えるが事前脱出はできない）。研究の小ノード割当は未駆動。_");
+        sb.AppendLine("_ハーネスの限界: 経済は貪欲エージェント近似（人力の結晶配分・杖の手詰めより下手）。魔法配置は greedy first-fit で回転のみ（Mega/Giga＋大型AoE の手詰めはしない）。「脱出」判定はウェーブ間だけ（1ウェーブ内のバースト即死は拾えるが事前脱出はできない）。研究割当は Atk>Def>Hp>Spd の貪欲（Luc/マナはスキップ）。_");
         return sb.ToString();
     }
 
