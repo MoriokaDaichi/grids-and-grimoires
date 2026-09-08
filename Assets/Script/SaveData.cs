@@ -63,4 +63,15 @@ public class SaveData
     public int money;
     // 初回起動で開始所持金を1度だけ付与するためのフラグ
     public bool moneyInitialized;
+
+    // プレイヤーの手動ステータス振り分け（StatusUIの＋ボタンで振ったぶん＋タスク報酬で増えたステP）。
+    // 研究の小ノード／製作装備ぶんは ResearchManager / HideoutManager が起動時に別途再適用するので、
+    // ここには含めない（含めると二重加算になる）。PlayerStatus が担当。
+    public bool playerStatsSaved;   // 一度でも手動振り分け or ステP増減を保存したか
+    public int savedStatsPoint;     // 残りステータスポイント
+    public int manualStatHp;        // AddStat("HP") で加算した累計量
+    public int manualStatAtk;
+    public int manualStatDef;
+    public int manualStatSpd;
+    public int manualStatLuc;
 }

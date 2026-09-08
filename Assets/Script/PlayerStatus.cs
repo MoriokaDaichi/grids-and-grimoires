@@ -14,6 +14,11 @@ public class PlayerStatus : MonoBehaviour
     // 残りステータスポイント
     public int statsPoint = 5;
 
+    // ＋ボタンで手動振り分けした累計量（研究/装備ぶんは含めない）。セーブ対象。
+    private int manualHp, manualAtk, manualDef, manualSpd, manualLuc;
+    // 起動時の復元が終わるまで Persist を抑止する（Start 前の他システムからの呼び出し対策）。
+    private bool allocationsRestored;
+
     // バトル中の現在HP（hpは振り分けで決まる最大値、こちらは戦闘中に増減する値）
     public int currentHp { get; private set; }
 
@@ -36,6 +41,40 @@ public class PlayerStatus : MonoBehaviour
     {
         currentHp = hp;
         currentMana = maxMana;
+    }
+
+    // セーブから手動振り分けを復元する。研究(ResearchManager)・装備(HideoutManager)の
+    // 恒久ボーナスは各自の Start で別途 ApplyResearchDelta されるため、ここでは触れない。
+    // 加算は全て可換なので、それらの Start と本 Start の実行順は問わない。
+    void Start()
+    {
+        PlayerStatAllocation a = PlayerStatSave.Read(SaveManager.Load());
+        allocationsRestored = true;
+        if (!a.saved) return;
+
+        manualHp = a.hp; manualAtk = a.atk; manualDef = a.def; manualSpd = a.spd; manualLuc = a.luc;
+        hp += manualHp;
+        atk += manualAtk;
+        def += manualDef;
+        spd += manualSpd;
+        luc += manualLuc;
+        statsPoint = a.statsPoint;
+        currentHp = hp; // 構築画面。戦闘突入時は BattleReset で改めて全回復する。
+
+        OnStatusChanged?.Invoke();
+    }
+
+    // 手動振り分けの領域だけを SaveData に書き戻す（他システムのフィールドは保つ）。
+    private void Persist()
+    {
+        if (!allocationsRestored) return; // Start で復元し切る前は書かない
+        SaveData d = SaveManager.Load();
+        PlayerStatSave.Write(d, new PlayerStatAllocation
+        {
+            statsPoint = statsPoint,
+            hp = manualHp, atk = manualAtk, def = manualDef, spd = manualSpd, luc = manualLuc,
+        });
+        SaveManager.Save(d);
     }
 
     // ダンジョン突入時など、戦闘開始時にHP・マナを全回復してリセットする
@@ -90,6 +129,7 @@ public class PlayerStatus : MonoBehaviour
     {
         if (amount <= 0) return;
         statsPoint += amount;
+        Persist();
         OnStatusChanged?.Invoke();
     }
 
@@ -125,21 +165,23 @@ public class PlayerStatus : MonoBehaviour
         switch (type)
         {
             case "HP":
-                if (hp < HP_MAX) { hp += 10; statsPoint--; }
+                if (hp < HP_MAX) { hp += 10; currentHp += 10; manualHp += 10; statsPoint--; }
                 break;
             case "Atk":
-                if (atk < OTHER_MAX) { atk += 1; statsPoint--; }
+                if (atk < OTHER_MAX) { atk += 1; manualAtk += 1; statsPoint--; }
                 break;
             case "Def":
-                if (def < OTHER_MAX) { def += 1; statsPoint--; }
+                if (def < OTHER_MAX) { def += 1; manualDef += 1; statsPoint--; }
                 break;
             case "Spd":
-                if (spd < OTHER_MAX) { spd += 1; statsPoint--; }
+                if (spd < OTHER_MAX) { spd += 1; manualSpd += 1; statsPoint--; }
                 break;
             case "Luc":
-                if (luc < OTHER_MAX) { luc += 1; statsPoint--; }
+                if (luc < OTHER_MAX) { luc += 1; manualLuc += 1; statsPoint--; }
                 break;
         }
+
+        Persist();
 
         // UIを更新するように通知
         OnStatusChanged?.Invoke();
