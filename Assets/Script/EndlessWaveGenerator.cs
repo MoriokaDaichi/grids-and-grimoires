@@ -29,20 +29,29 @@ public static class EndlessWaveGenerator
     public const float ScalingTaperSlope = 0.4f;    // 膝から先の勾配（0〜1）
     public const float DefMultCap = 2.5f;           // 防御倍率の上限（絶対値は窓の入れ替えで上がる）
 
+    // Atk だけ膝から先をさらに寝かせる。再検証3周（レポート D6）で、プレイヤー Atk が1周で 10→17 しか
+    // 伸びないのに敵 Atk は +10%/実効深度で伸び続け、深部ほど「殲滅が遅い→被弾総量が増える／満タンから
+    // バーストで即死」が悪化していた。膝までは HP/Def と同じ素の線形なので浅〜中盤の手応えは不変。
+    public const float AtkScalingTaperSlope = 0.25f;
+
     // 深度 d（0始まり）を、膝から先で勾配を落とした「実効深度」に変換する。
-    private static float TaperedDepth(int d)
+    private static float TaperedDepth(int d) => TaperedDepth(d, ScalingTaperSlope);
+
+    private static float TaperedDepth(int d, float slope)
     {
         if (d <= ScalingTaperKneeDepth) return d;
-        return ScalingTaperKneeDepth + (d - ScalingTaperKneeDepth) * ScalingTaperSlope;
+        return ScalingTaperKneeDepth + (d - ScalingTaperKneeDepth) * slope;
     }
 
     // 深度 depth（1始まり）の敵ステータス倍率。depth<=1 で等倍。
     public static WaveScaling ScalingFor(int depth)
     {
-        float e = TaperedDepth(Mathf.Max(1, depth) - 1);
+        int d0 = Mathf.Max(1, depth) - 1;
+        float e = TaperedDepth(d0);
+        float eAtk = TaperedDepth(d0, AtkScalingTaperSlope);
         return new WaveScaling(
             1f + HpGrowthPerDepth * e,
-            1f + AtkGrowthPerDepth * e,
+            1f + AtkGrowthPerDepth * eAtk,
             Mathf.Min(1f + DefGrowthPerDepth * e, DefMultCap));
     }
 

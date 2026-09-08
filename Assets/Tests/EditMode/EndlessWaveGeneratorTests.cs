@@ -71,6 +71,34 @@ public class EndlessWaveGeneratorTests
         }
     }
 
+    // D6: 膝から先の Atk 倍率の伸びは、係数で正規化しても HP より寝ている（Atk専用テーパー）。
+    [Test]
+    public void ScalingFor_PastKnee_AtkTaperIsGentlerThanHp()
+    {
+        Assert.Less(EndlessWaveGenerator.AtkScalingTaperSlope, EndlessWaveGenerator.ScalingTaperSlope);
+        Assert.Greater(EndlessWaveGenerator.AtkScalingTaperSlope, 0f);
+
+        int knee = EndlessWaveGenerator.ScalingTaperKneeDepth;
+        float hpStep = EndlessWaveGenerator.ScalingFor(knee + 5).hpMult - EndlessWaveGenerator.ScalingFor(knee + 4).hpMult;
+        float atkStep = EndlessWaveGenerator.ScalingFor(knee + 5).atkMult - EndlessWaveGenerator.ScalingFor(knee + 4).atkMult;
+        Assert.Greater(atkStep, 0f, "膝から先でも Atk は増加し続ける");
+        float hpSlope = hpStep / EndlessWaveGenerator.HpGrowthPerDepth;
+        float atkSlope = atkStep / EndlessWaveGenerator.AtkGrowthPerDepth;
+        Assert.Less(atkSlope, hpSlope, "係数で正規化した Atk の伸びは HP より寝ている");
+    }
+
+    // 膝までは Atk も HP/Def と同じ素の線形（Atk専用テーパーは膝から先だけ効く）。
+    [Test]
+    public void ScalingFor_UpToKnee_AtkStillPlainLinear()
+    {
+        for (int depth = 1; depth <= EndlessWaveGenerator.ScalingTaperKneeDepth + 1; depth++)
+        {
+            int d = depth - 1;
+            Assert.AreEqual(1f + EndlessWaveGenerator.AtkGrowthPerDepth * d,
+                EndlessWaveGenerator.ScalingFor(depth).atkMult, 0.0001f, "depth " + depth);
+        }
+    }
+
     [Test]
     public void ScalingFor_DefMult_NeverExceedsCap()
     {
