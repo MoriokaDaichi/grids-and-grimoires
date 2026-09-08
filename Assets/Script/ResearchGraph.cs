@@ -31,8 +31,10 @@ public class ResearchNodeDef
 
 public static class ResearchGraph
 {
-    public const float Ring0Radius = 340f;
-    public const float RingStep = 460f;
+    // 円盤の半径。ノードは全て overlap しない（ResearchGraphTests.NoTwoNodesOverlap で担保）
+    // ので、余白を詰めてパン量を減らす方向で調整している（最外 ring7 ≈ 半径 2680）。
+    public const float Ring0Radius = 300f;
+    public const float RingStep = 340f;
 
     private static List<ResearchNodeDef> _nodes;
     private static Dictionary<string, ResearchNodeDef> _byId;

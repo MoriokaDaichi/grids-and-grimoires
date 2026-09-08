@@ -50,7 +50,8 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
         BuildOnce();
         if (content != null)
         {
-            content.localScale = Vector3.one * 0.16f;
+            // 円盤が半径 ≈2680 に収まるので、開いた時点でノードのラベルが読める倍率にする。
+            content.localScale = Vector3.one * 0.22f;
             content.anchoredPosition = Vector2.zero;
         }
         if (legendText != null)

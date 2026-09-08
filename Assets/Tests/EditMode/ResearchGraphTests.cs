@@ -110,4 +110,46 @@ public class ResearchGraphTests
         ResearchNodeDef ring3 = ResearchGraph.Get("MegaFire");
         Assert.Greater(ResearchGraph.Position(ring3).magnitude, ResearchGraph.Position(ring1).magnitude);
     }
+
+    // ノードの描画半径（ResearchNodeWidget: 大=150 / 小=92 → 半径 75 / 46）。
+    private static float NodeRadius(ResearchNodeDef d) { return d.isMagic ? 75f : 46f; }
+
+    [Test]
+    public void NoTwoNodesOverlap()
+    {
+        List<ResearchNodeDef> ns = new List<ResearchNodeDef>(ResearchGraph.Nodes);
+        for (int i = 0; i < ns.Count; i++)
+        {
+            Vector2 pi = ResearchGraph.Position(ns[i]);
+            for (int j = i + 1; j < ns.Count; j++)
+            {
+                float dist = Vector2.Distance(pi, ResearchGraph.Position(ns[j]));
+                float need = NodeRadius(ns[i]) + NodeRadius(ns[j]);
+                Assert.GreaterOrEqual(dist, need,
+                    ns[i].id + " と " + ns[j].id + " が重なっている (dist=" + dist.ToString("F0") + " / need=" + need.ToString("F0") + ")");
+            }
+        }
+    }
+
+    [Test]
+    public void AllNodesFitInsideContentBounds()
+    {
+        // ResearchTreeView.content は 10000² （中心から ±5000）。余裕をもって半径 3000 以内に収める。
+        foreach (ResearchNodeDef d in ResearchGraph.Nodes)
+            Assert.Less(ResearchGraph.Position(d).magnitude, 3000f, d.id + " が円盤の外に出ている");
+    }
+
+    [Test]
+    public void NodesInSameRingShareRadius()
+    {
+        Dictionary<int, float> radiusByRing = new Dictionary<int, float>();
+        foreach (ResearchNodeDef d in ResearchGraph.Nodes)
+        {
+            float r = ResearchGraph.Position(d).magnitude;
+            if (radiusByRing.TryGetValue(d.ring, out float known))
+                Assert.AreEqual(known, r, 0.5f, d.id + " の半径が同 ring の他ノードと一致しない");
+            else
+                radiusByRing[d.ring] = r;
+        }
+    }
 }
