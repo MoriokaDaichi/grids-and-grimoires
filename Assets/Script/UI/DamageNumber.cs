@@ -45,4 +45,11 @@ public class DamageNumber : MonoBehaviour
 
         Destroy(gameObject);
     }
+
+    // GameObject が非アクティブになるとコルーチンは止まったまま再開しない（Unity仕様）。
+    // その場合 Destroy に到達できず画面に残るので、無効化されたら自分で消える。
+    void OnDisable()
+    {
+        Destroy(gameObject);
+    }
 }

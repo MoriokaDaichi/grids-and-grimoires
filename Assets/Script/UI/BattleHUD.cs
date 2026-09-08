@@ -85,6 +85,7 @@ public class BattleHUD : MonoBehaviour
         RefreshPlayerHp();
         RefreshPlayerMana();
         if (castLogText != null) castLogText.text = "";
+        ClearDamageNumbers(); // 前回の戦闘で流れ切らなかった数字が残っていれば掃除する
     }
 
     void OnDisable()
@@ -113,6 +114,9 @@ public class BattleHUD : MonoBehaviour
 
         ClearStatusIcons();
         ClearBuffIndicators();
+        // BattleRoot が非アクティブ化されると DamageNumber の演出コルーチンが止まり、
+        // 自分で Destroy できずに画面へ残ってしまう。ここで確実に片付ける。
+        ClearDamageNumbers();
     }
 
     void Update()
@@ -345,5 +349,14 @@ public class BattleHUD : MonoBehaviour
             if (kv.Value != null) Destroy(kv.Value.gameObject);
         }
         buffIndicators.Clear();
+    }
+
+    private void ClearDamageNumbers()
+    {
+        if (damageNumberRoot == null) return;
+        for (int i = damageNumberRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(damageNumberRoot.GetChild(i).gameObject);
+        }
     }
 }
