@@ -13,21 +13,34 @@ public static class EndlessWaveGenerator
     public const float HpGrowthPerDepth = 0.15f;   // 深度+1 ごとに最大HP +15%
     public const float AtkGrowthPerDepth = 0.10f;  // 深度+1 ごとに攻撃力 +10%
     public const float DefGrowthPerDepth = 0.07f;  // 深度+1 ごとに防御力 +7%
-    public const int DepthsPerExtraEnemy = 4;       // 4 深度ごとに同時出現数 +1
+    public const int DepthsPerExtraEnemy = 5;       // 5 深度ごとに同時出現数 +1（同時被弾＝バーストの最大要因なので緩め）
     public const int DepthsPerPoolShift = 3;        // 弱い敵が窓から外れる間隔（深度）
 
     public const int StartingChoices = 2;            // 深度1 で抽選できる敵数（最弱2体）
     public const float EnemiesUnlockedPerDepth = 1f; // 深度+1 ごとに窓へ入る敵数
     public const int WeakCutoffLagDepths = 7;        // この深度を超えてから最弱の敵が外れ始める
 
+    // 倍率の伸びを深部で寝かせる。浅い深度（膝まで）は素の線形、そこから先は勾配を落とす。
+    // 深部は「窓に強い敵が入ってくる」ことで十分に難度が上がるため、掛け算の倍率は青天井にしない。
+    public const int ScalingTaperKneeDepth = 12;    // この深度までは素の線形（＝従来と一致）
+    public const float ScalingTaperSlope = 0.5f;    // 膝から先の勾配（0〜1）
+    public const float DefMultCap = 2.5f;           // 防御倍率の上限（絶対値は窓の入れ替えで上がる）
+
+    // 深度 d（0始まり）を、膝から先で勾配を落とした「実効深度」に変換する。
+    private static float TaperedDepth(int d)
+    {
+        if (d <= ScalingTaperKneeDepth) return d;
+        return ScalingTaperKneeDepth + (d - ScalingTaperKneeDepth) * ScalingTaperSlope;
+    }
+
     // 深度 depth（1始まり）の敵ステータス倍率。depth<=1 で等倍。
     public static WaveScaling ScalingFor(int depth)
     {
-        int d = Mathf.Max(1, depth) - 1;
+        float e = TaperedDepth(Mathf.Max(1, depth) - 1);
         return new WaveScaling(
-            1f + HpGrowthPerDepth * d,
-            1f + AtkGrowthPerDepth * d,
-            1f + DefGrowthPerDepth * d);
+            1f + HpGrowthPerDepth * e,
+            1f + AtkGrowthPerDepth * e,
+            Mathf.Min(1f + DefGrowthPerDepth * e, DefMultCap));
     }
 
     // 深度 depth の同時出現数（1〜maxPerWave）。

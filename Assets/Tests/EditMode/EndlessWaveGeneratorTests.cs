@@ -30,7 +30,7 @@ public class EndlessWaveGeneratorTests
             WaveScaling s = EndlessWaveGenerator.ScalingFor(d);
             Assert.Greater(s.hpMult, prevHp);
             Assert.Greater(s.atkMult, prevAtk);
-            Assert.Greater(s.defMult, prevDef);
+            Assert.GreaterOrEqual(s.defMult, prevDef); // 深部で DefMultCap に張り付く
             prevHp = s.hpMult; prevAtk = s.atkMult; prevDef = s.defMult;
         }
     }
@@ -43,13 +43,48 @@ public class EndlessWaveGeneratorTests
         Assert.AreEqual(1f + EndlessWaveGenerator.AtkGrowthPerDepth, s.atkMult, 0.0001f);
     }
 
+    // 膝（ScalingTaperKneeDepth）までは素の線形＝従来式と一致する。浅〜中盤の手応えは変えない。
     [Test]
-    public void EnemyCountFor_GrowsEveryFourDepths_AndCaps()
+    public void ScalingFor_UpToTaperKnee_IsPlainLinear()
+    {
+        for (int depth = 1; depth <= EndlessWaveGenerator.ScalingTaperKneeDepth + 1; depth++)
+        {
+            int d = depth - 1;
+            WaveScaling s = EndlessWaveGenerator.ScalingFor(depth);
+            Assert.AreEqual(1f + EndlessWaveGenerator.HpGrowthPerDepth * d, s.hpMult, 0.0001f, "depth " + depth);
+            Assert.AreEqual(1f + EndlessWaveGenerator.AtkGrowthPerDepth * d, s.atkMult, 0.0001f, "depth " + depth);
+        }
+    }
+
+    // 膝から先は勾配が寝る＝各深度の伸び幅が膝前より小さくなる。
+    [Test]
+    public void ScalingFor_PastTaperKnee_GrowthSlowsButStillRises()
+    {
+        int knee = EndlessWaveGenerator.ScalingTaperKneeDepth;
+        float preKneeStep = EndlessWaveGenerator.ScalingFor(knee + 1).hpMult - EndlessWaveGenerator.ScalingFor(knee).hpMult;
+
+        for (int depth = knee + 2; depth <= 60; depth++)
+        {
+            float step = EndlessWaveGenerator.ScalingFor(depth).hpMult - EndlessWaveGenerator.ScalingFor(depth - 1).hpMult;
+            Assert.Greater(step, 0f, "depth " + depth + " はまだ増加する");
+            Assert.Less(step, preKneeStep + 0.0001f, "depth " + depth + " の伸び幅は膝前より小さい");
+        }
+    }
+
+    [Test]
+    public void ScalingFor_DefMult_NeverExceedsCap()
+    {
+        for (int depth = 1; depth <= 200; depth++)
+            Assert.LessOrEqual(EndlessWaveGenerator.ScalingFor(depth).defMult, EndlessWaveGenerator.DefMultCap + 0.0001f);
+    }
+
+    [Test]
+    public void EnemyCountFor_GrowsEveryFiveDepths_AndCaps()
     {
         Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(1, 6));
-        Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(4, 6));
-        Assert.AreEqual(2, EndlessWaveGenerator.EnemyCountFor(5, 6));
-        Assert.AreEqual(3, EndlessWaveGenerator.EnemyCountFor(9, 6));
+        Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(5, 6));
+        Assert.AreEqual(2, EndlessWaveGenerator.EnemyCountFor(6, 6));
+        Assert.AreEqual(3, EndlessWaveGenerator.EnemyCountFor(11, 6));
         Assert.AreEqual(6, EndlessWaveGenerator.EnemyCountFor(100, 6)); // maxPerWave でキャップ
         Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(100, 1));
     }
