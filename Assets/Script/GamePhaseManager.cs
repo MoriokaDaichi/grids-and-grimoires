@@ -24,6 +24,10 @@ public class GamePhaseManager : MonoBehaviour
     [SerializeField] private Button hideoutButton;
     [SerializeField] private Button tradeButton;
 
+    [Header("追加のナビゲーションボタン（下部バーなど。同じ遷移を複数箇所から呼びたいとき）")]
+    [SerializeField] private Button[] extraHideoutButtons;
+    [SerializeField] private Button[] extraTradeButtons;
+
     public GamePhase Current { get; private set; }
     public bool LastRunCleared { get; private set; }
     public System.Action<GamePhase> OnPhaseChanged;
@@ -36,6 +40,15 @@ public class GamePhaseManager : MonoBehaviour
         if (sortieButton != null) sortieButton.onClick.AddListener(StartSortie);
         if (hideoutButton != null) hideoutButton.onClick.AddListener(GoToHideout);
         if (tradeButton != null) tradeButton.onClick.AddListener(GoToTrade);
+        WireAll(extraHideoutButtons, GoToHideout);
+        WireAll(extraTradeButtons, GoToTrade);
+    }
+
+    private static void WireAll(Button[] buttons, UnityEngine.Events.UnityAction action)
+    {
+        if (buttons == null) return;
+        foreach (Button b in buttons)
+            if (b != null) b.onClick.AddListener(action);
     }
 
     void OnEnable()

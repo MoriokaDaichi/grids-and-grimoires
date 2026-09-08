@@ -72,6 +72,10 @@ public static class BattleUISceneBuilder
         Button tradeButton = BindMenuButton(canvasT, "MenuPanel/Button (2)", null);
         Button hideoutButton = BindMenuButton(canvasT, "MenuPanel/Button (3)", null);
 
+        // 画面下部バー（Canvas/Image）の「トレーダー」「隠れ家」ボタンも同じ遷移に配線する。
+        Button navTradeButton = BindMenuButton(canvasT, "Image/Button (7)", null);   // ラベル「トレーダー」
+        Button navHideoutButton = BindMenuButton(canvasT, "Image/Button (8)", null); // ラベル「隠れ家」
+
         GameObject gpmGo = new GameObject("GamePhaseManager");
         GamePhaseManager gpm = gpmGo.AddComponent<GamePhaseManager>();
 
@@ -120,6 +124,8 @@ public static class BattleUISceneBuilder
         so.FindProperty("sortieButton").objectReferenceValue = sortie;
         so.FindProperty("hideoutButton").objectReferenceValue = hideoutButton;
         so.FindProperty("tradeButton").objectReferenceValue = tradeButton;
+        AssignButtonArray(so, "extraHideoutButtons", navHideoutButton);
+        AssignButtonArray(so, "extraTradeButtons", navTradeButton);
         so.ApplyModifiedPropertiesWithoutUndo();
 
         hideoutRoot.SetActive(false);
@@ -674,6 +680,18 @@ public static class BattleUISceneBuilder
             if (lbl != null) lbl.text = label;
         }
         return b;
+    }
+
+    // GamePhaseManager の Button 配列プロパティに、null を除いたボタンを詰める。
+    private static void AssignButtonArray(SerializedObject so, string propName, params Button[] buttons)
+    {
+        SerializedProperty arr = so.FindProperty(propName);
+        if (arr == null) return;
+        List<Button> valid = new List<Button>();
+        foreach (Button b in buttons) if (b != null) valid.Add(b);
+        arr.arraySize = valid.Count;
+        for (int i = 0; i < valid.Count; i++)
+            arr.GetArrayElementAtIndex(i).objectReferenceValue = valid[i];
     }
 
     // ---------------------------------------------------------------- prefabs
