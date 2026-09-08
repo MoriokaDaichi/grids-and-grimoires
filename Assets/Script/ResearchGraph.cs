@@ -227,7 +227,10 @@ public static class ResearchGraph
         switch (s)
         {
             case ResearchStat.Hp: return 15f;
-            case ResearchStat.Atk: return 1f;
+            // 再検証3〜5 D6：Atk 小ノードは Fire 枝＋Fortune 扇の一部しか小結晶で辿れず（他は Luc を
+            // 経由するか中結晶ゲートの奥）、min-max でも実質 4本前後で頭打ち。1本あたりを +2 にして
+            // 「辿れるぶんだけ振っても Atk が深部スケーリングにある程度ついていく」ようにする（数値は仮）。
+            case ResearchStat.Atk: return 2f;
             case ResearchStat.Def: return 1f;
             case ResearchStat.Spd: return 1f;
             case ResearchStat.Luc: return 1f;
@@ -242,7 +245,7 @@ public static class ResearchGraph
         switch (s)
         {
             case ResearchStat.Hp: return "HP+15";
-            case ResearchStat.Atk: return "攻+1";
+            case ResearchStat.Atk: return "攻+2";
             case ResearchStat.Def: return "防+1";
             case ResearchStat.Spd: return "速+1";
             case ResearchStat.Luc: return "運+1";
