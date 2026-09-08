@@ -50,12 +50,22 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
   （他は Luc 経由か中結晶ゲート）、min-max でも実質4本で頭打ち（3〜5周で +2〜3）。
   `BuildSpoke("Fortune", …, Luc, Atk, …)` → `(…, Atk, Luc, …)`（座標・ID 不変）＋ `Amount(Atk)` 1→**2**（ラベル「攻+2」）。
   検証（無限結晶・min-max）: 研究による Atk 上昇 +4 → +8。テスト +1。
-- **ハーネス改良**（`PlaytestAutopilot`）: 経済パスに研究割当（魔法＋Atk>Def>Hp>Spd 貪欲、Luc/マナskip）を追加。
-  SKILL.md が挙げていた「研究未割当＝深度が低く出る主因」を解消。レポートに研究ノード数を追加。
-- **全改善の再測（Mode A ×5, `_ループ_2026-09-09_cycle6_*.md`）**: 到達深度 **7→8→11→12→16**（平均10.8）。
-  改善前の人力 再検証3（11→12→15→14→16）にほぼ一致＝ハーネスが人力並みの精度に。Atk 18・研究ステ27。
-  5周とも例外・ソフトロック・error/warning ゼロ、フェイルステート正常。
-- EditMode 190 → 192 グリーン。
+- **R3（設備Lv2 が中盤で建たない）**（`HideoutCatalog`）: 錬金釜Lv2 step1 `M(3)+剛毛×2+蜘蛛の糸×2` →
+  `M(3)+剛毛×2`（d10 debut の蜘蛛の糸を外す）。錬金釜Lv2 は tier2+ 変換→エレメント欠片→作業台Lv2/
+  研究机Lv2 の起点。テスト +1。
+- **R4（深部でフェイルステートがまた消える）**（`BattleFormula` / `PlayerStatus`）: HP320＋再生のトルク
+  だと深部（d17+）で毎秒回復が被弾を上回り続け、d21 でも死なずタイムアウト（R1 の高投資版）。
+  `WaveHealCapFraction`(=0.5)／`WaveHealCap(maxHp)` を新設。`PlayerStatus.regenHealedThisWave` で
+  `RegenHealth` の1ウェーブ累計をクランプ（`BeginWave`/`BattleReset` でリセット）。ウェーブ突破時の
+  `HealWaveTick` は別枠。被弾上限 0.85 > 回復上限 0.5 なので深部は必ず削り勝てる。テスト +2。
+- **ハーネス改良**（`PlaytestAutopilot`）: (a) 経済パスに研究割当（魔法＋Atk>Def>Hp>Spd 貪欲、Luc/マナskip）
+  ＝SKILL.md の「研究未割当＝深度が低く出る主因」を解消。(b) `farmRuns`(=2)/`shallowFarmCap`(=4)＝
+  最初の2周は深度4で回して低tier素材（スライムゼリー等）を確実に集める＝経済初動の分散を抑える。
+  (c) `perRunRealTimeout` 150→260。
+- **再測（Mode A）**: サイクル6（全改善＋研究割当）で push 7→8→11→12→16（人力 再検証3 の 11→12→15→14→16
+  に一致）。サイクル8（R4＋farm周）で farm×2→push 8→12→13→14、魔力炉Lv2＋錬金釜Lv2 が貪欲で建ち、
+  深部の HP 推移が「きれいに減って死ぬ」形（d11:96%→d14:0%）に。全周 例外・ソフトロック・error/warning ゼロ。
+- EditMode 190 → 195 グリーン。
 
 ### -9. 通しプレイ検証を Claude Code スキル化（2026-09-09 その9）
 `.claude/skills/gg-playtest/`（`SKILL.md` ＋ `references/manual-run.md`）。cold-start 通しプレイ検証の手順を
