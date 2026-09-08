@@ -32,6 +32,13 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 
 ## このセッションで実装したこと（新しい順）
 
+### -9. 通しプレイ検証を Claude Code スキル化（2026-09-09 その9）
+`.claude/skills/gg-playtest/`（`SKILL.md` ＋ `references/manual-run.md`）。cold-start 通しプレイ検証の手順を
+スキルに固めた。モードA＝自動ハーネス（`Grimoire > Run Playtest` / `PlaytestDriver.Begin`、速い・回帰用・
+到達深度の絶対値は低く出る）、モードB＝`execute_code` 手動ディープラン（人力に近い経済判断、絶対深度用、
+`EditorApplication.update` 常駐ドライバ＋sortie/poll＋`RewardScreen.OnReturn` 明示帰還のスニペット集）。
+レポート命名（`_ループ_*.md` / `再検証N_*.md`）・既知の構造的所見（D1〜D7）・確認済み数値も同梱。コード変更なし。
+
 ### -8. 改善ループ（自動）：通しプレイ検証ハーネス新設＋深部Atk／cold-start結晶詰み／バースト即死（2026-09-09 その8）
 「検証レポートの指摘を改善 → すぐ通しプレイで検証 → レポート → また改善」を自動で回すセッション。
 `Docs/検証レポート/_改善ループ_進捗.md` に経過、通しプレイ結果は `Docs/検証レポート/_ループ_*.md`。
