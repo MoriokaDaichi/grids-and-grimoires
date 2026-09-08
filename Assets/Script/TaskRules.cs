@@ -10,18 +10,24 @@ public enum TraderTaskKind
 }
 
 // トレーダーが出す1件のタスク。TradeOffer と同じくプレーンクラス（SO化はしない）。
+// requires を辿ってタスクライン（前提クリアで次が出現する連鎖）を成す。
 public class TraderTask
 {
     public string id;                                        // 一意ID（セーブの達成記録キー）
     public string traderId;
     public string title;
     public string description;
+    public string requires;                                  // 前提タスクID（空なら連鎖の先頭）。完了済みのときだけ解放。
     public TraderTaskKind kind;
     public List<MaterialCost> deliverItems = new List<MaterialCost>(); // DeliverItems: 納品物（達成時に消費）
+    public int deliverMoney;                                  // DeliverItems: 併せて納めるお金（受取時に消費）
     public string targetEnemyName;                            // DefeatEnemies: 対象の敵名（空なら種類問わず）
     public int targetCount;                                   // DefeatEnemies: 討伐数 / ReachDepth: 深度
     public List<MaterialCost> rewardItems = new List<MaterialCost>();
     public int rewardStatPoints;
+    public int rewardMoney;                                   // 報酬のお金
+    public string rewardGearId;                               // 報酬で完成品を直接付与する装備ID（GearCatalog）
+    public string rewardRecipeId;                             // 報酬で作業台レシピを解禁する装備ID（GearCatalog）
 }
 
 // タスク進捗の判定に必要な値（純粋関数に渡す）。
@@ -29,6 +35,7 @@ public struct TaskProgress
 {
     public int enemiesDefeated;          // 累計撃破数
     public int bestDepth;               // 到達最深
+    public int money;                   // 現在の所持金（納金タスクの判定用）
     public Func<string, int> enemyKills; // 敵名 → 累計撃破数
     public Func<MaterialCost, int> inventoryCount; // 素材 → 所持数
 }
@@ -56,6 +63,7 @@ public static class TaskRules
                 if (p.inventoryCount == null) return false;
                 foreach (MaterialCost c in task.deliverItems)
                     if (c != null && p.inventoryCount(c) < c.amount) return false;
+                if (task.deliverMoney > 0 && p.money < task.deliverMoney) return false;
                 return true;
 
             default:
@@ -82,7 +90,10 @@ public static class TaskRules
                 return "深度 " + Math.Min(p.bestDepth, task.targetCount) + " / " + task.targetCount;
 
             case TraderTaskKind.DeliverItems:
-                return IsComplete(task, p) ? "納品可能" : "素材を集める";
+            {
+                if (IsComplete(task, p)) return "納品可能";
+                return task.deliverMoney > 0 ? "素材と " + task.deliverMoney + "G を集める" : "素材を集める";
+            }
 
             default:
                 return "";

@@ -56,4 +56,11 @@ public class SaveData
     public List<BrewRecord> magicCircleBrews = new List<BrewRecord>();
     // 作業台で製作済みの装備ID（所有で PlayerStatus に永続ボーナス）
     public List<string> craftedGearIds = new List<string>();
+    // 作業台で解禁済みの装備レシピID（recipeGated な GearDef はこれが無いと製作できない）
+    public List<string> unlockedGearRecipes = new List<string>();
+
+    // お金（ゴールド）。トレード・タスク納金・ダンジョン入場料で使う。
+    public int money;
+    // 初回起動で開始所持金を1度だけ付与するためのフラグ
+    public bool moneyInitialized;
 }

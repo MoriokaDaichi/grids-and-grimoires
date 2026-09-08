@@ -171,12 +171,24 @@ public class TradePanel : MonoBehaviour
 
     private void BuildTasks(Trader t)
     {
-        if (t.tasks.Count == 0) { InfoRow("（依頼はありません）"); return; }
-        foreach (TraderTask task in t.tasks)
+        List<TraderTask> visible = trade.VisibleTasks(t);
+        if (visible.Count == 0) { InfoRow("（依頼はありません）"); return; }
+        foreach (TraderTask task in visible)
         {
             TraderTask captured = task;
+            bool unlocked = trade.IsTaskUnlocked(task);
             bool completed = trade.IsTaskCompleted(task);
             bool canClaim = trade.CanClaim(task);
+
+            if (!unlocked)
+            {
+                TraderTask prereq = trade.FindTask(task.requires);
+                string need = prereq != null ? "前提: " + prereq.title : "前提タスク未達成";
+                ActionRow("<b>" + task.title + "</b>\n<size=85%>" + need + RewardText(task) + "</size>",
+                    "未解放", false, DimBtn, null);
+                continue;
+            }
+
             string detail = trade.TaskProgressText(task) + RewardText(task);
             string btn = completed ? "達成済" : (canClaim ? "報酬受取" : "未達成");
             ActionRow("<b>" + task.title + "</b>\n<size=85%>" + detail + "</size>",
@@ -192,8 +204,21 @@ public class TradePanel : MonoBehaviour
         if (task.rewardItems != null)
             foreach (MaterialCost c in task.rewardItems)
                 if (c != null) parts.Add(MaterialCatalog.DisplayName(c) + " ×" + c.amount);
+        if (task.rewardMoney > 0) parts.Add(task.rewardMoney + " G");
         if (task.rewardStatPoints > 0) parts.Add("ステータスP +" + task.rewardStatPoints);
-        return parts.Count > 0 ? "　→ " + string.Join(" / ", parts) : "";
+        if (!string.IsNullOrEmpty(task.rewardGearId))
+        {
+            GearDef g = GearCatalog.Get(task.rewardGearId);
+            parts.Add("装備: " + (g != null ? g.name : task.rewardGearId));
+        }
+        if (!string.IsNullOrEmpty(task.rewardRecipeId))
+        {
+            GearDef g = GearCatalog.Get(task.rewardRecipeId);
+            parts.Add("レシピ: " + (g != null ? g.name : task.rewardRecipeId));
+        }
+        string reward = parts.Count > 0 ? "　→ " + string.Join(" / ", parts) : "";
+        if (task.deliverMoney > 0) reward = "　(納金 " + task.deliverMoney + " G)" + reward;
+        return reward;
     }
 
     // ---------------------------------------------------------------- 行ヘルパー

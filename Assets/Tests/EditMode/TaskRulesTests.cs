@@ -77,6 +77,37 @@ public class TaskRulesTests
     }
 
     [Test]
+    public void DeliverItems_WithDeliverMoney_RequiresBothItemsAndMoney()
+    {
+        TraderTask t = new TraderTask
+        {
+            kind = TraderTaskKind.DeliverItems,
+            deliverItems = new List<MaterialCost> { Small(10) },
+            deliverMoney = 50,
+        };
+
+        // 素材は足りるがお金が足りない
+        Assert.IsFalse(TaskRules.IsComplete(t, new TaskProgress { inventoryCount = c => 10, money = 40 }));
+        // 両方足りる
+        Assert.IsTrue(TaskRules.IsComplete(t, new TaskProgress { inventoryCount = c => 10, money = 50 }));
+        // お金は足りるが素材が足りない
+        Assert.IsFalse(TaskRules.IsComplete(t, new TaskProgress { inventoryCount = c => 9, money = 999 }));
+    }
+
+    [Test]
+    public void ProgressText_DeliverWithMoney_MentionsGold()
+    {
+        TraderTask t = new TraderTask
+        {
+            kind = TraderTaskKind.DeliverItems,
+            deliverItems = new List<MaterialCost> { Small(10) },
+            deliverMoney = 30,
+        };
+        Assert.AreEqual("素材と 30G を集める", TaskRules.ProgressText(t, new TaskProgress { inventoryCount = c => 0, money = 0 }));
+        Assert.AreEqual("納品可能", TaskRules.ProgressText(t, new TaskProgress { inventoryCount = c => 10, money = 30 }));
+    }
+
+    [Test]
     public void DeliverItems_EmptyList_NeverComplete()
     {
         TraderTask t = new TraderTask { kind = TraderTaskKind.DeliverItems, deliverItems = new List<MaterialCost>() };

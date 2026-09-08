@@ -18,6 +18,7 @@ public class HideoutManager : MonoBehaviour
     private long furnaceFuel;
     private readonly List<BrewRecord> brews = new List<BrewRecord>();
     private readonly HashSet<string> craftedGear = new HashSet<string>();
+    private readonly HashSet<string> unlockedRecipes = new HashSet<string>();
 
     private PlayerStatus playerStatus;
     private bool gearApplied;
@@ -61,6 +62,9 @@ public class HideoutManager : MonoBehaviour
     public IReadOnlyList<BrewRecord> Brews { get { return brews; } }
     public bool HasGear(string id) { return craftedGear.Contains(id); }
     public IEnumerable<string> OwnedGear { get { return craftedGear; } }
+
+    public bool RecipeUnlocked(string id) { return !string.IsNullOrEmpty(id) && unlockedRecipes.Contains(id); }
+    public IEnumerable<string> UnlockedRecipes { get { return unlockedRecipes; } }
 
     // ---------------------------------------------------------------- 電力
 
@@ -252,10 +256,45 @@ public class HideoutManager : MonoBehaviour
     {
         if (gear == null) return false;
         if (gear.tier > Level(FacilityKind.Workbench)) return false;
+        if (gear.recipeGated && !RecipeUnlocked(gear.id)) return false;
         if (HasGear(gear.id)) return false;
         if (!CanPowerFacilityAction()) return false;
         PlayerInventory inv = PlayerInventory.Instance;
         return inv != null && inv.CanAfford(gear.cost);
+    }
+
+    // トレーダーのタスク報酬でレシピを解禁する。
+    public void UnlockRecipe(string gearId)
+    {
+        if (string.IsNullOrEmpty(gearId)) return;
+        if (!unlockedRecipes.Add(gearId)) return;
+        Save();
+        Debug.Log("[作業台] レシピ「" + gearId + "」を解禁した。");
+    }
+
+    // トレーダーのタスク報酬で完成品を直接付与する（コスト・電力チェックなし。Craft のボーナス反映部分と同じ）。
+    public void GrantGear(string gearId)
+    {
+        GearDef gear = GearCatalog.Get(gearId);
+        if (gear == null || HasGear(gear.id)) return;
+
+        List<string> toRemove = new List<string>();
+        foreach (string ownedId in craftedGear)
+        {
+            GearDef o = GearCatalog.Get(ownedId);
+            if (o != null && o.slot == gear.slot) toRemove.Add(ownedId);
+        }
+        foreach (string id in toRemove)
+        {
+            craftedGear.Remove(id);
+            GearDef o = GearCatalog.Get(id);
+            if (o != null && playerStatus != null) playerStatus.ApplyResearchDelta(o.stat, -o.amount);
+        }
+
+        craftedGear.Add(gear.id);
+        if (playerStatus != null) playerStatus.ApplyResearchDelta(gear.stat, gear.amount);
+        Save();
+        Debug.Log("[作業台] " + gear.name + " を受け取った（タスク報酬）。");
     }
 
     public bool Craft(GearDef gear)
@@ -337,6 +376,9 @@ public class HideoutManager : MonoBehaviour
         craftedGear.Clear();
         if (d.craftedGearIds != null)
             foreach (string g in d.craftedGearIds) if (!string.IsNullOrEmpty(g)) craftedGear.Add(g);
+        unlockedRecipes.Clear();
+        if (d.unlockedGearRecipes != null)
+            foreach (string r in d.unlockedGearRecipes) if (!string.IsNullOrEmpty(r)) unlockedRecipes.Add(r);
     }
 
     private void Save()
@@ -349,6 +391,7 @@ public class HideoutManager : MonoBehaviour
         d.furnaceFuel = furnaceFuel;
         d.magicCircleBrews = new List<BrewRecord>(brews);
         d.craftedGearIds = new List<string>(craftedGear);
+        d.unlockedGearRecipes = new List<string>(unlockedRecipes);
 
         SaveManager.Save(d);
         OnHideoutChanged?.Invoke();

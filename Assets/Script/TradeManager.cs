@@ -76,7 +76,15 @@ public class TradeManager : MonoBehaviour
     {
         if (offer == null) return false;
         PlayerInventory inv = PlayerInventory.Instance;
-        return inv != null && inv.CanAfford(offer.give);
+        if (inv == null || !inv.CanAfford(offer.give)) return false;
+        // お金が絡むオファーは MoneyManager がシーンに無ければ成立させない（払い/受取が消える事故を防ぐ）
+        if (offer.giveMoney > 0 || offer.gainMoney > 0)
+        {
+            MoneyManager money = MoneyManager.Instance;
+            if (money == null) return false;
+            if (offer.giveMoney > 0 && !money.CanAfford(offer.giveMoney)) return false;
+        }
+        return true;
     }
 
     public bool TryTrade(TradeOffer offer)
@@ -84,9 +92,18 @@ public class TradeManager : MonoBehaviour
         if (!CanTrade(offer)) return false;
 
         PlayerInventory inv = PlayerInventory.Instance;
-        if (!inv.TrySpend(offer.give)) return false;
+        MoneyManager money = MoneyManager.Instance;
+
+        // 素材とお金の両方が払えることを確かめてから消費する
+        if (offer.giveMoney > 0 && (money == null || !money.TrySpend(offer.giveMoney))) return false;
+        if (!inv.TrySpend(offer.give))
+        {
+            if (offer.giveMoney > 0 && money != null) money.Add(offer.giveMoney); // 返金
+            return false;
+        }
 
         if (offer.receive != null && offer.receive.Count > 0) inv.Add(offer.receive);
+        if (offer.gainMoney > 0 && money != null) money.Add(offer.gainMoney);
 
         if (offer.bonusStatPoints > 0)
         {
@@ -107,9 +124,40 @@ public class TradeManager : MonoBehaviour
         {
             enemiesDefeated = lifetimeKills,
             bestDepth = bestDepth,
+            money = MoneyManager.Instance != null ? MoneyManager.Instance.Balance : 0,
             enemyKills = KillsOf,
             inventoryCount = InventoryCountOf,
         };
+    }
+
+    // 前提タスク（requires）が無い、または達成済みなら解放されている。
+    public bool IsTaskUnlocked(TraderTask task)
+    {
+        if (task == null) return false;
+        return string.IsNullOrEmpty(task.requires) || completedTaskIds.Contains(task.requires);
+    }
+
+    // 画面に出すタスク: 解放済みは全部＋「次の未解放（最初の1件）」だけ。連鎖の先が見えるように。
+    public List<TraderTask> VisibleTasks(Trader trader)
+    {
+        List<TraderTask> outp = new List<TraderTask>();
+        if (trader == null) return outp;
+        bool shownNextLocked = false;
+        foreach (TraderTask t in trader.tasks)
+        {
+            if (IsTaskUnlocked(t)) { outp.Add(t); continue; }
+            if (!shownNextLocked) { outp.Add(t); shownNextLocked = true; }
+        }
+        return outp;
+    }
+
+    public TraderTask FindTask(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return null;
+        foreach (Trader tr in traders)
+            foreach (TraderTask t in tr.tasks)
+                if (t.id == id) return t;
+        return null;
     }
 
     private int KillsOf(string enemyName)
@@ -137,6 +185,7 @@ public class TradeManager : MonoBehaviour
     public bool CanClaim(TraderTask task)
     {
         if (task == null || completedTaskIds.Contains(task.id)) return false;
+        if (!IsTaskUnlocked(task)) return false;
         return TaskRules.IsComplete(task, BuildProgress());
     }
 
@@ -145,20 +194,35 @@ public class TradeManager : MonoBehaviour
         if (!CanClaim(task)) return false;
 
         PlayerInventory inv = PlayerInventory.Instance;
+        MoneyManager money = MoneyManager.Instance;
 
-        // 納品タスクは受取と引き換えに素材を消費する
+        // 納品タスクは受取と引き換えに素材（＋納金）を消費する。両方払えることを先に確認する。
         if (task.kind == TraderTaskKind.DeliverItems)
         {
-            if (inv == null || !inv.TrySpend(task.deliverItems)) return false;
+            if (inv == null || !inv.CanAfford(task.deliverItems)) return false;
+            if (task.deliverMoney > 0 && (money == null || !money.CanAfford(task.deliverMoney))) return false;
+
+            if (!inv.TrySpend(task.deliverItems)) return false;
+            if (task.deliverMoney > 0 && money != null && !money.TrySpend(task.deliverMoney))
+            {
+                inv.Add(task.deliverItems); // 返却
+                return false;
+            }
         }
 
         if (inv != null && task.rewardItems != null && task.rewardItems.Count > 0) inv.Add(task.rewardItems);
+        if (task.rewardMoney > 0 && money != null) money.Add(task.rewardMoney);
 
         if (task.rewardStatPoints > 0)
         {
             PlayerStatus ps = UnityEngine.Object.FindFirstObjectByType<PlayerStatus>();
             if (ps != null) ps.AddStatsPoint(task.rewardStatPoints);
         }
+
+        if (!string.IsNullOrEmpty(task.rewardRecipeId) && HideoutManager.Instance != null)
+            HideoutManager.Instance.UnlockRecipe(task.rewardRecipeId);
+        if (!string.IsNullOrEmpty(task.rewardGearId) && HideoutManager.Instance != null)
+            HideoutManager.Instance.GrantGear(task.rewardGearId);
 
         completedTaskIds.Add(task.id);
         SaveProgress();

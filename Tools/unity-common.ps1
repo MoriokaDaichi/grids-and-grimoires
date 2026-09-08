@@ -27,8 +27,12 @@ function Assert-EditorClosed {
 function Invoke-Unity {
     param([string[]]$UnityArgs, [string]$LogFile)
 
-    $allArgs = @(
-        '-batchmode', '-nographics', '-quit',
+    # -runTests must NOT be combined with -quit: Unity 6 quits before the test
+    # runner starts, producing no results file. -runTests exits on its own.
+    $base = @('-batchmode', '-nographics')
+    if ($UnityArgs -notcontains '-runTests') { $base += '-quit' }
+
+    $allArgs = $base + @(
         '-projectPath', $ProjectPath,
         '-logFile', $LogFile
     ) + $UnityArgs

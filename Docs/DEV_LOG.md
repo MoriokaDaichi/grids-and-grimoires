@@ -11,7 +11,7 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 
 - **ブランチ**: `feat/battle-ui-core-loop` の全 40 コミットを **PR #1 で `master` にマージ済み**
   （マージコミット `7ff60e3`）。`master` と `feat` は差分ゼロ。feat ブランチは残置。
-- **EditMode テスト**: 137/137 グリーン（`GridsAndGrimoires.EditModeTests`）。
+- **EditMode テスト**: 147/147 グリーン（`GridsAndGrimoires.EditModeTests`）。
 - **Unity**: 6000.3.9f1 / URL シーン `Assets/Scenes/SampleScene.unity`。
 - アセンブリ分割済み: `GridsAndGrimoires.Runtime`（Assets/Script）/ `.Editor`（Assets/Editor）/
   `.EditModeTests`（Assets/Tests/EditMode）。
@@ -32,6 +32,27 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 ---
 
 ## このセッションで実装したこと（新しい順）
+
+### 0. トレーダーのタスクライン ＋ お金（ゴールド）経済
+- **お金（ゴールド）**: `MoneyManager`（シーンシングルトン、`PlayerInventory` と同型）。`SaveData.money` /
+  `moneyInitialized`（開始所持金＝仮 80G を1度だけ付与）。`OnMoneyChanged` を購読する `MoneyLabel`（構築画面・
+  トレード画面ヘッダ）。`BattleUISceneBuilder` が `MoneyManager` を生成し所持金ラベルを配線。
+- **ダンジョン入場料**: `DungeonEconomy.EntryFee()`＝仮 15G。`DungeonManager.StartDungeon()` が `MoneyManager`
+  から徴収、`CanAffordEntry()`。払えないと出撃せず構築画面に留まる。`MoneyManager` がシーンに無ければ無料。
+- **タスクライン**: `TraderTask.requires`（前提タスクID）で連鎖化。`TraderCatalog.Chain(...)` が定義順に前タスク
+  IDを埋める。各トレーダー 8〜9 段（グレン/リーゼ/ダグ/オルカ）。`TradeManager.IsTaskUnlocked` /
+  `VisibleTasks`（解放済み＋次の未解放1件）。`TradePanel` は未解放を「未解放」グレー行＋`前提: 〜` で表示。
+- **タスク報酬の拡張**: `rewardMoney` / `rewardGearId`（`HideoutManager.GrantGear` で完成品直接付与）/
+  `rewardRecipeId`（`HideoutManager.UnlockRecipe`）。納品タスクは `deliverMoney`（納金）も消費。
+- **作業台レシピ解禁制**: `GearDef.recipeGated`、`SaveData.unlockedGearRecipes`。上位装備 6 種を新設
+  （`wand_runed`/`acc_sigil`/`armor_warded`/`wand_stormcaller`/`armor_aegis`/`acc_orb`）。`GearCatalog.Craftable`
+  はレシピ品を除外、`CraftableWithRecipes(level, unlocked)` を追加。ハブUIは未解放を「✎レシピ未取得」で表示。
+- **交換オファーの拡張**: `TradeOffer.giveMoney` / `gainMoney`。各トレーダーに素材→お金の売却口と
+  お金→素材/ステP の買取を追加。`TradeManager.CanTrade/TryTrade` が `MoneyManager` を出し入れ。
+- **テスト**: `DungeonEconomyTests` 新規、`TaskRulesTests`（納金）/`TraderCatalogTests`（連鎖整合・gear/recipe
+  参照・売却口）/`SaveManagerTests`（money/recipe ラウンドトリップ）/`GearCatalogTests`（レシピゲート）を追記。
+- **ツール修正**: `Tools/unity-common.ps1` — `-runTests` のときは `-quit` を付けない（Unity 6 でテスト前に
+  終了して結果が出ない問題）。これで `Tools/unity-tests.ps1` が正しく走る。
 
 ### 1. 杖グリッドのサイズを作業台の杖 tier で可変化（`19c395b`）
 - [MagicGridManager.cs](../Assets/Script/MagicGridManager.cs): 固定 5×5 → `HideoutManager.OwnedGear` から
@@ -128,9 +149,10 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 | **`MonsterPartCatalog`** | 敵 40 体のドロップ = 固有素材の正本（tier/属性） |
 | `ResearchGraph` / `ResearchRules` | スキルツリー定義 / 解放判定 |
 | `HideoutCatalog` / `HideoutRules` | 5 設備の定義・効果・変換・**tier ゲート**・抽選 |
-| `GearCatalog` | 製作装備 9 種 |
+| `GearCatalog` | 製作装備（通常 9 種＋`recipeGated` 6 種） |
 | `TradeCatalog` | 旧・交換メニュー（`StandardOffers`） |
-| `TraderCatalog` / `TaskRules` | 複数トレーダーと依頼タスク |
+| `TraderCatalog` / `TaskRules` | 複数トレーダーとタスクライン（`requires` 連鎖・報酬に素材/お金/装備/レシピ/ステP） |
+| `DungeonEconomy` | ダンジョン入場料 |
 
 ---
 

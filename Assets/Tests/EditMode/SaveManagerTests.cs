@@ -57,7 +57,34 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.IsNotNull(d.facilityLevels);
             Assert.IsNotNull(d.magicCircleBrews);
             Assert.IsNotNull(d.craftedGearIds);
+            Assert.IsNotNull(d.unlockedGearRecipes);
             Assert.AreEqual(0, d.furnaceFuel);
+        }
+
+        [Test]
+        public void MoneyAndRecipeFields_RoundTrip()
+        {
+            SaveData src = new SaveData();
+            src.money = 235;
+            src.moneyInitialized = true;
+            src.unlockedGearRecipes.Add("wand_runed");
+            src.unlockedGearRecipes.Add("armor_aegis");
+
+            SaveData dst = SaveManager.Deserialize(SaveManager.Serialize(src));
+
+            Assert.AreEqual(235, dst.money);
+            Assert.IsTrue(dst.moneyInitialized);
+            Assert.AreEqual(2, dst.unlockedGearRecipes.Count);
+            Assert.Contains("wand_runed", dst.unlockedGearRecipes);
+            Assert.Contains("armor_aegis", dst.unlockedGearRecipes);
+        }
+
+        [Test]
+        public void NewSaveData_MoneyDefaultsToZeroUninitialized()
+        {
+            SaveData d = SaveManager.Deserialize("");
+            Assert.AreEqual(0, d.money);
+            Assert.IsFalse(d.moneyInitialized);
         }
     }
 }

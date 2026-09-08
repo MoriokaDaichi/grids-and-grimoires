@@ -36,12 +36,43 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
-        public void Craftable_GatedByWorkbenchLevel()
+        public void Craftable_GatedByWorkbenchLevel_ExcludesRecipeGated()
         {
+            // Craftable は「常時作れる」= tier<=level かつ レシピ制でない もの
+            int nonRecipe = 0;
+            foreach (GearDef g in GearCatalog.All) if (!g.recipeGated) nonRecipe++;
+
             Assert.AreEqual(0, GearCatalog.Craftable(0).Count);
             Assert.AreEqual(3, GearCatalog.Craftable(1).Count);
             Assert.AreEqual(6, GearCatalog.Craftable(2).Count);
-            Assert.AreEqual(GearCatalog.All.Count, GearCatalog.Craftable(3).Count);
+            Assert.AreEqual(nonRecipe, GearCatalog.Craftable(3).Count);
+            foreach (GearDef g in GearCatalog.Craftable(3)) Assert.IsFalse(g.recipeGated);
+        }
+
+        [Test]
+        public void RecipeGated_OnlyAppearsWhenUnlocked()
+        {
+            System.Collections.Generic.List<GearDef> gated = GearCatalog.RecipeGated();
+            Assert.Greater(gated.Count, 0, "レシピ制の装備が1つも無い");
+
+            GearDef sample = gated.Find(g => g.tier > 1) ?? gated[0];
+            // 未解禁: CraftableWithRecipes に出ない
+            System.Collections.Generic.List<GearDef> none =
+                GearCatalog.CraftableWithRecipes(3, new string[0]);
+            Assert.IsFalse(none.Exists(g => g.id == sample.id));
+
+            // 解禁済み: tier<=level なら出る
+            System.Collections.Generic.List<GearDef> withOne =
+                GearCatalog.CraftableWithRecipes(3, new[] { sample.id });
+            Assert.IsTrue(withOne.Exists(g => g.id == sample.id));
+
+            // 作業台レベル不足なら解禁済みでも出ない
+            if (sample.tier > 1)
+            {
+                System.Collections.Generic.List<GearDef> lowLevel =
+                    GearCatalog.CraftableWithRecipes(sample.tier - 1, new[] { sample.id });
+                Assert.IsFalse(lowLevel.Exists(g => g.id == sample.id));
+            }
         }
 
         [Test]

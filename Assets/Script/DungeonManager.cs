@@ -88,11 +88,28 @@ public class DungeonManager : MonoBehaviour
         return pool;
     }
 
+    // 入場料を払える状態か（MoneyManager がシーンに無ければ常に true）。
+    public bool CanAffordEntry()
+    {
+        MoneyManager money = MoneyManager.Instance;
+        return money == null || money.CanAfford(DungeonEconomy.EntryFee());
+    }
+
     public bool StartDungeon()
     {
         if (playerStatus == null || roster == null || battleManager == null || EffectivePool().Count == 0)
         {
             Debug.LogWarning("DungeonManager: PlayerStatus / EnemyRoster / BattleManager / enemyPool の設定を確認してください。");
+            return false;
+        }
+
+        // ダンジョン入場料（少額固定・仮）。MoneyManager が無ければ無料。
+        // 出撃が確定するまで（AdvanceWave 成功まで）は徴収しない＝空杖などで中断しても取られない。
+        MoneyManager money = MoneyManager.Instance;
+        int fee = DungeonEconomy.EntryFee();
+        if (money != null && !money.CanAfford(fee))
+        {
+            Debug.LogWarning($"DungeonManager: 入場料 {fee}G が足りません。");
             return false;
         }
 
@@ -103,7 +120,15 @@ public class DungeonManager : MonoBehaviour
         defeatedEnemies.Clear();
         rng = seed != 0 ? new System.Random(seed) : new System.Random();
 
-        return AdvanceWave();
+        if (!AdvanceWave())
+        {
+            dungeonActive = false;
+            return false;
+        }
+
+        // 潜行が始まった。ここで入場料を徴収する。
+        if (money != null) money.TrySpend(fee);
+        return true;
     }
 
     private bool AdvanceWave()

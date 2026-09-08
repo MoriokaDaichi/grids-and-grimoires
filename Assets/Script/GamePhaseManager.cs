@@ -113,6 +113,13 @@ public class GamePhaseManager : MonoBehaviour
     {
         if (dungeon == null || Current != GamePhase.Build) return;
 
+        // 入場料が払えないなら構築画面のまま留まる
+        if (!dungeon.CanAffordEntry())
+        {
+            Debug.LogWarning("[GamePhaseManager] ダンジョン入場料が足りません。");
+            return;
+        }
+
         GoTo(GamePhase.Battle);
         if (!dungeon.StartDungeon())
         {

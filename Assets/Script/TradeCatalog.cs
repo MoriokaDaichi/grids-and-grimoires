@@ -9,6 +9,8 @@ public class TradeOffer
     public List<MaterialCost> give = new List<MaterialCost>();
     public List<MaterialCost> receive = new List<MaterialCost>();
     public int bonusStatPoints;
+    public int giveMoney;   // 交換にお金を支払う（お金コストのオファー）
+    public int gainMoney;   // 交換でお金を受け取る（素材の売却）
 }
 
 public static class TradeCatalog

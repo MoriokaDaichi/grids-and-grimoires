@@ -52,6 +52,7 @@ public static class BattleUISceneBuilder
         if (oldGpm != null) Object.DestroyImmediate(oldGpm);
 
         EnsureSingleton<PlayerInventory>("PlayerInventory");
+        EnsureSingleton<MoneyManager>("MoneyManager");
         EnsureSingleton<ResearchManager>("ResearchManager");
         EnsureSingleton<HideoutManager>("HideoutManager");
         EnsureSingleton<TradeManager>("TradeManager");
@@ -354,7 +355,12 @@ public static class BattleUISceneBuilder
         AddImage(root, new Color(0f, 0f, 0f, 0.4f), false);
 
         TMP_Text title = AddText(root, "Title", "所持素材", 20, TextAlignmentOptions.TopLeft);
-        Frame(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(280f, 28f));
+        Frame(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(160f, 28f));
+
+        TMP_Text moneyText = AddText(root, "MoneyText", "所持金 0 G", 16, TextAlignmentOptions.TopRight);
+        Frame(moneyText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -10f), new Vector2(160f, 24f));
+        moneyText.color = new Color(1f, 0.92f, 0.6f, 1f);
+        WireMoneyLabel(moneyText);
 
         RectTransform listRoot = NewUI("ListRoot", root);
         Frame(listRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -40f), new Vector2(284f, 210f));
@@ -377,6 +383,15 @@ public static class BattleUISceneBuilder
         so.ApplyModifiedPropertiesWithoutUndo();
 
         return root.gameObject;
+    }
+
+    // TMP_Text に MoneyLabel を付けて label 参照を配線する。
+    private static void WireMoneyLabel(TMP_Text text)
+    {
+        MoneyLabel ml = text.gameObject.AddComponent<MoneyLabel>();
+        SerializedObject so = new SerializedObject(ml);
+        so.FindProperty("label").objectReferenceValue = text;
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void EnsureSingleton<T>(string goName) where T : Component
@@ -578,6 +593,11 @@ public static class BattleUISceneBuilder
         TMP_Text blurb = AddText(root, "Blurb", "", 15, TextAlignmentOptions.Center);
         Frame(blurb.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(1180f, 30f));
         blurb.color = new Color(1f, 1f, 1f, 0.7f);
+
+        TMP_Text money = AddText(root, "MoneyText", "所持金 0 G", 20, TextAlignmentOptions.Right);
+        Frame(money.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-40f, -40f), new Vector2(280f, 34f));
+        money.color = new Color(1f, 0.92f, 0.6f, 1f);
+        WireMoneyLabel(money);
 
         RectTransform viewport = NewUI("Viewport", root);
         Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(1180f, 600f));

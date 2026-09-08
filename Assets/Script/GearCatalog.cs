@@ -19,6 +19,7 @@ public class GearDef
     public ResearchStat stat;     // 付与ステータス（PlayerStatus.ApplyResearchDelta で流用）
     public float amount;
     public List<MaterialCost> cost = new List<MaterialCost>();
+    public bool recipeGated;      // true なら、レシピを解禁（トレーダーのタスク報酬）するまで作業台に出さない
 }
 
 public static class GearCatalog
@@ -40,18 +41,50 @@ public static class GearCatalog
         return null;
     }
 
-    // 作業台レベル level で製作可能なもの（tier <= level）。
+    // 作業台レベル level で常時製作可能なもの（tier <= level かつ レシピ制でない）。
     public static List<GearDef> Craftable(int workbenchLevel)
     {
         Ensure();
         List<GearDef> outp = new List<GearDef>();
-        foreach (GearDef g in _all) if (g.tier <= workbenchLevel) outp.Add(g);
+        foreach (GearDef g in _all) if (g.tier <= workbenchLevel && !g.recipeGated) outp.Add(g);
+        return outp;
+    }
+
+    // 作業台レベル level で製作可能なもの（tier <= level）。レシピ制のものは解禁済みIDに含まれる場合のみ。
+    public static List<GearDef> CraftableWithRecipes(int workbenchLevel, IEnumerable<string> unlockedRecipeIds)
+    {
+        Ensure();
+        HashSet<string> unlocked = new HashSet<string>();
+        if (unlockedRecipeIds != null)
+            foreach (string id in unlockedRecipeIds) if (!string.IsNullOrEmpty(id)) unlocked.Add(id);
+
+        List<GearDef> outp = new List<GearDef>();
+        foreach (GearDef g in _all)
+        {
+            if (g.tier > workbenchLevel) continue;
+            if (g.recipeGated && !unlocked.Contains(g.id)) continue;
+            outp.Add(g);
+        }
+        return outp;
+    }
+
+    // レシピ制の全装備（トレーダー報酬 rewardRecipeId の候補検証などに使う）。
+    public static List<GearDef> RecipeGated()
+    {
+        Ensure();
+        List<GearDef> outp = new List<GearDef>();
+        foreach (GearDef g in _all) if (g.recipeGated) outp.Add(g);
         return outp;
     }
 
     private static GearDef G(string id, string name, GearSlot slot, int tier, ResearchStat stat, float amount, params MaterialCost[] cost)
     {
         return new GearDef { id = id, name = name, slot = slot, tier = tier, stat = stat, amount = amount, cost = new List<MaterialCost>(cost) };
+    }
+
+    private static GearDef Gr(string id, string name, GearSlot slot, int tier, ResearchStat stat, float amount, params MaterialCost[] cost)
+    {
+        return new GearDef { id = id, name = name, slot = slot, tier = tier, stat = stat, amount = amount, cost = new List<MaterialCost>(cost), recipeGated = true };
     }
 
     private static void Ensure()
@@ -73,6 +106,14 @@ public static class GearCatalog
             G("wand_arch",       "大魔道の杖",   GearSlot.Wand,      3, ResearchStat.Atk, 11f, L(1), Frag(MagicAttribute.Dark, 3)),
             G("armor_plate",     "彫紋の板金",   GearSlot.Armor,     3, ResearchStat.Hp, 55f, L(1), Part("古木の芯", 3)),
             G("acc_amulet",      "賢者の護符",   GearSlot.Accessory, 3, ResearchStat.ManaRegen, 2.5f, L(1), Frag(MagicAttribute.Light, 3)),
+
+            // --- レシピ制（トレーダーのタスク報酬で解禁。作業台Lvは満たしていること）---
+            Gr("wand_runed",      "刻印の杖",     GearSlot.Wand,      1, ResearchStat.Atk, 5f,  S(20), Frag(MagicAttribute.Fire, 2), Part("小さな牙", 4)),
+            Gr("acc_sigil",       "精霊のシジル", GearSlot.Accessory, 1, ResearchStat.ManaRegen, 1.8f, S(20), Frag(MagicAttribute.Wind, 2), Part("薄い翼膜", 4)),
+            Gr("armor_warded",    "護符織りの法衣", GearSlot.Armor,   2, ResearchStat.Hp, 40f, M(6), Frag(MagicAttribute.Light, 2), Part("トロルの生皮", 2)),
+            Gr("wand_stormcaller","嵐呼びの杖",   GearSlot.Wand,      3, ResearchStat.Atk, 14f, L(1), Frag(MagicAttribute.Thunder, 3), Part("竜王のうろこ", 1)),
+            Gr("armor_aegis",     "深淵のイージス", GearSlot.Armor,   3, ResearchStat.Def, 9f,  L(1), Frag(MagicAttribute.Dark, 3), Part("首無しの兜", 1)),
+            Gr("acc_orb",         "賢者の宝珠",   GearSlot.Accessory, 3, ResearchStat.ManaMax, 45f, L(1), Frag(MagicAttribute.Light, 3), Part("命の宝珠", 1)),
         };
     }
 }

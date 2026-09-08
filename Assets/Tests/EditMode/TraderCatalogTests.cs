@@ -56,7 +56,13 @@ public class TraderCatalogTests
                 else
                     Assert.Greater(task.targetCount, 0, task.id + " の目標値が0");
 
-                Assert.IsTrue(task.rewardItems.Count > 0 || task.rewardStatPoints > 0, task.id + " に報酬が無い");
+                bool hasReward = task.rewardItems.Count > 0 || task.rewardStatPoints > 0 || task.rewardMoney > 0
+                    || !string.IsNullOrEmpty(task.rewardGearId) || !string.IsNullOrEmpty(task.rewardRecipeId);
+                Assert.IsTrue(hasReward, task.id + " に報酬が無い");
+
+                // 納金は納品タスクだけに設定する（他種別では判定されない）
+                if (task.kind != TraderTaskKind.DeliverItems)
+                    Assert.AreEqual(0, task.deliverMoney, task.id + " は納品タスクでないのに deliverMoney がある");
             }
         }
     }
@@ -110,6 +116,74 @@ public class TraderCatalogTests
             foreach (TraderTask task in t.tasks)
                 if (task.kind == TraderTaskKind.DefeatEnemies && !string.IsNullOrEmpty(task.targetEnemyName))
                     Assert.IsTrue(known.Contains(task.targetEnemyName), "未知の討伐対象: " + task.targetEnemyName);
+    }
+
+    [Test]
+    public void TaskLines_RequiresPointsBackwardWithinSameTrader()
+    {
+        foreach (Trader t in TraderCatalog.BuildTraders())
+        {
+            HashSet<string> seen = new HashSet<string>();
+            bool firstSeen = false;
+            foreach (TraderTask task in t.tasks)
+            {
+                if (string.IsNullOrEmpty(task.requires))
+                {
+                    Assert.IsFalse(firstSeen, t.id + " に連鎖の先頭（requires 空）が複数ある: " + task.id);
+                    firstSeen = true;
+                }
+                else
+                {
+                    Assert.IsTrue(seen.Contains(task.requires),
+                        task.id + " の requires「" + task.requires + "」が同一トレーダーのより前のタスクを指していない");
+                }
+                seen.Add(task.id);
+            }
+            Assert.IsTrue(t.tasks.Count == 0 || firstSeen, t.id + " の連鎖に先頭が無い");
+        }
+    }
+
+    [Test]
+    public void TaskGearAndRecipeRewards_ResolveInGearCatalog()
+    {
+        foreach (Trader t in TraderCatalog.BuildTraders())
+        {
+            foreach (TraderTask task in t.tasks)
+            {
+                if (!string.IsNullOrEmpty(task.rewardGearId))
+                    Assert.IsNotNull(GearCatalog.Get(task.rewardGearId),
+                        task.id + " の rewardGearId「" + task.rewardGearId + "」が GearCatalog に無い");
+                if (!string.IsNullOrEmpty(task.rewardRecipeId))
+                {
+                    GearDef g = GearCatalog.Get(task.rewardRecipeId);
+                    Assert.IsNotNull(g, task.id + " の rewardRecipeId「" + task.rewardRecipeId + "」が GearCatalog に無い");
+                    Assert.IsTrue(g.recipeGated, task.id + " の rewardRecipeId「" + task.rewardRecipeId + "」は recipeGated でない");
+                }
+            }
+        }
+    }
+
+    [Test]
+    public void EveryTrader_HasAMoneySellOffer()
+    {
+        foreach (Trader t in TraderCatalog.BuildTraders())
+        {
+            bool hasSell = false;
+            foreach (TradeOffer o in t.offers)
+                if (o.gainMoney > 0) hasSell = true;
+            Assert.IsTrue(hasSell, t.name + " に売却（→お金）オファーが無い");
+        }
+    }
+
+    [Test]
+    public void MoneyOffers_HaveNonNegativeAmounts()
+    {
+        foreach (Trader t in TraderCatalog.BuildTraders())
+            foreach (TradeOffer o in t.offers)
+            {
+                Assert.GreaterOrEqual(o.giveMoney, 0, t.id + " の giveMoney が負");
+                Assert.GreaterOrEqual(o.gainMoney, 0, t.id + " の gainMoney が負");
+            }
     }
 
     private static void AssertKnownPart(MaterialCost c, string where)

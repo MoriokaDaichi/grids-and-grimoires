@@ -207,15 +207,22 @@ public class HideoutHubPanel : MonoBehaviour
     private void BuildWorkbenchSection(RectTransform card, int level)
     {
         if (level <= 0) return;
-        foreach (GearDef g in GearCatalog.Craftable(level))
+        // 通常品＋レシピ制（tier<=level）を並べ、レシピ未取得はグレー表示にする。
+        List<GearDef> list = new List<GearDef>(GearCatalog.Craftable(level));
+        foreach (GearDef rg in GearCatalog.RecipeGated())
+            if (rg.tier <= level) list.Add(rg);
+        foreach (GearDef g in list)
         {
             bool owned = hideout.HasGear(g.id);
+            bool lockedRecipe = g.recipeGated && !hideout.RecipeUnlocked(g.id);
             bool can = hideout.CanCraft(g);
             string stat = ResearchGraph.Label(g.stat);
             string line = g.name + "（" + SlotName(g.slot) + " / " + stat + "）  " + CostText(g.cost);
             if (owned) line += "  ✓所持";
+            else if (lockedRecipe) line += "  ✎レシピ未取得";
             GearDef captured = g;
-            ActionRow(card, line, owned ? "所持" : "製作", can, owned ? DimBtn : OkBtn,
+            string btn = owned ? "所持" : (lockedRecipe ? "未解放" : "製作");
+            ActionRow(card, line, btn, can, (owned || lockedRecipe) ? DimBtn : OkBtn,
                 () => hideout.Craft(captured));
         }
     }
