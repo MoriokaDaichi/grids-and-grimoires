@@ -9,4 +9,11 @@ public static class DungeonEconomy
     {
         return BaseEntryFee;
     }
+
+    // 実際に徴収する入場料。所持金が基本料金に満たないときは無料にする
+    // （タスク報酬が現物中心でお金が枯れると「潜れない」詰みに近づくため、そのセーフティ。仮）。
+    public static int EffectiveEntryFee(int currentMoney)
+    {
+        return currentMoney < BaseEntryFee ? 0 : BaseEntryFee;
+    }
 }

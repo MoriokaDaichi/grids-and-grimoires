@@ -127,7 +127,23 @@ public class TradeManager : MonoBehaviour
             money = MoneyManager.Instance != null ? MoneyManager.Instance.Balance : 0,
             enemyKills = KillsOf,
             inventoryCount = InventoryCountOf,
+            ownedGearTier = OwnedGearTierOf,
         };
+    }
+
+    // 所持中の装備のうち、そのスロットの最上位 tier（無ければ 0）。CraftGear タスクの判定用。
+    // 装備所持は HideoutManager から都度導出する（在庫数と同じく永続化はしない）。
+    private static int OwnedGearTierOf(GearSlot slot)
+    {
+        HideoutManager h = HideoutManager.Instance;
+        if (h == null) return 0;
+        int best = 0;
+        foreach (string id in h.OwnedGear)
+        {
+            GearDef g = GearCatalog.Get(id);
+            if (g != null && g.slot == slot && g.tier > best) best = g.tier;
+        }
+        return best;
     }
 
     // 前提タスク（requires）が無い、または達成済みなら解放されている。

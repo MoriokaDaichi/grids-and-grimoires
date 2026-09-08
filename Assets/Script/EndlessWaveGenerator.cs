@@ -19,11 +19,14 @@ public static class EndlessWaveGenerator
     public const int StartingChoices = 2;            // 深度1 で抽選できる敵数（最弱2体）
     public const float EnemiesUnlockedPerDepth = 1f; // 深度+1 ごとに窓へ入る敵数
     public const int WeakCutoffLagDepths = 7;        // この深度を超えてから最弱の敵が外れ始める
+    public const int MinTwoEnemyDepth = 2;           // この深度以降はウェーブ最低2体：debut敵の保証枠＋RNG枠を両立させる
 
     // 倍率の伸びを深部で寝かせる。浅い深度（膝まで）は素の線形、そこから先は勾配を落とす。
     // 深部は「窓に強い敵が入ってくる」ことで十分に難度が上がるため、掛け算の倍率は青天井にしない。
-    public const int ScalingTaperKneeDepth = 12;    // この深度までは素の線形（＝従来と一致）
-    public const float ScalingTaperSlope = 0.5f;    // 膝から先の勾配（0〜1）
+    // 再検証3周で「深度12〜13 のウェーブが満タンから即死させる」所見（C2）を受けて、膝を 12→10・
+    // 勾配を 0.5→0.4 に下げ、中盤〜深部のステータス倍率の伸びをさらに寝かせた（数値は仮）。
+    public const int ScalingTaperKneeDepth = 10;    // この深度までは素の線形
+    public const float ScalingTaperSlope = 0.4f;    // 膝から先の勾配（0〜1）
     public const float DefMultCap = 2.5f;           // 防御倍率の上限（絶対値は窓の入れ替えで上がる）
 
     // 深度 d（0始まり）を、膝から先で勾配を落とした「実効深度」に変換する。
@@ -44,10 +47,14 @@ public static class EndlessWaveGenerator
     }
 
     // 深度 depth の同時出現数（1〜maxPerWave）。
+    // 深度2以降は最低2体：debut敵をこの深度で必ず1体出す（PickIndices の保証枠）ぶん、
+    // もう1枠を RNG に残さないと浅層のウェーブが「debut敵1種で固定」になり、最弱スライム等が
+    // 抽選から完全に消える（＝そのドロップが枯れる／AoEの価値が消える）。
     public static int EnemyCountFor(int depth, int maxPerWave)
     {
         int d = Mathf.Max(1, depth);
         int count = 1 + (d - 1) / DepthsPerExtraEnemy;
+        if (d >= MinTwoEnemyDepth) count = Mathf.Max(count, 2);
         int cap = Mathf.Max(1, maxPerWave);
         return Mathf.Clamp(count, 1, cap);
     }
@@ -69,7 +76,20 @@ public static class EndlessWaveGenerator
         return Mathf.Clamp(floor, 0, Mathf.Max(0, maxExclusive - 1));
     }
 
+    // この深度で「初めて抽選窓に入った」敵のインデックス。窓が広がっていなければ -1。
+    // ＝抽選窓の上限が前深度より増えたとき、その増分の先頭（最強）の敵。
+    // 新しく開放された敵種のドロップが、その深度を通るたび最低1体は出るよう保証するために使う。
+    public static int NewlyOpenedIndexFor(int depth, int poolCount)
+    {
+        if (poolCount <= 0) return -1;
+        int now = MaxPoolIndexExclusiveFor(depth, poolCount);
+        int prev = MaxPoolIndexExclusiveFor(Mathf.Max(1, depth) - 1, poolCount);
+        if (now <= prev) return -1; // 窓が広がっていない（poolCount でクランプ済み等）
+        return now - 1;
+    }
+
     // このウェーブに出す敵の「プール内インデックス」を count 個選ぶ（同じ敵の重複あり）。
+    // この深度で新規開放された敵がいれば、1枠をその敵に固定する（新規敵のドロップ導線の保証）。
     public static List<int> PickIndices(int depth, int poolCount, int count, System.Random rng)
     {
         List<int> result = new List<int>();
@@ -84,6 +104,13 @@ public static class EndlessWaveGenerator
             int r = rng != null ? rng.Next(span) : (i % span);
             result.Add(min + r);
         }
+
+        // debut敵の保証は「RNG枠を1つ以上残せるとき」だけ差し込む。1体ウェーブを保証で
+        // 潰すと、その深度は debut敵1種で固定になり抽選の多様性が消えるため。
+        int guaranteed = NewlyOpenedIndexFor(depth, poolCount);
+        if (guaranteed >= min && guaranteed < maxExclusive && result.Count >= 2 && !result.Contains(guaranteed))
+            result[result.Count - 1] = guaranteed;
+
         return result;
     }
 }

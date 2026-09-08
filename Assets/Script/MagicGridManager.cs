@@ -9,9 +9,10 @@ public class MagicGridManager : MonoBehaviour
     public float cellSize = 50f;
 
     [Header("杖のグリッド1辺（作業台で作る杖の tier で決まる。数値は仮）")]
-    [Tooltip("杖 未製作(tier0) のときの1辺。tier1 で +1、tier2 で +2 … と広がる")]
-    public int minGridSize = 2;
-    [Tooltip("最大の1辺（作業台Lv3の杖）")]
+    [Tooltip("杖 未製作(tier0) のときの1辺。tier1 で +1、tier2 で +2 … と広がる。" +
+             "3 スタート＝杖なしでも基本＋1枚は置けて、tier1 杖で 4×4（Mega＋AoE＋単体が両立）に届く")]
+    public int minGridSize = 3;
+    [Tooltip("最大の1辺（作業台Lv2以上の杖）")]
     public int maxGridSize = 5;
 
     // グリッドの1辺が変わったときに発火（新 width, height）。

@@ -216,8 +216,7 @@ public class HideoutHubPanel : MonoBehaviour
             bool owned = hideout.HasGear(g.id);
             bool lockedRecipe = g.recipeGated && !hideout.RecipeUnlocked(g.id);
             bool can = hideout.CanCraft(g);
-            string stat = ResearchGraph.Label(g.stat);
-            string line = g.name + "（" + SlotName(g.slot) + " / " + stat + "）  " + CostText(g.cost);
+            string line = g.name + "（" + SlotName(g.slot) + " / " + GearEffectText(g) + "）  " + CostText(g.cost);
             if (owned) line += "  （所持済）";
             else if (lockedRecipe) line += "  （レシピ未取得）";
             GearDef captured = g;
@@ -230,6 +229,17 @@ public class HideoutHubPanel : MonoBehaviour
     private static string SlotName(GearSlot s)
     {
         switch (s) { case GearSlot.Wand: return "杖"; case GearSlot.Armor: return "防具"; default: return "アクセ"; }
+    }
+
+    // 装備の効果を1行に要約（主ステータス＋サステイン系の副効果）。
+    private static string GearEffectText(GearDef g)
+    {
+        List<string> parts = new List<string>();
+        if (g.amount != 0f) parts.Add(ResearchGraph.Label(g.stat) + "+" + g.amount.ToString("0.#"));
+        if (g.hpRegenPerSecond > 0f) parts.Add("HP毎秒+" + g.hpRegenPerSecond.ToString("0.#"));
+        if (g.healPerWaveFlat > 0f) parts.Add("ウェーブ回復+" + g.healPerWaveFlat.ToString("0.#"));
+        if (g.healPerWavePercent > 0f) parts.Add("ウェーブ回復+" + Mathf.RoundToInt(g.healPerWavePercent * 100f) + "%");
+        return parts.Count > 0 ? string.Join(", ", parts) : "—";
     }
 
     // ---------------------------------------------------------------- マジックサークル

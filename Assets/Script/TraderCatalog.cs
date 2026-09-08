@@ -116,6 +116,17 @@ public static class TraderCatalog
         };
     }
 
+    private static TraderTask CraftGear(string id, string trader, string title, GearSlot slot, int minTier,
+        List<MaterialCost> reward, int rewardStat = 0, int rewardMoney = 0)
+    {
+        return new TraderTask
+        {
+            id = id, traderId = trader, title = title, kind = TraderTaskKind.CraftGear,
+            targetGearSlot = slot, targetCount = minTier,
+            rewardItems = reward ?? new List<MaterialCost>(), rewardStatPoints = rewardStat, rewardMoney = rewardMoney,
+        };
+    }
+
     // 連鎖にする：定義順で直前タスクの id を requires に埋め、トレーダーへ追加する。
     private static void Chain(Trader trader, params TraderTask[] tasks)
     {
@@ -148,11 +159,13 @@ public static class TraderCatalog
         glen.offers.Add(Buy("150 G → ステータスポイント +1（仮）", 150, null, bonusStat: 1));
         Chain(glen,
             Deliver("glen_1", "glen", "小結晶を 15 個かき集める",
-                Items(M(MaterialType.SmallManaCrystal, 15)), Items(M(MaterialType.MediumManaCrystal, 3)), rewardMoney: 20),
+                Items(M(MaterialType.SmallManaCrystal, 15)), Items(M(MaterialType.MediumManaCrystal, 3)), rewardMoney: 30),
             Deliver("glen_2", "glen", "中結晶を 8 個用立てる",
                 Items(M(MaterialType.MediumManaCrystal, 8)), Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 1),
+            // 再検証2 R5：序盤の中結晶供給が glen_1（小15→中3・1回）だけで、研究/設備Lv2 が中結晶枯れで止まる。
+            // 結晶トレーダーの浅いタスクにもう1本、中結晶を出す（現物中心でお金も細いので少額の現金も付ける）。
             Deliver("glen_3", "glen", "小結晶 ×30 と手数料 20 G を預ける",
-                Items(M(MaterialType.SmallManaCrystal, 30)), null, deliverMoney: 20, rewardMoney: 70),
+                Items(M(MaterialType.SmallManaCrystal, 30)), Items(M(MaterialType.MediumManaCrystal, 3)), deliverMoney: 20, rewardMoney: 70),
             Deliver("glen_4", "glen", "中結晶を 12 個回す",
                 Items(M(MaterialType.MediumManaCrystal, 12)), null, rewardStat: 1, rewardMoney: 90),
             Deliver("glen_5", "glen", "大結晶 ×2 と 40 G で精霊細工の権利を買う",
@@ -222,6 +235,17 @@ public static class TraderCatalog
         dag.offers.Add(Sell("スライムゼリー ×5 → 10 G", Part("スライムゼリー", 5), 10));
         dag.offers.Add(Sell("ゴブリンの牙 ×4 → 16 G", Part("ゴブリンの牙", 4), 16));
         dag.offers.Add(Sell("大ネズミの尾 ×4 → 14 G", Part("大ネズミの尾", 4), 14));
+        // tier2 の中位素材（剛毛/蜘蛛の糸/鉄の兜/毒腺/錆びた短剣/風切羽/若木の枝/腐肉）は
+        // 錬金釜Lv1 で変換できず売り先も無く「塩漬け」になる（再検証2 R4）。深度10前後を周回するほど
+        // 積み上がるので、討伐報酬の買取口をまとめて開ける（レートは仮、tier2 ≒ 6 G/個）。
+        dag.offers.Add(Sell("剛毛 ×3 → 18 G", Part("剛毛", 3), 18));
+        dag.offers.Add(Sell("蜘蛛の糸 ×3 → 18 G", Part("蜘蛛の糸", 3), 18));
+        dag.offers.Add(Sell("鉄の兜 ×3 → 18 G", Part("鉄の兜", 3), 18));
+        dag.offers.Add(Sell("毒腺 ×3 → 18 G", Part("毒腺", 3), 18));
+        dag.offers.Add(Sell("錆びた短剣 ×3 → 18 G", Part("錆びた短剣", 3), 18));
+        dag.offers.Add(Sell("風切羽 ×3 → 18 G", Part("風切羽", 3), 18));
+        dag.offers.Add(Sell("若木の枝 ×3 → 18 G", Part("若木の枝", 3), 18));
+        dag.offers.Add(Sell("腐肉 ×3 → 18 G", Part("腐肉", 3), 18));
         dag.offers.Add(Sell("番人の樹皮 ×3 → 30 G", Part("番人の樹皮", 3), 30));
         dag.offers.Add(Sell("オーガの牙 ×2 → 45 G", Part("オーガの牙", 2), 45));
         dag.offers.Add(Sell("トロルの生皮 ×2 → 40 G", Part("トロルの生皮", 2), 40));
@@ -230,7 +254,13 @@ public static class TraderCatalog
         dag.offers.Add(Sell("竜王のうろこ ×1 → 180 G", Part("竜王のうろこ", 1), 180));
         dag.offers.Add(Buy("80 G → 中結晶 ×1", 80, M(MaterialType.MediumManaCrystal, 1)));
         Chain(dag,
-            Kill("dag_1", "dag", "魔物を 10 体討伐", null, 10, Items(M(MaterialType.MediumManaCrystal, 3)), rewardMoney: 30),
+            // 再検証3 D2：「まず杖」導線。研究より先にグリッドを広げる動機づけが無く、cold-start で
+            // 有限な結晶を研究へ全振り→杖が買えず 3×3 のまま火力が伸びない、という詰み方をしていた。
+            // ダグの連鎖の先頭に「杖を打て」を置き、報酬に中結晶×3（D3 の中盤 faucet も兼ねる）。
+            // 見習いの杖でよい（targetCount=1＝最低tier1）。作業台Lv1 が前提なので序盤の一里塚になる。
+            CraftGear("dag_wand", "dag", "作業台で杖を打つ（見習いの杖でよい）", GearSlot.Wand, 1,
+                Items(M(MaterialType.MediumManaCrystal, 3))),
+            Kill("dag_1", "dag", "魔物を 10 体討伐", null, 10, Items(M(MaterialType.MediumManaCrystal, 4)), rewardMoney: 40),
             Kill("dag_2", "dag", "魔物を 30 体討伐", null, 30, Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 1),
             Kill("dag_3", "dag", "森の番人を 3 体討伐", "森の番人", 3, Items(Elem(MagicAttribute.Light, 1)), rewardMoney: 50),
             Deliver("dag_4", "dag", "ゴブリンの牙を 12 本納める",
@@ -255,6 +285,9 @@ public static class TraderCatalog
         Chain(orca,
             Depth("orca_1", "orca", "深度 5 まで到達する", 5, Items(M(MaterialType.MediumManaCrystal, 5)), rewardMoney: 40),
             Depth("orca_2", "orca", "深度 10 まで到達する", 10, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 1),
+            // 「ウェーブ間 HP 無回復＋深部バーストで満タンから即死」の壁（C2）に届く直前で、
+            // tier2 サステイン（再生のトルク＝毎秒 +3.5）を作業台Lv2 を待たず直接渡す＝入手性の底上げ。
+            Depth("orca_2b", "orca", "深度 12 まで到達する", 12, null, rewardGear: "acc_regen_torc"),
             Deliver("orca_3", "orca", "浅層の素材を 3 つずつ蒐集する",
                 Items(Part("スライムゼリー", 3), Part("ゴブリンの牙", 3), Part("大ネズミの尾", 3), Part("番人の樹皮", 3)),
                 Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 1),

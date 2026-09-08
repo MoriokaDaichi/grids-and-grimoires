@@ -15,4 +15,12 @@ public class DropRow : MonoBehaviour
         if (amountLabel != null) amountLabel.text = "×" + amount;
         if (icon != null) icon.color = iconColor;
     }
+
+    // 数量の無い注記行（入場料の精算など）。数量ラベルは空にする。
+    public void BindNote(string text, Color iconColor)
+    {
+        if (nameLabel != null) nameLabel.text = text;
+        if (amountLabel != null) amountLabel.text = "";
+        if (icon != null) icon.color = iconColor;
+    }
 }

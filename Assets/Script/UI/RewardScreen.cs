@@ -18,6 +18,11 @@ public class RewardScreen : MonoBehaviour
     private readonly List<MaterialCost> pendingDrops = new List<MaterialCost>();
     private bool granted;
 
+    // 無料入場ぶんの入場料を戦利品から自動精算した記録（Populate で計算、OnReturn でお金に反映）。
+    private int feeOwed;        // 精算対象の入場料
+    private int feeRecovered;   // 自動売却で回収したゴールド
+    private string feeSoldText; // 売却した素材の内訳（表示用）
+
     void Awake()
     {
         dungeon = Object.FindFirstObjectByType<DungeonManager>();
@@ -32,11 +37,27 @@ public class RewardScreen : MonoBehaviour
 
     private void OnReturn()
     {
-        if (!granted && pendingDrops.Count > 0)
+        if (!granted)
         {
-            PlayerInventory inv = PlayerInventory.Instance;
-            if (inv == null) inv = Object.FindFirstObjectByType<PlayerInventory>();
-            if (inv != null) inv.Add(pendingDrops);
+            // 無料入場ぶんの入場料をお金に反映（自動売却ぶんを足してから料金を引く＝実質は戦利品で相殺）。
+            if (feeOwed > 0)
+            {
+                MoneyManager money = MoneyManager.Instance;
+                if (money != null)
+                {
+                    if (feeRecovered > 0) money.Add(feeRecovered);
+                    money.TrySpend(Mathf.Min(feeOwed, feeRecovered));
+                }
+                if (dungeon != null) dungeon.SettleEntryFee();
+                Debug.Log($"[Reward] 後払いの入場料 {feeOwed}G を戦利品から精算（売却 {feeRecovered}G 分：{feeSoldText}）。");
+            }
+
+            if (pendingDrops.Count > 0)
+            {
+                PlayerInventory inv = PlayerInventory.Instance;
+                if (inv == null) inv = Object.FindFirstObjectByType<PlayerInventory>();
+                if (inv != null) inv.Add(pendingDrops);
+            }
             granted = true;
         }
         if (phaseManager != null) phaseManager.ReturnToBuild();
@@ -46,6 +67,9 @@ public class RewardScreen : MonoBehaviour
     {
         granted = false;
         pendingDrops.Clear();
+        feeOwed = 0;
+        feeRecovered = 0;
+        feeSoldText = null;
 
         bool cleared = phaseManager != null && phaseManager.LastRunCleared;
 
@@ -99,13 +123,77 @@ public class RewardScreen : MonoBehaviour
                 specialItemName = mc.specialItemName,
                 amount = kv.Value,
             });
+        }
 
+        // 無料入場したぶんの入場料は、戦利品を安い順に自動売却して差し引く。
+        SettleEntryFeeFromLoot();
+
+        foreach (MaterialCost mc in pendingDrops)
+        {
             GameObject row = Instantiate(dropRowPrefab, dropListRoot, false);
             DropRow dropRow = row.GetComponent<DropRow>();
             if (dropRow != null)
             {
-                dropRow.Bind(MaterialCatalog.DisplayName(mc), kv.Value, Color.white);
+                dropRow.Bind(MaterialCatalog.DisplayName(mc), mc.amount, Color.white);
             }
         }
+
+        if (feeOwed > 0)
+        {
+            GameObject row = Instantiate(dropRowPrefab, dropListRoot, false);
+            DropRow dropRow = row.GetComponent<DropRow>();
+            if (dropRow != null)
+            {
+                string label = string.IsNullOrEmpty(feeSoldText)
+                    ? "入場料の精算（後払い " + feeOwed + "G）"
+                    : "入場料の精算：" + feeSoldText + " を売却（-" + feeOwed + "G）";
+                dropRow.BindNote(label, new Color(1f, 0.75f, 0.55f, 1f));
+            }
+        }
+    }
+
+    // 無料入場ぶんの入場料（dungeon.EntryFeeOwed）を、pendingDrops から安い順に1個ずつ
+    // 自動売却して回収する。pendingDrops を直接減らし、回収額・売却内訳を記録する。
+    private void SettleEntryFeeFromLoot()
+    {
+        if (dungeon == null) return;
+        int owed = dungeon.EntryFeeOwed;
+        if (owed <= 0 || pendingDrops.Count == 0) return;
+
+        Dictionary<string, int> soldCounts = new Dictionary<string, int>();
+        Dictionary<string, MaterialCost> soldSample = new Dictionary<string, MaterialCost>();
+        int recovered = 0;
+
+        while (recovered < owed)
+        {
+            int pick = -1;
+            int pickUnit = int.MaxValue;
+            for (int i = 0; i < pendingDrops.Count; i++)
+            {
+                if (pendingDrops[i].amount <= 0) continue;
+                int unit = Mathf.Max(1, MaterialCatalog.GoldValue(pendingDrops[i]));
+                if (unit < pickUnit) { pickUnit = unit; pick = i; }
+            }
+            if (pick < 0) break; // 売るものが尽きた
+
+            MaterialCost mc = pendingDrops[pick];
+            mc.amount -= 1;
+            recovered += pickUnit;
+
+            string key = MaterialCatalog.Key(mc);
+            soldCounts.TryGetValue(key, out int c);
+            soldCounts[key] = c + 1;
+            if (!soldSample.ContainsKey(key)) soldSample[key] = mc;
+        }
+
+        pendingDrops.RemoveAll(d => d.amount <= 0);
+
+        feeOwed = owed;
+        feeRecovered = recovered;
+
+        List<string> parts = new List<string>();
+        foreach (KeyValuePair<string, int> kv in soldCounts)
+            parts.Add(MaterialCatalog.DisplayName(soldSample[kv.Key]) + " ×" + kv.Value);
+        feeSoldText = parts.Count > 0 ? string.Join("、", parts) : null;
     }
 }

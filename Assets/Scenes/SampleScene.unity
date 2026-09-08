@@ -4788,7 +4788,7 @@ MonoBehaviour:
   width: 5
   height: 5
   cellSize: 50
-  minGridSize: 2
+  minGridSize: 3
   maxGridSize: 5
 --- !u!114 &482944431
 MonoBehaviour:

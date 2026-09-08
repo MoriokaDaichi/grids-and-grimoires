@@ -46,6 +46,18 @@ public class DungeonManager : MonoBehaviour
     public bool AwaitingChoice { get { return awaitingChoice; } }
     public bool DungeonActive { get { return dungeonActive; } }
 
+    // 無料入場したぶんの未精算入場料（>0 なら帰還時に戦利品から差し引く）。
+    private int entryFeeOwed;
+    public int EntryFeeOwed { get { return entryFeeOwed; } }
+
+    // 未精算の入場料を確定し、額を返してクリアする（RewardScreen が帰還時に1度だけ呼ぶ）。
+    public int SettleEntryFee()
+    {
+        int owed = entryFeeOwed;
+        entryFeeOwed = 0;
+        return owed;
+    }
+
     void Awake()
     {
         playerStatus = Object.FindFirstObjectByType<PlayerStatus>();
@@ -88,11 +100,13 @@ public class DungeonManager : MonoBehaviour
         return pool;
     }
 
-    // 入場料を払える状態か（MoneyManager がシーンに無ければ常に true）。
+    // 入場料を払える状態か。所持金が基本料金未満なら無料扱いになるので、事実上つねに true
+    // （MoneyManager がシーンに無い場合も true）。
     public bool CanAffordEntry()
     {
         MoneyManager money = MoneyManager.Instance;
-        return money == null || money.CanAfford(DungeonEconomy.EntryFee());
+        if (money == null) return true;
+        return money.CanAfford(DungeonEconomy.EffectiveEntryFee(money.Balance));
     }
 
     public bool StartDungeon()
@@ -104,13 +118,22 @@ public class DungeonManager : MonoBehaviour
         }
 
         // ダンジョン入場料（少額固定・仮）。MoneyManager が無ければ無料。
+        // 所持金が基本料金に満たないときは無料（お金が枯れて潜れなくなる詰みのセーフティ）。
         // 出撃が確定するまで（AdvanceWave 成功まで）は徴収しない＝空杖などで中断しても取られない。
         MoneyManager money = MoneyManager.Instance;
-        int fee = DungeonEconomy.EntryFee();
+        int fee = money != null ? DungeonEconomy.EffectiveEntryFee(money.Balance) : 0;
         if (money != null && !money.CanAfford(fee))
         {
             Debug.LogWarning($"DungeonManager: 入場料 {fee}G が足りません。");
             return false;
+        }
+
+        // 所持金が乏しくて無料入場したぶんは、帰還時に戦利品から差し引く（RewardScreen が精算）。
+        entryFeeOwed = 0;
+        if (money != null && fee == 0 && money.Balance < DungeonEconomy.BaseEntryFee)
+        {
+            entryFeeOwed = DungeonEconomy.BaseEntryFee;
+            Debug.Log($"DungeonManager: 所持金が乏しいため入場料を後払いにした（{entryFeeOwed}G を帰還時に戦利品から精算）。");
         }
 
         playerStatus.BattleReset();
@@ -181,6 +204,9 @@ public class DungeonManager : MonoBehaviour
             defeatedEnemies.Add(e);
             OnEnemyDefeated?.Invoke(e);
         }
+
+        // サステイン系アクセサリによるウェーブ間回復（無装備なら何も起きない）。
+        if (playerStatus != null) playerStatus.HealWaveTick();
 
         awaitingChoice = true;
         battleManager.EndBattle(); // 選択が済むまで戦闘ループを止める

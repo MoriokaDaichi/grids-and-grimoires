@@ -61,6 +61,14 @@ public static class HideoutCatalog
         if (_all != null) return;
         // 建造コストのモンスター素材は「Lv1=tier1（浅層）のみ / Lv2=tier1〜2 / Lv3=上限なし（深層可）」。
         // （HideoutCatalogTests がこの上限を検証する）
+        //
+        // 再検証2（cold start 5周）で「Lv2 設備が中盤でデッドロック」＝錬金釜Lv2 の建材『古木の芯』が
+        // 森の番人（debut 深度19）ドロップで、深度16 の壁に詰まったプレイヤーは永遠に建てられず、
+        // 中結晶・tier2 素材の出口が両方閉じる、という所見。対策として Lv2(step1) は
+        //   ・モンスター素材の必要個数を ×3→×2
+        //   ・深層 debut の素材（古木の芯 等）を深度10〜13 で採れる tier2 素材へ差し替え
+        //   ・中結晶の要求量も圧縮（Lv2 到達の前提が中結晶なので）
+        // （数値は全て仮）
         _all = new List<FacilityDef>
         {
             new FacilityDef
@@ -70,7 +78,7 @@ public static class HideoutCatalog
                 costByStep = new List<List<MaterialCost>>
                 {
                     new List<MaterialCost> { S(12), Part("スライムゼリー", 4) },
-                    new List<MaterialCost> { M(6), Part("鉄の兜", 3) },
+                    new List<MaterialCost> { M(5), Part("鉄の兜", 2) },
                     new List<MaterialCost> { L(1), M(12), Part("巨神の核", 1) },
                 },
             },
@@ -81,7 +89,7 @@ public static class HideoutCatalog
                 costByStep = new List<List<MaterialCost>>
                 {
                     new List<MaterialCost> { S(20), Part("毒針", 4) },
-                    new List<MaterialCost> { M(8), Frag(MagicAttribute.Light, 2), Part("古びた骨", 4) },
+                    new List<MaterialCost> { M(6), Frag(MagicAttribute.Light, 2), Part("古びた骨", 2) },
                     new List<MaterialCost> { L(2), M(20), Part("世界樹の若枝", 2) },
                 },
             },
@@ -92,7 +100,9 @@ public static class HideoutCatalog
                 costByStep = new List<List<MaterialCost>>
                 {
                     new List<MaterialCost> { S(16), Part("大ネズミの尾", 4) },
-                    new List<MaterialCost> { M(7), Part("剛毛", 3), Part("古木の芯", 2) },
+                    // 再検証3 D3：中結晶の中盤 faucet が無く、Lv2 の M(5) は「tier2素材を$146売って
+                    // $120の大結晶を買い glen で崩す」細い一本道でしか賄えなかった。M(3) に緩める。
+                    new List<MaterialCost> { M(3), Part("剛毛", 2), Part("蜘蛛の糸", 2) },
                     new List<MaterialCost> { L(1), Frag(MagicAttribute.Wind, 3), Part("魔石の欠片", 3) },
                 },
             },
@@ -103,7 +113,10 @@ public static class HideoutCatalog
                 costByStep = new List<List<MaterialCost>>
                 {
                     new List<MaterialCost> { S(24), Part("ゴブリンの牙", 4) },
-                    new List<MaterialCost> { M(10), Frag(MagicAttribute.Fire, 2), Part("竜人の鱗", 3) },
+                    // 再検証3 D7：作業台Lv2＝tier2杖の 5×5 グリッド。建材の『竜人の鱗』は
+                    // リザードマン（debut 深度13＝バースト即死帯）待ちで 5周とも建たなかった。
+                    // 同 tier2・Fire の『錆びた短剣』（コボルト debut 深度9）へ差し替えて導線を浅くする。
+                    new List<MaterialCost> { M(7), Frag(MagicAttribute.Fire, 2), Part("錆びた短剣", 2) },
                     new List<MaterialCost> { L(2), Frag(MagicAttribute.Dark, 3), Part("竜のうろこ", 2) },
                 },
             },
@@ -114,7 +127,7 @@ public static class HideoutCatalog
                 costByStep = new List<List<MaterialCost>>
                 {
                     new List<MaterialCost> { S(30), Part("スライムゼリー", 6) },
-                    new List<MaterialCost> { M(12), Frag(MagicAttribute.Thunder, 2), Part("風切羽", 3) },
+                    new List<MaterialCost> { M(8), Frag(MagicAttribute.Thunder, 2), Part("風切羽", 2) },
                     new List<MaterialCost> { L(3), Part("古木の芯", 3), Part("命の宝珠", 1) },
                 },
             },
@@ -174,9 +187,14 @@ public static class HideoutCatalog
     }
 
     // 魔力炉：設備アクション1回あたりの燃料消費（燃料は魔力結晶の価値で測る）
+    // 再検証3（cold start 5周）D1/D4：Lv1=2 だと錬金釜Lv1 の tier1 変換（part+小2→小2）が
+    // 完全に燃料中立で、cold-start は有限な序盤タスク報酬の結晶を配分ミスすると回復不能に近かった。
+    // Lv1 を 1 に下げると Lv1 錬金釜でも `part + 燃料1 → 小2` ＝純増+1 になり、素材を結晶へ
+    // 回して経済を立て直せる。中盤（Lv2 炉）以降の値は不変なので 3周目以降の推移は変わらない。
+    // 魔力炉の強化はスロット（燃料バッファ上限）でメリットが残る。
     public static int FurnaceFuelPerAction(int level)
     {
-        switch (level) { case 1: return 2; case 2: return 1; case 3: return 1; default: return 0; }
+        switch (level) { case 1: return 1; case 2: return 1; case 3: return 1; default: return 0; }
     }
 
     // 作業台：解禁されるレシピ階層（0 = 未建造）

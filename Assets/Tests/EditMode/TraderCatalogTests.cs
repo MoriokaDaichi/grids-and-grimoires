@@ -79,6 +79,35 @@ public class TraderCatalogTests
     }
 
     [Test]
+    public void EarlyOnboarding_HasCraftWandTask_AtHeadOfAChain()
+    {
+        // 再検証3 D2：「まず杖」導線。どこかのトレーダーの連鎖の先頭に、杖の製作を促す
+        // CraftGear タスクがあること（前提タスク無し＝cold start で即見える）。
+        bool found = false;
+        foreach (Trader t in TraderCatalog.BuildTraders())
+            foreach (TraderTask task in t.tasks)
+                if (task.kind == TraderTaskKind.CraftGear
+                    && task.targetGearSlot == GearSlot.Wand
+                    && string.IsNullOrEmpty(task.requires))
+                    found = true;
+        Assert.IsTrue(found, "杖の製作を促す CraftGear タスクが連鎖の先頭に無い（再検証3 D2）");
+    }
+
+    [Test]
+    public void CraftGearTasks_HavePositiveMinTier_AndReward()
+    {
+        foreach (Trader t in TraderCatalog.BuildTraders())
+            foreach (TraderTask task in t.tasks)
+            {
+                if (task.kind != TraderTaskKind.CraftGear) continue;
+                Assert.Greater(task.targetCount, 0, task.id + " の最低tierが0");
+                bool hasReward = task.rewardItems.Count > 0 || task.rewardStatPoints > 0 || task.rewardMoney > 0
+                    || !string.IsNullOrEmpty(task.rewardGearId) || !string.IsNullOrEmpty(task.rewardRecipeId);
+                Assert.IsTrue(hasReward, task.id + " に報酬が無い");
+            }
+    }
+
+    [Test]
     public void CollectorTrader_HasReachDepthTask()
     {
         bool found = false;
@@ -172,6 +201,27 @@ public class TraderCatalogTests
             foreach (TradeOffer o in t.offers)
                 if (o.gainMoney > 0) hasSell = true;
             Assert.IsTrue(hasSell, t.name + " に売却（→お金）オファーが無い");
+        }
+    }
+
+    [Test]
+    public void MidTierMonsterParts_HaveAMoneySink()
+    {
+        // 再検証2 R4：錬金釜Lv1 で変換できず売り先も無い tier2 中位素材が周回で塩漬けになる所見。
+        // 主要な tier2 素材はどこかのトレーダーが現金で買い取れること。
+        string[] midParts = { "剛毛", "蜘蛛の糸", "鉄の兜", "毒腺", "錆びた短剣", "風切羽", "若木の枝", "腐肉" };
+        List<Trader> traders = TraderCatalog.BuildTraders();
+        foreach (string part in midParts)
+        {
+            bool sellable = false;
+            foreach (Trader t in traders)
+                foreach (TradeOffer o in t.offers)
+                {
+                    if (o.gainMoney <= 0) continue;
+                    foreach (MaterialCost c in o.give)
+                        if (c.materialType == MaterialType.SpecialItem && c.specialItemName == part) sellable = true;
+                }
+            Assert.IsTrue(sellable, "tier2 素材「" + part + "」に現金の売却口が無い（再検証2 R4）");
         }
     }
 

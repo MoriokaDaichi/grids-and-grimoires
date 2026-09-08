@@ -178,8 +178,8 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.Less(HideoutRules.FurnaceCapacity(1), HideoutRules.FurnaceCapacity(3));
 
             Assert.IsFalse(HideoutRules.CanPowerAction(0, 999));  // 未建造
-            Assert.IsFalse(HideoutRules.CanPowerAction(1, 1));    // 燃料不足（Lv1 は 2 必要）
-            Assert.IsTrue(HideoutRules.CanPowerAction(1, 2));
+            Assert.IsFalse(HideoutRules.CanPowerAction(1, 0));    // 燃料ゼロ（再検証3 D1：Lv1 は 1 必要）
+            Assert.IsTrue(HideoutRules.CanPowerAction(1, 1));
         }
     }
 }

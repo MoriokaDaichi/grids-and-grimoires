@@ -10,7 +10,7 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 ## 現在の状態（2026-09-09 時点）
 
 - **ブランチ**: `master`。`feat/battle-ui-core-loop` は PR #1 マージ済み（`7ff60e3`）で残置。
-- **EditMode テスト**: 158/158 グリーン（`GridsAndGrimoires.EditModeTests`）。
+- **EditMode テスト**: 180/180 グリーン（`GridsAndGrimoires.EditModeTests`）。
 - **Unity**: 6000.3.9f1 / URL シーン `Assets/Scenes/SampleScene.unity`。
 - アセンブリ分割済み: `GridsAndGrimoires.Runtime`（Assets/Script）/ `.Editor`（Assets/Editor）/
   `.EditModeTests`（Assets/Tests/EditMode）。
@@ -31,6 +31,162 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 ---
 
 ## このセッションで実装したこと（新しい順）
+
+### -7. 再検証3のフィードバック反映：cold-start 結晶詰み／中結晶ゲート／5×5 導線／「まず杖」タスク（2026-09-09 その7）
+`Docs/検証レポート/2026-09-09_再検証3_cold-start5周_総括.md` の「次にやるなら（優先度順）」から
+D1・D3・D7 を実装（`HideoutCatalog` のみ）、加えて D2 の一次対応として「杖を作る」タスクを新設
+（`TaskRules`/`TraderCatalog`/`TradeManager`）。テスト 172→180 グリーン。
+
+- **D1（cold-start の結晶詰み）**: `FurnaceFuelPerAction(1)` を **2→1**。Lv1=2 だと錬金釜Lv1 の
+  tier1 変換（`part + 燃料2 → 小結晶×2`）が完全に燃料中立で、有限な序盤タスク報酬の結晶を配分
+  ミスすると回復不能に近かった（再検証3 は 1 トライ目が深度9でハードロック→wipe 再開）。Lv1=1 なら
+  `part + 燃料1 → 小2` ＝**純増+1**になり、Lv1 設備だけで「素材→結晶」で経済を立て直せる。
+  Lv2/Lv3 は元々 1 なので**中盤以降の推移は不変**（3周目の S277 ダンプ等は変わらない）。魔力炉の
+  強化メリットはスロット（燃料バッファ上限）に残る。
+  - テスト: `Furnace_SlotsGrow_FuelPerActionShrinks_WithLevel` → `Furnace_SlotsGrow_FuelPerActionStaysLean_WithLevel` に改称し、
+    「Lv1 錬金釜×Lv1 魔力炉 で tier1 変換が純増」を `HideoutRules.Transmute` で直接検証。
+    `HideoutRulesTests.Furnace_CapacityAndPowerGate` の燃料ゲート境界を 2→1 に更新。
+- **D3（錬金釜Lv2 の中結晶ゲート）**: 錬金釜Lv2 step1 を `M(5)+剛毛×2+蜘蛛の糸×2` → **`M(3)`**。
+  中結晶の中盤 faucet が無く、`M(5)` は「tier2素材を$146売る→$120で大結晶買う→glen で崩す」の
+  細い一本道でしか賄えなかった（3周目の中盤ブレイクスルーがそこ頼み）。
+  - テスト: `AlchemyCauldronLv2_MediumCrystalCost_StaysModest`（中結晶 ≤3）追加。
+- **D7（tier2 杖＝5×5 グリッドの導線）**: 作業台Lv2 step1 の `竜人の鱗×2`（リザードマン debut 深度13
+  ＝バースト即死帯）→ 同 tier2・Fire の **`錆びた短剣×2`**（コボルト debut 深度9）。5周とも作業台Lv2 が
+  建たず 4×4 のままで、GigaFire＋強AoE が同居できない壁が解けなかった。
+  - テスト: `WorkbenchLv2_DoesNotRequireBurstBandDebutPart`（竜人の鱗 を要求しない）追加。
+- **D2（「まず杖」導線）一次対応 ― 新タスク種別 `CraftGear`**（`TaskRules`/`TraderCatalog`/`TradeManager`）:
+  研究より先にグリッドを広げる動機づけが無く、cold-start で有限な結晶を研究へ全振り→杖が買えず
+  3×3 のまま火力が伸びない詰み方をしていた（レポート D1/D2）。トレーダー依頼で明示的に誘導する。
+  - `TraderTaskKind.CraftGear`：`targetGearSlot` の装備を `targetCount`（＝最低tier）以上で所持していれば達成。
+    消費なし（杖は手元に残る）。`TaskProgress.ownedGearTier`（スロット→所持中の最上位tier）を追加、
+    `TradeManager` が `HideoutManager.OwnedGear` から都度導出（在庫数と同じく非永続）。
+  - ダグの連鎖の**先頭**に `dag_wand`「作業台で杖を打つ（見習いの杖でよい）」→ 報酬 **中結晶×3**
+    （D3 の中盤 faucet も兼ねる）。作業台Lv1 が前提なので序盤の一里塚になる。既存 `dag_1` が
+    `dag_wand` を requires するように連鎖が1段ずれる（旧セーブで `dag_1` 完了済みだと、`dag_wand`
+    受取までその行が「未解放」表示になる軽微なズレ。受取で解消。検証は毎回 wipe 開始なので実害なし）。
+  - `TradePanel` は種別非依存（`TaskProgressText`＋`RewardText`）なので UI 変更不要。
+  - テスト: `TaskRulesTests` に `CraftGear_*` 4本、`TraderCatalogTests` に
+    `EarlyOnboarding_HasCraftWandTask_AtHeadOfAChain` / `CraftGearTasks_HavePositiveMinTier_AndReward` を追加。
+- **今回見送り（要判断・別セッション）**:
+  - **D5（ウェーブ内バースト即死）**: 被弾総量クランプは `BattleManager`/`EnemyStatus` の再入ガード規律に
+    触れるため、専用の設計・検証が要る。
+  - **D6（Atk が伸びない）**: 研究ツリーの Atk 小ノードを中結晶ゲートより手前へ、は `ResearchGraph` の
+    レイアウト変更（極座標テーブル・重なり不変条件テスト）を伴うため次回。
+  - **D2 の残り**: 構築画面側での能動的な提示（グリッドが狭いときの誘導表示など）はまだ。
+    次の cold start 5周で `dag_wand` 導線が効いているか再計測。
+
+### -6. 再検証3（cold start 5周・改善「-5.」の再計測）― 検証のみ、コード変更なし（2026-09-09 その6）
+`Docs/検証レポート/2026-09-09_再検証3_cold-start5周_総括.md`。DEV_LOG「-5.」で先送りした「項目4」を実施。
+自動ドライバ（`EditorApplication.update` 常駐＋貪欲経済エージェント）で cold start から連続5周。
+
+- **到達深度: 11 → 12 → 15 → 14 → 16**（前回 再検証2 の 11→13→13→15→16 とほぼ一致）。**深度20 には届かない**。
+- **安定性: 例外・進行不能バグ・コンソール error/warning ゼロ**（約40出撃・400ウェーブ超）。EditMode 172/172（不変）。
+- 「-5.」の判定: **R2/R3（Lv2ゲート浅層化）＝⭕**（錬金釜Lv2 が `蜘蛛の糸×2`＝深度10 で建つ）、**R4（tier2売却口）＝⭕**（中盤ブートストラップの原資）、**R5（序盤中結晶）＝🔺**（1回きりで faucet にならない）。
+- 残る壁（未対応・要判断）:
+  - **D1: cold-start の結晶詰み**。錬金釜Lv1 の tier1 変換が完全に燃料中立（`CauldronYieldMult(1)=1.0` / `FurnaceFuelPerAction(1)=2` → part+小2→小2）。有限な序盤タスク報酬の結晶を配分ミスすると回復不能に近い（1回目のトライは深度9でハードロック→wipe再開）。黒字化は錬金釜Lv2＋魔力炉Lv2 の両方が要る（Lv2炉で `-1燃料+小2`＝純増+1）。
+  - **D2: 「まず杖」導線が無い**（既知・未実装）。研究より先に見習いの杖（小15＋ゴブリンの牙×3）を作れるかが分岐点。
+  - **D3: 錬金釜Lv2 の `中結晶×5`** は依然ゲート（中結晶の中盤faucetが無く、「tier2素材を$146売る→$120で大結晶買う→glenで崩す」の細道頼み）。
+  - **D5: ウェーブ内バースト即死**（深度13+、farm 2回没収）。**D6: Atk が伸びない**（5周で 10→17）。**D7: 4×4 に GigaFire＋強AoE が同居不可**（作業台Lv2＝竜人の鱗 d13 待ちで 5×5 に届かず）。
+- 提案（レポート「次にやるなら」）: `CauldronYieldMult(1)` 1.0→1.5 か `FurnaceFuelPerAction(1)` 2→1 で Lv1変換を薄く黒字に／「まず杖」導線／orca_2 の要件を深度10→8／錬金釜Lv2 の中結晶 ×5→×3。
+
+### -5. 再検証2（cold start 5周）のフィードバック反映：Lv2 設備ゲート／tier2 素材の出口／序盤の中結晶（2026-09-09 その5）
+`Docs/検証レポート/2026-09-09_再検証2_{1〜5}周目*.md`（改善「-4.」反映後の cold start 5周）。
+バグ・ソフトロックはゼロ。到達深度は 11→16 と投資に比例して伸び、狙い（火力ゲート・即死の緩和）は達成。
+残る所見はいずれも中盤の導線で、総括の「次にやるなら（優先度順）」の 1〜3 を実装。テスト 169→172。
+
+- **R2/R3：Lv2 設備の連鎖ゲートを浅層寄りに**（`HideoutCatalog`）。錬金釜Lv2 の建材『古木の芯』は
+  森の番人（debut 深度19）ドロップで、深度16 の壁で詰まるプレイヤーは永遠に建てられず、中結晶
+  （`M(n)` 要求）と tier2 素材の出口が両方閉じるデッドロックだった。5設備すべての Lv2(step1) で：
+  - モンスター素材の必要個数を ×3→×2（farm 1回で賄える量に）
+  - 錬金釜Lv2：`M(7)+剛毛×3+古木の芯×2` → `M(5)+剛毛×2+蜘蛛の糸×2`（古木の芯 d19 → 蜘蛛の糸 d10。
+    R4 の塩漬け素材を消費させる置き換え）
+  - 魔力炉Lv2 `M(6)→M(5)`、研究机Lv2 `M(8)+古びた骨×4 → M(6)+古びた骨×2`、
+    作業台Lv2 `M(10)+竜人の鱗×3 → M(7)+竜人の鱗×2`、サークルLv2 `M(12)+風切羽×3 → M(8)+風切羽×2`
+  - Lv3(step2) は据え置き（endgame。深層素材 OK）。tier 予算テスト（step1≤tier2）は不変で通過。
+  - テスト追加：`Lv2BuildSteps_UseSmallMonsterPartStacks`（step1 の SpecialItem は ≤2）、
+    `AlchemyCauldronLv2_DoesNotRequireDeepDebutPart`（古木の芯 を要求しない）。
+- **R4：tier2 中位素材の現金売却口を拡充**（`TraderCatalog`）。錬金釜Lv1 で変換不可・売り先も無く
+  周回で塩漬けになる 8 素材（剛毛/蜘蛛の糸/鉄の兜/毒腺/錆びた短剣/風切羽/若木の枝/腐肉）を
+  ダグの買取に `×3 → 18 G` で追加（レート仮、tier2 ≒ 6 G/個）。
+  テスト追加：`MidTierMonsterParts_HaveAMoneySink`。
+- **R5：序盤の中結晶・お金の供給を1本**（`TraderCatalog`）。cold start の中結晶が glen_1（小15→中3・1回）
+  だけで研究/設備Lv2 が枯れで止まる所見。`glen_3`（小30+20G 預け）の報酬に中結晶×3 を追加、
+  `dag_1`（討伐10）を 中結晶×3+30G → ×4+40G、`glen_1` の現金 20→30G。id は不変（セーブ互換）。
+- **未対応（要判断）**: R2 の魔力炉Lv2 の `M(n)` は中結晶バッファ次第で依然重い可能性（cold start 再測で判断）、
+  研究机Lv2/サークルLv2 の光・雷エレメント欠片（対応属性のモンスター素材が1体も無い＝リーゼ横断連鎖か
+  サークル頼み）、「まず杖」導線、farm テンポの単調さ。次は改善反映後の cold start 5周で深度推移を再計測。
+
+### -4. 再検証3周のフィードバック反映：N1（新規敵保証の副作用）／C1（グリッド火力ゲート）／C2（深部の即死）（2026-09-09 その4）
+`Docs/検証レポート/2026-09-09_再検証_{1,2,3}周目*.md`（改善「-3.」の cold start 3周検証）。バグ・ソフトロックはゼロ、
+指摘は全てバランス／導線。レポートの「次にやるなら（優先度順）」から N1・C1・C2 を実装。テスト 166→169。
+
+- **問題（N1）**: `EnemyCountFor` は深度2〜5で1体/ウェーブ。そこへ `NewlyOpenedIndexFor` の debut 敵保証枠が
+  唯一のスロットを固定するため、深度2〜5のウェーブが「debut 敵1種で完全固定」に。結果：
+  (a) 最弱スライム（プール index0）が抽選から消え、スライムゼリー（魔力炉Lv1・マジックサークル・複数装備/タスクの
+  コスト）が深度1の escape 周回でしか安定入手できない、(b) 浅層のウェーブ多様性・AoE の価値が消える。
+- **対策**（`EndlessWaveGenerator`）:
+  - `MinTwoEnemyDepth`(=2) を新設。`EnemyCountFor` は**深度2以降 最低2体**（`count = Max(count, 2)`）。
+    従来カーブと変わるのは深度2〜5 のみ（1→2）。深度6以降は元々2体なので不変。
+  - `PickIndices` の debut 保証は **RNG 枠を1つ以上残せるとき（`result.Count >= 2`）だけ**差し込む。
+    ＝1体ウェーブは保証で潰さず通常抽選のまま（＝レポートの提案 (a)+(b) を両立）。
+  - これで debut 深度でも「保証枠＝debut 敵／もう1枠＝RNG（最弱含む）」となり、スライム等が再び抽選対象に。
+- **テスト**: `EnemyCountFor_IsAtLeastTwo_FromDepth2` / `PickIndices_DebutDepth_StillLetsWeakestRoll` /
+  `PickIndices_SingleEnemyWave_DoesNotForceGuarantee` を追加。既存の
+  `EnemyCountFor_GrowsEveryFiveDepths_AndCaps` / `PickIndices_AlwaysIncludesNewlyOpenedEnemy_AtDebutDepth` を新契約に更新。
+
+**C1（グリッドが火力ゲート）— 初期グリッドを 3×3 に**（`MagicGridManager` / `SampleScene.unity`）
+- `minGridSize` を 2→3。杖 tier → 1辺は `未製作3×3 / Lv1杖4×4 / Lv2以上5×5`（`WandTierToSize` の式は不変、
+  クランプで Lv2/Lv3 は 5×5 に収束）。シーンの `MagicGridManager.minGridSize` も 3 に更新。
+- 狙い：杖なしでも「基本＋1枚」が置け、**最初の杖で 4×4＝MegaFire＋Flame(AoE)＋単体が同時に載る**。
+  3周とも「3×3 では単体特化か範囲特化の二択」で深度13頭打ちだったのを、tier1 杖の一段で解く。
+- `MagicGridResizeTests.WandTierToSize_MapsTierToSideLength` を新マッピングに更新。
+
+**C2（ウェーブ間 HP 無回復＋深部バーストで満タンから即死）— 2 方向で対処**
+- **深層スケーリングをさらに寝かせる**（`EndlessWaveGenerator`）: `ScalingTaperKneeDepth` 12→10、
+  `ScalingTaperSlope` 0.5→0.4。深度11以降の敵 HP/Atk 倍率の伸びを抑える（例：深度13 の HP 倍率 2.8→約2.6）。
+  既存のテーパーテストは定数参照なので追従（膝までの素の線形・膝から先で伸び幅が縮む不変条件は不変）。
+- **tier2 サステインの入手性を底上げ**（`TraderCatalog`）: 蒐集家オルカのタスクラインに `orca_2b`
+  「深度 12 まで到達する」→ 報酬 `acc_regen_torc`（再生のトルク＝毎秒 +3.5 回復）を追加。
+  作業台Lv2（竜人の鱗など tier2 素材待ちの長い連鎖）を経由せず、壁の直前で毎秒回復アクセが手に入る。
+  `GrantGear` 経由なのでコスト・電力・作業台Lv 不問。既存 `orca_3`〜`orca_9` の id は不変（セーブ互換）。
+
+- **未対応（要判断）**: N2（Lv2 設備の連鎖ゲート）、C1 の別案（Mega シェイプの 2×2 化）、
+  panic 脱出が間に合わない即死ウェーブの被弾総量クランプ、farm テンポの単調さ。
+
+### -3. 通し検証3周のフィードバック反映：入場料セーフティ／新規敵保証／サステイン装備（2026-09-09 その3）
+`Docs/検証レポート/` の3周分（バグ・ソフトロックはゼロ、指摘は全てバランス／導線）から3点を実装。テスト 158→166。
+
+- **入場料セーフティ（後払い）**（`DungeonEconomy.EffectiveEntryFee(currentMoney)`）: 所持金が `BaseEntryFee`(15G)
+  未満なら入場無料。タスク報酬が現物中心でお金が枯れ「潜れない」詰みに近づく所見への対策。
+  `DungeonManager.CanAffordEntry` / `StartDungeon` が `EffectiveEntryFee` を使い、無料入場したぶんは
+  `DungeonManager.entryFeeOwed`（=15）に記録。**帰還時（`RewardScreen`）に戦利品を安い順に1個ずつ自動売却して
+  15G を精算**（`SettleEntryFeeFromLoot`：`pendingDrops` を直接減らし、`MoneyManager.Add(回収額)`→`TrySpend(15)` で
+  実質相殺。戦利品が15G分に満たなければ不足ぶんは免除）。報酬画面に「入場料の精算：〇〇 ×N を売却（-15G）」の
+  注記行（`DropRow.BindNote`）。死亡＝戦利品没収の run では精算なし（次 run 開始で `entryFeeOwed` リセット）。
+  素材のゴールド価値は新設の `MaterialCatalog.GoldValue`（結晶1/10/100・欠片8・エレメント60・
+  固有アイテムは `MonsterPartCatalog` tier で 3/10/20/60/150。トレーダー売却レート基準・仮）。
+- **抽選窓に新規開放の敵を毎ウェーブ最低1体保証**（`EndlessWaveGenerator`）: `NewlyOpenedIndexFor(depth,poolCount)`
+  ＝その深度で抽選窓の上限が前深度より増えたときの増分先頭（最強）インデックス、無ければ -1。
+  `PickIndices` が新規開放敵を1枠に固定（末尾スロットを置換、重複時は何もしない）。
+  毒針（大スズメバチ debut 深度4）・ゴブリンの牙（ゴブリン debut 深度6）等の「浅層の名前つき泥」の
+  泥運の壁が、debut 深度を通るたび最低1体は湧くことで緩和される。窓がクランプ済み（プール消化後）は保証なし。
+- **サステイン系アクセサリ10種**（`GearCatalog` / `PlayerStatus`）: 「ウェーブ間でHPが回復しない」＝
+  最大HPより Def/殲滅速度が効く、という壁への直接対策としてアクセ枠に回復装備を追加。
+  - `GearDef` に副効果フィールド `hpRegenPerSecond`（戦闘中の毎秒HP回復）／`healPerWaveFlat`（ウェーブ突破時の
+    固定回復）／`healPerWavePercent`（同・最大HP割合）＋ `HasSustain`。
+  - 10種：tier1 癒しのペンダント/繕いの腕輪/若葉の護符、tier2 命脈の指輪/再生のトルク/血石の首飾り/鼓動の護石、
+    tier3 不死鳥の護符/生命の泉/永生のロケット。数値違い＋複合効果（鼓動＝毎秒+ウェーブ固定、永生＝3種全部）を含む。
+    全て通常解禁（recipeGated でない）、主ステータスも保持。
+  - `PlayerStatus`: `RegenHealth(dt)`（毎秒回復、int の端数は `hpRegenCarry` で持ち越し）／`HealWaveTick()`
+    （ウェーブ突破時）／`ApplyGearDelta(GearDef, sign)`（主ステータス＋副効果を一括増減。装備の着脱で使う）／
+    `OnHealed` イベント（HUD 拡張用、未配線）。`BattleReset` で carry リセット。
+  - `BattleManager.Update` が `RegenHealth` も毎フレーム呼ぶ。`DungeonManager.HandleWaveDefeated` が
+    `HealWaveTick()` を呼ぶ（WaveClear 画面に回復後HPが出る）。
+  - `HideoutManager` の装備着脱4箇所を `ApplyResearchDelta(stat,amount)` → `ApplyGearDelta(gear,±1)` に統一。
+  - `HideoutHubPanel` の作業台行は `GearEffectText(g)`＝主ステータス＋サステイン副効果を1行要約。
+  - `GearCatalogTests` の Craftable 数 3→6 / 6→13、`SustainAccessories_AreWellFormed_AndAtLeastTen` 追加。
+- **未対応（次周以降）**: 「まず杖」導線（今回は後回し）、TradePanel の前提未達タスク「納品可能」表示、
+  `Transmute(part,times)` の times 非依存で燃料2固定、panic 脱出が間に合わない即死ウェーブ、farm テンポの単調さ。
 
 ### -2. スキルツリー整形 ／ 戦闘HUDのN体リスト ／ 深部バランス（2026-09-09 その2）
 - **スキルツリーのレイアウト圧縮**（`0de5de2`）: ノードの重なりは元々無いが円盤が半径3560と

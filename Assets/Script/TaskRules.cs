@@ -7,6 +7,7 @@ public enum TraderTaskKind
     DeliverItems,   // 指定素材の納品
     DefeatEnemies,  // 敵の討伐（種類指定または累計）
     ReachDepth,     // 指定深度への到達
+    CraftGear,      // 指定スロットの装備を製作・所持する（targetGearSlot / targetCount=最低tier）
 }
 
 // トレーダーが出す1件のタスク。TradeOffer と同じくプレーンクラス（SO化はしない）。
@@ -22,7 +23,8 @@ public class TraderTask
     public List<MaterialCost> deliverItems = new List<MaterialCost>(); // DeliverItems: 納品物（達成時に消費）
     public int deliverMoney;                                  // DeliverItems: 併せて納めるお金（受取時に消費）
     public string targetEnemyName;                            // DefeatEnemies: 対象の敵名（空なら種類問わず）
-    public int targetCount;                                   // DefeatEnemies: 討伐数 / ReachDepth: 深度
+    public int targetCount;                                   // DefeatEnemies: 討伐数 / ReachDepth: 深度 / CraftGear: 最低tier
+    public GearSlot targetGearSlot;                           // CraftGear: 対象の装備スロット
     public List<MaterialCost> rewardItems = new List<MaterialCost>();
     public int rewardStatPoints;
     public int rewardMoney;                                   // 報酬のお金
@@ -38,6 +40,7 @@ public struct TaskProgress
     public int money;                   // 現在の所持金（納金タスクの判定用）
     public Func<string, int> enemyKills; // 敵名 → 累計撃破数
     public Func<MaterialCost, int> inventoryCount; // 素材 → 所持数
+    public Func<GearSlot, int> ownedGearTier; // 装備スロット → 所持中の最上位 tier（無ければ0。CraftGear の判定用）
 }
 
 // タスクの達成判定と進捗テキスト（純粋関数）。シーン非依存で EditMode テストできる。
@@ -57,6 +60,9 @@ public static class TaskRules
 
             case TraderTaskKind.ReachDepth:
                 return p.bestDepth >= task.targetCount;
+
+            case TraderTaskKind.CraftGear:
+                return p.ownedGearTier != null && p.ownedGearTier(task.targetGearSlot) >= Math.Max(1, task.targetCount);
 
             case TraderTaskKind.DeliverItems:
                 if (task.deliverItems == null || task.deliverItems.Count == 0) return false;
@@ -88,6 +94,9 @@ public static class TaskRules
             }
             case TraderTaskKind.ReachDepth:
                 return "深度 " + Math.Min(p.bestDepth, task.targetCount) + " / " + task.targetCount;
+
+            case TraderTaskKind.CraftGear:
+                return IsComplete(task, p) ? "製作ずみ" : "作業台で製作する";
 
             case TraderTaskKind.DeliverItems:
             {

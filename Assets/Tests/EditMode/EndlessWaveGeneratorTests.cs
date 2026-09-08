@@ -81,12 +81,21 @@ public class EndlessWaveGeneratorTests
     [Test]
     public void EnemyCountFor_GrowsEveryFiveDepths_AndCaps()
     {
-        Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(1, 6));
-        Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(5, 6));
+        Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(1, 6)); // 深度1だけ1体（debut保証なし）
+        Assert.AreEqual(2, EndlessWaveGenerator.EnemyCountFor(2, 6)); // 深度2以降は最低2体
+        Assert.AreEqual(2, EndlessWaveGenerator.EnemyCountFor(5, 6));
         Assert.AreEqual(2, EndlessWaveGenerator.EnemyCountFor(6, 6));
         Assert.AreEqual(3, EndlessWaveGenerator.EnemyCountFor(11, 6));
         Assert.AreEqual(6, EndlessWaveGenerator.EnemyCountFor(100, 6)); // maxPerWave でキャップ
-        Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(100, 1));
+        Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(100, 1)); // cap 1 なら1体まで
+    }
+
+    // 深度2以降のウェーブは常に2体以上（debut敵の保証枠を差し引いても RNG 枠が1つ残る）。
+    [Test]
+    public void EnemyCountFor_IsAtLeastTwo_FromDepth2()
+    {
+        for (int d = 2; d <= 60; d++)
+            Assert.GreaterOrEqual(EndlessWaveGenerator.EnemyCountFor(d, 6), 2, "depth " + d);
     }
 
     [Test]
@@ -155,5 +164,66 @@ public class EndlessWaveGeneratorTests
     {
         List<int> picks = EndlessWaveGenerator.PickIndices(5, 0, 3, new System.Random(1));
         Assert.AreEqual(0, picks.Count);
+    }
+
+    [Test]
+    public void NewlyOpenedIndexFor_ReturnsTopOfWindow_OnlyWhenItGrows()
+    {
+        Assert.AreEqual(2, EndlessWaveGenerator.NewlyOpenedIndexFor(2, 40));  // 窓が 2→3
+        Assert.AreEqual(4, EndlessWaveGenerator.NewlyOpenedIndexFor(4, 40));  // 窓が 4→5
+        Assert.AreEqual(6, EndlessWaveGenerator.NewlyOpenedIndexFor(6, 40));  // 窓が 6→7
+        Assert.AreEqual(-1, EndlessWaveGenerator.NewlyOpenedIndexFor(1, 40)); // 深度1は最初から2体
+        Assert.AreEqual(-1, EndlessWaveGenerator.NewlyOpenedIndexFor(100, 40)); // プール消化後は広がらない
+        Assert.AreEqual(-1, EndlessWaveGenerator.NewlyOpenedIndexFor(5, 0));
+    }
+
+    [Test]
+    public void PickIndices_AlwaysIncludesNewlyOpenedEnemy_AtDebutDepth()
+    {
+        // 新規開放される深度では、乱数シードに関わらず必ずその敵が1体は出る（ドロップ導線の保証）。
+        // 深度4は2体ウェーブなので、1枠が debut敵に固定されても RNG 枠は残る。
+        int newIdx = EndlessWaveGenerator.NewlyOpenedIndexFor(4, 40);
+        for (int seed = 0; seed < 60; seed++)
+        {
+            List<int> picks = EndlessWaveGenerator.PickIndices(4, 40, 2, new System.Random(seed));
+            Assert.Contains(newIdx, picks, "seed " + seed + " で新規開放敵が含まれない");
+        }
+    }
+
+    // debut深度の2体ウェーブでは、保証枠を差し引いても RNG 枠が残るので最弱の敵（index0）も
+    // 抽選され得る（＝新規敵保証で最弱スライムが枯れる副作用への対策）。
+    [Test]
+    public void PickIndices_DebutDepth_StillLetsWeakestRoll()
+    {
+        int newIdx = EndlessWaveGenerator.NewlyOpenedIndexFor(4, 40); // = 4
+        bool sawWeakest = false;
+        for (int seed = 0; seed < 200 && !sawWeakest; seed++)
+        {
+            List<int> picks = EndlessWaveGenerator.PickIndices(4, 40, 2, new System.Random(seed));
+            Assert.Contains(newIdx, picks, "seed " + seed);
+            if (picks.Contains(0)) sawWeakest = true;
+        }
+        Assert.IsTrue(sawWeakest, "200シード回しても最弱の敵が1度も抽選されない");
+    }
+
+    // 1体ウェーブでは debut保証を適用しない（保証で潰すと抽選の多様性がゼロになるため）。
+    [Test]
+    public void PickIndices_SingleEnemyWave_DoesNotForceGuarantee()
+    {
+        List<int> picks = EndlessWaveGenerator.PickIndices(4, 40, 1, new System.Random(0));
+        Assert.AreEqual(1, picks.Count);
+        int min = EndlessWaveGenerator.MinPoolIndexFor(4, 40);
+        int maxExclusive = EndlessWaveGenerator.MaxPoolIndexExclusiveFor(4, 40);
+        Assert.GreaterOrEqual(picks[0], min);
+        Assert.Less(picks[0], maxExclusive);
+    }
+
+    [Test]
+    public void PickIndices_NoNewGuarantee_WhenWindowStable()
+    {
+        // 窓が広がらない深度では通常抽選のまま（強制挿入なし）
+        List<int> picks = EndlessWaveGenerator.PickIndices(100, 5, 3, new System.Random(3));
+        Assert.AreEqual(3, picks.Count);
+        foreach (int i in picks) { Assert.GreaterOrEqual(i, 0); Assert.Less(i, 5); }
     }
 }

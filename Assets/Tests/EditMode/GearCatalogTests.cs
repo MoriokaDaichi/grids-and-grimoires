@@ -43,10 +43,26 @@ namespace GridsAndGrimoires.EditModeTests
             foreach (GearDef g in GearCatalog.All) if (!g.recipeGated) nonRecipe++;
 
             Assert.AreEqual(0, GearCatalog.Craftable(0).Count);
-            Assert.AreEqual(3, GearCatalog.Craftable(1).Count);
-            Assert.AreEqual(6, GearCatalog.Craftable(2).Count);
+            Assert.AreEqual(6, GearCatalog.Craftable(1).Count);
+            Assert.AreEqual(13, GearCatalog.Craftable(2).Count);
             Assert.AreEqual(nonRecipe, GearCatalog.Craftable(3).Count);
             foreach (GearDef g in GearCatalog.Craftable(3)) Assert.IsFalse(g.recipeGated);
+        }
+
+        [Test]
+        public void SustainAccessories_AreWellFormed_AndAtLeastTen()
+        {
+            int sustain = 0;
+            foreach (GearDef g in GearCatalog.All)
+            {
+                if (!g.HasSustain) continue;
+                sustain++;
+                Assert.AreEqual(GearSlot.Accessory, g.slot, g.id + " はアクセ枠であるべき");
+                Assert.IsFalse(g.recipeGated, g.id + " は常時解禁のはず");
+                Assert.IsTrue(g.hpRegenPerSecond > 0f || g.healPerWaveFlat > 0f || g.healPerWavePercent > 0f);
+                Assert.LessOrEqual(g.healPerWavePercent, 1f, g.id + " の割合回復が 100% 超");
+            }
+            Assert.GreaterOrEqual(sustain, 10, "サステイン系アクセサリが10種未満");
         }
 
         [Test]

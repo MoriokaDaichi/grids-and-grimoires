@@ -20,6 +20,16 @@ public class GearDef
     public float amount;
     public List<MaterialCost> cost = new List<MaterialCost>();
     public bool recipeGated;      // true なら、レシピを解禁（トレーダーのタスク報酬）するまで作業台に出さない
+
+    // --- サステイン系の副効果（0 は無効）。主に「アクセ」枠。数値は全て仮。---
+    public float hpRegenPerSecond;    // 戦闘中、毎秒このぶん現在HPを自然回復する
+    public float healPerWaveFlat;     // ウェーブ突破時に固定値ぶん現在HPを回復する
+    public float healPerWavePercent;  // ウェーブ突破時に最大HPのこの割合ぶん回復する（0..1）
+
+    public bool HasSustain
+    {
+        get { return hpRegenPerSecond > 0f || healPerWaveFlat > 0f || healPerWavePercent > 0f; }
+    }
 }
 
 public static class GearCatalog
@@ -87,6 +97,19 @@ public static class GearCatalog
         return new GearDef { id = id, name = name, slot = slot, tier = tier, stat = stat, amount = amount, cost = new List<MaterialCost>(cost), recipeGated = true };
     }
 
+    // サステイン系アクセサリ。主ステータス（stat/amount）に加えて HP 回復系の副効果を持つ。
+    // regen=毎秒回復 / healFlat=ウェーブ突破時の固定回復 / healPct=ウェーブ突破時の最大HP割合回復。
+    private static GearDef Ga(string id, string name, int tier, ResearchStat stat, float amount,
+        float regen, float healFlat, float healPct, params MaterialCost[] cost)
+    {
+        return new GearDef
+        {
+            id = id, name = name, slot = GearSlot.Accessory, tier = tier, stat = stat, amount = amount,
+            cost = new List<MaterialCost>(cost),
+            hpRegenPerSecond = regen, healPerWaveFlat = healFlat, healPerWavePercent = healPct,
+        };
+    }
+
     private static void Ensure()
     {
         if (_all != null) return;
@@ -106,6 +129,21 @@ public static class GearCatalog
             G("wand_arch",       "大魔道の杖",   GearSlot.Wand,      3, ResearchStat.Atk, 11f, L(1), Frag(MagicAttribute.Dark, 3)),
             G("armor_plate",     "彫紋の板金",   GearSlot.Armor,     3, ResearchStat.Hp, 55f, L(1), Part("古木の芯", 3)),
             G("acc_amulet",      "賢者の護符",   GearSlot.Accessory, 3, ResearchStat.ManaRegen, 2.5f, L(1), Frag(MagicAttribute.Light, 3)),
+
+            // --- サステイン系アクセサリ（ウェーブ間でHPが回復しない壁への対策。作業台Lvで解禁）---
+            // tier1
+            Ga("acc_salve_pendant",  "癒しのペンダント", 1, ResearchStat.Hp,  10f, 0f,   15f, 0f,    S(15), Part("スライムゼリー", 4)),
+            Ga("acc_mending_band",   "繕いの腕輪",       1, ResearchStat.Hp,  10f, 1.5f, 0f,   0f,    S(15), Part("薄い翼膜", 4)),
+            Ga("acc_verdant_charm",  "若葉の護符",       1, ResearchStat.Def, 1f,  0f,   0f,   0.06f, S(15), Part("胞子嚢", 4)),
+            // tier2
+            Ga("acc_lifewell_ring",  "命脈の指輪",       2, ResearchStat.Hp,  20f, 0f,   35f,  0f,    M(6), Frag(MagicAttribute.Light, 2)),
+            Ga("acc_regen_torc",     "再生のトルク",     2, ResearchStat.Hp,  15f, 3.5f, 0f,   0f,    M(6), Part("番人の樹皮", 3)),
+            Ga("acc_bloodstone",     "血石の首飾り",     2, ResearchStat.Atk, 3f,  0f,   0f,   0.10f, M(6), Frag(MagicAttribute.Dark, 2)),
+            Ga("acc_heartbeat_stone","鼓動の護石",       2, ResearchStat.Def, 2f,  2f,   20f,  0f,    M(6), Frag(MagicAttribute.Wind, 2)),
+            // tier3
+            Ga("acc_phoenix_charm",  "不死鳥の護符",     3, ResearchStat.Hp,  30f, 0f,   0f,   0.20f, L(1), Frag(MagicAttribute.Fire, 3)),
+            Ga("acc_font_of_life",   "生命の泉",         3, ResearchStat.Hp,  25f, 6f,   0f,   0f,    L(1), Part("古木の芯", 3)),
+            Ga("acc_eternal_locket", "永生のロケット",   3, ResearchStat.ManaRegen, 1.5f, 3f, 40f, 0.08f, L(1), Frag(MagicAttribute.Light, 3)),
 
             // --- レシピ制（トレーダーのタスク報酬で解禁。作業台Lvは満たしていること）---
             Gr("wand_runed",      "刻印の杖",     GearSlot.Wand,      1, ResearchStat.Atk, 5f,  S(20), Frag(MagicAttribute.Fire, 2), Part("小さな牙", 4)),

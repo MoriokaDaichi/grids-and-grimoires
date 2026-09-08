@@ -288,11 +288,11 @@ public class HideoutManager : MonoBehaviour
         {
             craftedGear.Remove(id);
             GearDef o = GearCatalog.Get(id);
-            if (o != null && playerStatus != null) playerStatus.ApplyResearchDelta(o.stat, -o.amount);
+            if (o != null && playerStatus != null) playerStatus.ApplyGearDelta(o, -1);
         }
 
         craftedGear.Add(gear.id);
-        if (playerStatus != null) playerStatus.ApplyResearchDelta(gear.stat, gear.amount);
+        if (playerStatus != null) playerStatus.ApplyGearDelta(gear, +1);
         Save();
         Debug.Log("[作業台] " + gear.name + " を受け取った（タスク報酬）。");
     }
@@ -314,11 +314,11 @@ public class HideoutManager : MonoBehaviour
         {
             craftedGear.Remove(id);
             GearDef o = GearCatalog.Get(id);
-            if (o != null && playerStatus != null) playerStatus.ApplyResearchDelta(o.stat, -o.amount);
+            if (o != null && playerStatus != null) playerStatus.ApplyGearDelta(o, -1);
         }
 
         craftedGear.Add(gear.id);
-        if (playerStatus != null) playerStatus.ApplyResearchDelta(gear.stat, gear.amount);
+        if (playerStatus != null) playerStatus.ApplyGearDelta(gear, +1);
 
         ConsumeFacilityPower();
         Save();
@@ -334,7 +334,7 @@ public class HideoutManager : MonoBehaviour
         foreach (string id in craftedGear)
         {
             GearDef g = GearCatalog.Get(id);
-            if (g != null) playerStatus.ApplyResearchDelta(g.stat, g.amount);
+            if (g != null) playerStatus.ApplyGearDelta(g, +1);
         }
     }
 

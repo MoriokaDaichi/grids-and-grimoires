@@ -121,6 +121,47 @@ public class TaskRulesTests
     }
 
     [Test]
+    public void CraftGear_CompletesWhenOwnedTierMeetsTarget()
+    {
+        TraderTask t = new TraderTask
+        {
+            kind = TraderTaskKind.CraftGear, targetGearSlot = GearSlot.Wand, targetCount = 1,
+        };
+        // 杖なし → 未達成
+        Assert.IsFalse(TaskRules.IsComplete(t, new TaskProgress { ownedGearTier = s => 0 }));
+        // 杖あり（tier1）→ 達成
+        Assert.IsTrue(TaskRules.IsComplete(t, new TaskProgress { ownedGearTier = s => s == GearSlot.Wand ? 1 : 0 }));
+        // 他スロットの装備は関係ない
+        Assert.IsFalse(TaskRules.IsComplete(t, new TaskProgress { ownedGearTier = s => s == GearSlot.Armor ? 3 : 0 }));
+    }
+
+    [Test]
+    public void CraftGear_RespectsMinimumTier()
+    {
+        TraderTask t = new TraderTask
+        {
+            kind = TraderTaskKind.CraftGear, targetGearSlot = GearSlot.Wand, targetCount = 2,
+        };
+        Assert.IsFalse(TaskRules.IsComplete(t, new TaskProgress { ownedGearTier = s => 1 }));
+        Assert.IsTrue(TaskRules.IsComplete(t, new TaskProgress { ownedGearTier = s => 2 }));
+    }
+
+    [Test]
+    public void CraftGear_NullAccessor_False()
+    {
+        TraderTask t = new TraderTask { kind = TraderTaskKind.CraftGear, targetGearSlot = GearSlot.Wand, targetCount = 1 };
+        Assert.IsFalse(TaskRules.IsComplete(t, new TaskProgress()));
+    }
+
+    [Test]
+    public void ProgressText_CraftGear_ReflectsOwnership()
+    {
+        TraderTask t = new TraderTask { kind = TraderTaskKind.CraftGear, targetGearSlot = GearSlot.Wand, targetCount = 1 };
+        Assert.AreEqual("作業台で製作する", TaskRules.ProgressText(t, new TaskProgress { ownedGearTier = s => 0 }));
+        Assert.AreEqual("製作ずみ", TaskRules.ProgressText(t, new TaskProgress { ownedGearTier = s => 1 }));
+    }
+
+    [Test]
     public void ProgressText_ClampsToTarget()
     {
         TraderTask kill = new TraderTask { kind = TraderTaskKind.DefeatEnemies, targetCount = 10 };

@@ -81,13 +81,25 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
-        public void Furnace_SlotsGrow_FuelPerActionShrinks_WithLevel()
+        public void Furnace_SlotsGrow_FuelPerActionStaysLean_WithLevel()
         {
             Assert.AreEqual(0, HideoutCatalog.FurnaceSlots(0));
             Assert.AreEqual(2, HideoutCatalog.FurnaceSlots(1));
             Assert.Less(HideoutCatalog.FurnaceSlots(1), HideoutCatalog.FurnaceSlots(3));
-            Assert.GreaterOrEqual(HideoutCatalog.FurnaceFuelPerAction(1), HideoutCatalog.FurnaceFuelPerAction(3));
+
+            // 再検証3 D1：Lv1 の燃費を 2→1 に下げ、Lv1 錬金釜でも tier1 変換が純増になるようにした。
+            // 建造済みレベルはどれも 1 燃料/アクション（強化のメリットはスロット＝バッファ上限に寄せる）。
             Assert.AreEqual(0, HideoutCatalog.FurnaceFuelPerAction(0));
+            Assert.AreEqual(1, HideoutCatalog.FurnaceFuelPerAction(1));
+            Assert.GreaterOrEqual(HideoutCatalog.FurnaceFuelPerAction(1), HideoutCatalog.FurnaceFuelPerAction(3));
+
+            // Lv1 錬金釜（yieldMult=1.0）× Lv1 魔力炉 で tier1 素材変換が純増になる。
+            var outp = HideoutRules.Transmute(
+                new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = "スライムゼリー", amount = 1 },
+                1, HideoutCatalog.CauldronYieldMult(1));
+            Assert.AreEqual(MaterialType.SmallManaCrystal, outp[0].materialType);
+            Assert.Greater(outp[0].amount, HideoutCatalog.FurnaceFuelPerAction(1),
+                "Lv1 錬金釜×Lv1 魔力炉 で tier1 変換が燃料中立以下（cold-start の詰みが残る）");
         }
 
         [Test]
@@ -106,6 +118,55 @@ namespace GridsAndGrimoires.EditModeTests
                         if (c != null && c.materialType == MaterialType.SpecialItem)
                             Assert.IsTrue(MonsterPartCatalog.IsKnown(c.specialItemName),
                                 d.kind + " のコストに未登録の固有アイテム「" + c.specialItemName + "」");
+        }
+
+        [Test]
+        public void Lv2BuildSteps_UseSmallMonsterPartStacks()
+        {
+            // 再検証2 R2/R3：Lv2 設備の連鎖ゲートを緩めるため、Lv2(step1) のモンスター素材は
+            // 必要個数 ≤ 2（farm 1回で賄える量）に抑える。深層 debut の素材で足踏みさせない。
+            foreach (FacilityDef d in HideoutCatalog.Facilities)
+            {
+                foreach (MaterialCost c in d.costByStep[1])
+                {
+                    if (c == null || c.materialType != MaterialType.SpecialItem) continue;
+                    Assert.LessOrEqual(c.amount, 2,
+                        d.kind + " Lv2 のコスト「" + c.specialItemName + "」×" + c.amount + " が多すぎる（Lv2 は ≤2）");
+                }
+            }
+        }
+
+        [Test]
+        public void AlchemyCauldronLv2_DoesNotRequireDeepDebutPart()
+        {
+            // 『古木の芯』は森の番人（debut 深度19）ドロップ。深度16 前後で詰まるプレイヤーが
+            // 錬金釜Lv2 を建てられず中結晶／tier2 素材の出口が両方閉じるデッドロックの元だった。
+            foreach (MaterialCost c in HideoutCatalog.Get(FacilityKind.AlchemyCauldron).costByStep[1])
+                if (c != null && c.materialType == MaterialType.SpecialItem)
+                    Assert.AreNotEqual("古木の芯", c.specialItemName,
+                        "錬金釜Lv2 が深層 debut の『古木の芯』を要求している（再検証2 R2）");
+        }
+
+        [Test]
+        public void AlchemyCauldronLv2_MediumCrystalCost_StaysModest()
+        {
+            // 再検証3 D3：中結晶の中盤 faucet が無いので Lv2 の中結晶要求は farm＋わずかな両替で
+            // 賄える量（≤3）に抑える。
+            foreach (MaterialCost c in HideoutCatalog.Get(FacilityKind.AlchemyCauldron).costByStep[1])
+                if (c != null && c.materialType == MaterialType.MediumManaCrystal)
+                    Assert.LessOrEqual(c.amount, 3,
+                        "錬金釜Lv2 の中結晶 ×" + c.amount + " が多すぎる（再検証3 D3：≤3）");
+        }
+
+        [Test]
+        public void WorkbenchLv2_DoesNotRequireBurstBandDebutPart()
+        {
+            // 再検証3 D7：作業台Lv2 は tier2 杖＝5×5 グリッドのゲート。建材が『竜人の鱗』
+            // （リザードマン debut 深度13＝バースト即死帯）だと 5×5 に届かないまま詰む。
+            foreach (MaterialCost c in HideoutCatalog.Get(FacilityKind.Workbench).costByStep[1])
+                if (c != null && c.materialType == MaterialType.SpecialItem)
+                    Assert.AreNotEqual("竜人の鱗", c.specialItemName,
+                        "作業台Lv2 が深度13帯 debut の『竜人の鱗』を要求している（再検証3 D7）");
         }
 
         [Test]

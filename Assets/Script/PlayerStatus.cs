@@ -27,6 +27,12 @@ public class PlayerStatus : MonoBehaviour
     public float manaRegenPerSecond = ManaRules.DefaultRegenPerSecond;
     public float currentMana { get; private set; }
 
+    // サステイン系アクセサリ（GearDef）による恒久ボーナス。装備の着脱で HideoutManager が増減させる。
+    public float hpRegenPerSecond;       // 戦闘中、毎秒この量ずつ現在HPを回復
+    public float healPerWaveFlat;        // ウェーブ突破時に固定量ずつ現在HPを回復
+    public float healPerWavePercent;     // ウェーブ突破時に最大HPのこの割合ぶん回復（0..1）
+    private float hpRegenCarry;           // 毎秒回復の端数（1未満を持ち越す）
+
     // 上限値
     private const int HP_MAX = 1000;
     private const int OTHER_MAX = 100;
@@ -35,6 +41,7 @@ public class PlayerStatus : MonoBehaviour
     public Action OnStatusChanged;
     public Action OnDefeated;
     public Action<int, int> OnDamaged; // (被ダメージ量, 残りcurrentHp)
+    public Action<int, int> OnHealed;  // (回復量, 残りcurrentHp) サステイン系アクセサリの回復
     public Action OnManaChanged;       // マナが増減した
 
     void Awake()
@@ -82,6 +89,7 @@ public class PlayerStatus : MonoBehaviour
     {
         currentHp = hp;
         currentMana = maxMana;
+        hpRegenCarry = 0f;
         OnStatusChanged?.Invoke();
         OnManaChanged?.Invoke();
     }
@@ -111,6 +119,41 @@ public class PlayerStatus : MonoBehaviour
 
         currentMana = Mathf.Min(maxMana, currentMana + ManaRules.RegenAmount(manaRegenPerSecond, deltaTime));
         OnManaChanged?.Invoke();
+    }
+
+    // 戦闘中の HP 自然回復（サステイン系アクセサリ）。BattleManager が毎フレーム呼ぶ。
+    // currentHp は int なので 1 未満は hpRegenCarry に持ち越す。
+    public void RegenHealth(float deltaTime)
+    {
+        if (hpRegenPerSecond <= 0f || deltaTime <= 0f) return;
+        if (currentHp <= 0 || currentHp >= hp) { hpRegenCarry = 0f; return; }
+
+        hpRegenCarry += hpRegenPerSecond * deltaTime;
+        int whole = Mathf.FloorToInt(hpRegenCarry);
+        if (whole <= 0) return;
+        hpRegenCarry -= whole;
+
+        int before = currentHp;
+        currentHp = Mathf.Min(hp, currentHp + whole);
+        int healed = currentHp - before;
+        if (healed <= 0) return;
+        OnStatusChanged?.Invoke();
+        OnHealed?.Invoke(healed, currentHp);
+    }
+
+    // ウェーブ突破時の HP 回復（サステイン系アクセサリ）。DungeonManager が呼ぶ。
+    public void HealWaveTick()
+    {
+        if (currentHp <= 0 || currentHp >= hp) return;
+        int amount = Mathf.RoundToInt(healPerWaveFlat + hp * healPerWavePercent);
+        if (amount <= 0) return;
+
+        int before = currentHp;
+        currentHp = Mathf.Min(hp, currentHp + amount);
+        int healed = currentHp - before;
+        if (healed <= 0) return;
+        OnStatusChanged?.Invoke();
+        OnHealed?.Invoke(healed, currentHp);
     }
 
     public void TakeDamage(int amount)
@@ -156,6 +199,21 @@ public class PlayerStatus : MonoBehaviour
         }
         OnStatusChanged?.Invoke();
         OnManaChanged?.Invoke();
+    }
+
+    // 製作装備（GearDef）の恒久ボーナス。HideoutManager が着脱時／起動時に sign=+1/-1 で呼ぶ。
+    // 主ステータス（stat/amount）に加え、サステイン系の副効果も増減させる。
+    public void ApplyGearDelta(GearDef gear, int sign)
+    {
+        if (gear == null || sign == 0) return;
+
+        if (gear.amount != 0f) ApplyResearchDelta(gear.stat, gear.amount * sign);
+
+        hpRegenPerSecond = Mathf.Max(0f, hpRegenPerSecond + gear.hpRegenPerSecond * sign);
+        healPerWaveFlat = Mathf.Max(0f, healPerWaveFlat + gear.healPerWaveFlat * sign);
+        healPerWavePercent = Mathf.Max(0f, healPerWavePercent + gear.healPerWavePercent * sign);
+
+        OnStatusChanged?.Invoke();
     }
 
     public void AddStat(string type)

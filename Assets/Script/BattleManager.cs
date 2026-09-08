@@ -192,8 +192,9 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        // マナの自然回復（戦闘中のみ）
+        // マナ／HP の自然回復（戦闘中のみ。HP回復はサステイン系アクセサリを装備しているときだけ効く）
         playerStatus.RegenMana(Time.deltaTime);
+        playerStatus.RegenHealth(Time.deltaTime);
 
         // ループ中にStartBattle()が呼ばれてもcastsは新リストに差し替わるだけなので、スナップショットは安全に回せる
         List<CastState> currentCasts = casts;

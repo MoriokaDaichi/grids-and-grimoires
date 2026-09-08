@@ -47,10 +47,10 @@ namespace GridsAndGrimoires.EditModeTests
         public void WandTierToSize_MapsTierToSideLength()
         {
             MagicGridManager g = NewGrid();
-            Assert.AreEqual(2, g.WandTierToSize(0)); // 未製作
-            Assert.AreEqual(3, g.WandTierToSize(1)); // 作業台Lv1の杖
-            Assert.AreEqual(4, g.WandTierToSize(2)); // 作業台Lv2の杖
-            Assert.AreEqual(5, g.WandTierToSize(3)); // 作業台Lv3の杖
+            Assert.AreEqual(3, g.WandTierToSize(0)); // 未製作＝3×3（基本＋1枚は置ける）
+            Assert.AreEqual(4, g.WandTierToSize(1)); // 作業台Lv1の杖＝4×4（Mega＋AoE＋単体が両立）
+            Assert.AreEqual(5, g.WandTierToSize(2)); // 作業台Lv2の杖
+            Assert.AreEqual(5, g.WandTierToSize(3)); // 作業台Lv3の杖（上限クランプ）
             Assert.AreEqual(5, g.WandTierToSize(9)); // 上限クランプ
         }
 
