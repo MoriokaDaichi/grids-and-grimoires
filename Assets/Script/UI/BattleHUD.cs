@@ -5,7 +5,8 @@ using UnityEngine.UI;
 
 // 戦闘画面の表示専用コンポーネント。ゲームロジックは持たず、イベントを購読して
 // 敵/プレイヤーのHPバー、ダメージ数字、状態異常アイコン、バフインジケータ、ウェーブ表示を更新する。
-// 複数敵ウェーブでは「先頭の生存個体」を代表として表示し、残り体数を別途表示する（N体分の個別ウィジェットは今後）。
+// 複数敵ウェーブでは「先頭の生存個体」を代表（大きいスプライト＋状態異常アイコン）として表示しつつ、
+// ウェーブの全個体を EnemyRowWidget の縦リストで並べる（enemyRowRoot）。
 public class BattleHUD : MonoBehaviour
 {
     [Header("敵（代表個体）")]
@@ -15,6 +16,10 @@ public class BattleHUD : MonoBehaviour
     [SerializeField] private TMP_Text enemyHpText;
     [SerializeField] private TMP_Text enemyCountText;
     [SerializeField] private RectTransform enemyStatusIconRoot;
+
+    [Header("敵リスト（ウェーブ全個体）")]
+    [SerializeField] private RectTransform enemyRowRoot;
+    [SerializeField] private GameObject enemyRowPrefab;
 
     [Header("プレイヤー")]
     [SerializeField] private Image playerHpFill;
@@ -49,6 +54,7 @@ public class BattleHUD : MonoBehaviour
 
     private readonly Dictionary<StatusEffectType, StatusEffectIcon> statusIcons = new Dictionary<StatusEffectType, StatusEffectIcon>();
     private readonly Dictionary<BuffStat, BuffIndicator> buffIndicators = new Dictionary<BuffStat, BuffIndicator>();
+    private readonly List<EnemyRowWidget> enemyRows = new List<EnemyRowWidget>();
     private float castLogHideAt;
 
     void Awake()
@@ -114,6 +120,7 @@ public class BattleHUD : MonoBehaviour
 
         ClearStatusIcons();
         ClearBuffIndicators();
+        ClearEnemyRows();
         // BattleRoot が非アクティブ化されると DamageNumber の演出コルーチンが止まり、
         // 自分で Destroy できずに画面へ残ってしまう。ここで確実に片付ける。
         ClearDamageNumbers();
@@ -125,6 +132,7 @@ public class BattleHUD : MonoBehaviour
         {
             castLogText.text = "";
         }
+        RefreshEnemyRows();
     }
 
     // --- 代表個体のバインド ---
@@ -141,6 +149,52 @@ public class BattleHUD : MonoBehaviour
             enemyCountText.gameObject.SetActive(show);
             if (show) enemyCountText.text = "残り " + alive + " 体";
         }
+
+        RebuildEnemyRows();
+    }
+
+    // --- 敵リスト（ウェーブ全個体） ---
+
+    private void RebuildEnemyRows()
+    {
+        if (enemyRowRoot == null || enemyRowPrefab == null) return;
+
+        IReadOnlyList<EnemyStatus> living = roster != null ? roster.Living : null;
+        int n = living != null ? living.Count : 0;
+
+        while (enemyRows.Count < n)
+        {
+            GameObject go = Instantiate(enemyRowPrefab, enemyRowRoot, false);
+            enemyRows.Add(go.GetComponent<EnemyRowWidget>());
+        }
+        for (int i = 0; i < enemyRows.Count; i++)
+        {
+            if (enemyRows[i] != null) enemyRows[i].gameObject.SetActive(i < n);
+        }
+
+        RefreshEnemyRows();
+    }
+
+    private void RefreshEnemyRows()
+    {
+        IReadOnlyList<EnemyStatus> living = roster != null ? roster.Living : null;
+        if (living == null) return;
+
+        for (int i = 0; i < living.Count && i < enemyRows.Count; i++)
+        {
+            EnemyStatus es = living[i];
+            if (es == null || enemyRows[i] == null) continue;
+            enemyRows[i].Set(es.enemyName, es.hp, es.maxHp, es == primary);
+        }
+    }
+
+    private void ClearEnemyRows()
+    {
+        foreach (EnemyRowWidget w in enemyRows)
+        {
+            if (w != null) Destroy(w.gameObject);
+        }
+        enemyRows.Clear();
     }
 
     private void BindPrimary(EnemyStatus next)

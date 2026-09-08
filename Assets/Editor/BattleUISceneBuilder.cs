@@ -180,6 +180,17 @@ public static class BattleUISceneBuilder
         enemyCount.color = new Color(1f, 0.8f, 0.5f, 1f);
         enemyCount.gameObject.SetActive(false);
 
+        // ウェーブ全個体の縦リスト（左側）。EnemyRowWidget を BattleHUD が動的生成する。
+        RectTransform enemyRowRoot = NewUI("EnemyRowRoot", root);
+        Frame(enemyRowRoot, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 40f), new Vector2(320f, 360f));
+        VerticalLayoutGroup rowLayout = enemyRowRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        rowLayout.spacing = 4f;
+        rowLayout.childAlignment = TextAnchor.UpperLeft;
+        rowLayout.childForceExpandWidth = true;
+        rowLayout.childForceExpandHeight = false;
+        rowLayout.childControlWidth = true;
+        rowLayout.childControlHeight = true;
+
         // キャストログ（中央）
         TMP_Text castLog = AddText(root, "CastLogText", "", 26, TextAlignmentOptions.Center);
         Frame(castLog.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -20f), new Vector2(600f, 50f));
@@ -231,6 +242,8 @@ public static class BattleUISceneBuilder
         so.FindProperty("enemyHpText").objectReferenceValue = enemyHpText;
         so.FindProperty("enemyStatusIconRoot").objectReferenceValue = statusIconRoot;
         so.FindProperty("enemyCountText").objectReferenceValue = enemyCount;
+        so.FindProperty("enemyRowRoot").objectReferenceValue = enemyRowRoot;
+        so.FindProperty("enemyRowPrefab").objectReferenceValue = Load("EnemyRowWidget");
         so.FindProperty("playerHpFill").objectReferenceValue = playerHpFill;
         so.FindProperty("playerHpText").objectReferenceValue = playerHpText;
         so.FindProperty("playerManaFill").objectReferenceValue = playerManaFill;
@@ -704,6 +717,7 @@ public static class BattleUISceneBuilder
         SavePrefabIfMissing("DamageNumber", BuildDamageNumberTemplate);
         SavePrefabIfMissing("StatusEffectIcon", BuildStatusIconTemplate);
         SavePrefabIfMissing("BuffIndicator", BuildBuffIndicatorTemplate);
+        SavePrefabIfMissing("EnemyRowWidget", BuildEnemyRowTemplate);
         SavePrefabIfMissing("DropRow", BuildDropRowTemplate);
         SavePrefabIfMissing("ResearchNode", BuildResearchNodeTemplate);
         AssetDatabase.SaveAssets();
@@ -759,6 +773,36 @@ public static class BattleUISceneBuilder
         BuffIndicator comp = rt.gameObject.AddComponent<BuffIndicator>();
         SetPrivate(comp, "radialFill", fill);
         SetPrivate(comp, "label", label);
+        return rt.gameObject;
+    }
+
+    private static GameObject BuildEnemyRowTemplate()
+    {
+        RectTransform rt = NewUI("EnemyRowWidget", null);
+        rt.sizeDelta = new Vector2(300f, 34f);
+        Image bg = AddImage(rt, new Color(1f, 1f, 1f, 0.10f), false);
+        LayoutElement le = rt.gameObject.AddComponent<LayoutElement>();
+        le.preferredHeight = 34f; le.minHeight = 34f;
+
+        TMP_Text nameText = AddText(rt, "Name", "敵", 15, TextAlignmentOptions.Left);
+        Frame(nameText.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, 0f), new Vector2(150f, 30f));
+
+        RectTransform hpBg = NewUI("HpBG", rt);
+        Frame(hpBg, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(128f, 16f));
+        AddImage(hpBg, new Color(0f, 0f, 0f, 0.55f), false);
+        RectTransform hpFillRt = NewUI("HpFill", hpBg);
+        Stretch(hpFillRt);
+        Image hpFill = AddImage(hpFillRt, new Color(0.85f, 0.30f, 0.30f, 1f), false);
+        MakeHorizontalFill(hpFill);
+
+        TMP_Text hpText = AddText(hpBg, "HpText", "60 / 60", 11, TextAlignmentOptions.Center);
+        Stretch(hpText.rectTransform);
+
+        EnemyRowWidget comp = rt.gameObject.AddComponent<EnemyRowWidget>();
+        SetPrivate(comp, "background", bg);
+        SetPrivate(comp, "nameText", nameText);
+        SetPrivate(comp, "hpFill", hpFill);
+        SetPrivate(comp, "hpText", hpText);
         return rt.gameObject;
     }
 
