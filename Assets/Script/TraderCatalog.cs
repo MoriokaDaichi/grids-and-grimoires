@@ -284,7 +284,9 @@ public static class TraderCatalog
         orca.offers.Add(Buy("120 G → 大結晶 ×1", 120, M(MaterialType.LargeManaCrystal, 1)));
         Chain(orca,
             Depth("orca_1", "orca", "深度 5 まで到達する", 5, Items(M(MaterialType.MediumManaCrystal, 5)), rewardMoney: 40),
-            Depth("orca_2", "orca", "深度 10 まで到達する", 10, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 1),
+            // 再検証3 D1／改善ループ通しプレイ：cold-start の壁は深度8〜9 で、大結晶×2 の注入（＝中盤の
+            // 結晶 faucet）が要件 深度10 だと壁の“先”にあって永遠に届かない。要件を壁より手前の深度8 へ。
+            Depth("orca_2", "orca", "深度 8 まで到達する", 8, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 1),
             // 「ウェーブ間 HP 無回復＋深部バーストで満タンから即死」の壁（C2）に届く直前で、
             // tier2 サステイン（再生のトルク＝毎秒 +3.5）を作業台Lv2 を待たず直接渡す＝入手性の底上げ。
             Depth("orca_2b", "orca", "深度 12 まで到達する", 12, null, rewardGear: "acc_regen_torc"),

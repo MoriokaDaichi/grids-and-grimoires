@@ -117,6 +117,26 @@ public class TraderCatalogTests
         Assert.IsTrue(found, "深度到達タスクが1つも無い");
     }
 
+    // 再検証3 D1／改善ループ通しプレイ：cold-start の壁は深度8〜9。中盤の結晶 faucet（orca_2＝
+    // 大結晶×2）の到達要件が壁の先だと永遠に届かないので、壁より手前（≤8）に置く。
+    [Test]
+    public void Orca2_CrystalFaucet_IsReachableAtOrBeforeColdStartWall()
+    {
+        TraderTask orca2 = null;
+        foreach (Trader t in TraderCatalog.BuildTraders())
+            foreach (TraderTask task in t.tasks)
+                if (task.id == "orca_2") orca2 = task;
+
+        Assert.IsNotNull(orca2, "orca_2 が見つからない");
+        Assert.AreEqual(TraderTaskKind.ReachDepth, orca2.kind);
+        Assert.LessOrEqual(orca2.targetCount, 8, "orca_2 の到達要件が cold-start の壁より深い");
+
+        bool givesLargeCrystal = false;
+        foreach (MaterialCost c in orca2.rewardItems)
+            if (c != null && c.materialType == MaterialType.LargeManaCrystal) givesLargeCrystal = true;
+        Assert.IsTrue(givesLargeCrystal, "orca_2 が大結晶を出さない（結晶 faucet の役割）");
+    }
+
     [Test]
     public void EverySpecialItemReferenced_IsKnownMonsterPart()
     {
