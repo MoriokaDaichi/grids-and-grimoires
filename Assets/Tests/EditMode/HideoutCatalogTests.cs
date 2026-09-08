@@ -137,6 +137,17 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
+        public void FurnaceBuildBonusFuel_IsPositive_AndFitsLv1Buffer()
+        {
+            // 再検証5 R2：魔力炉初建造時の初期燃料。cold-start の燃料デッドロックを破れる量で、
+            // かつ Lv1 の燃料バッファ（FurnaceSlots(1) × 大結晶価値 = 200）に収まること。
+            Assert.Greater(HideoutCatalog.FurnaceBuildBonusFuel, HideoutCatalog.FurnaceFuelPerAction(1),
+                "1アクション分すら無いと意味がない");
+            long lv1Buffer = HideoutCatalog.FurnaceSlots(1) * (long)MaterialCatalog.Value(MaterialType.LargeManaCrystal);
+            Assert.LessOrEqual(HideoutCatalog.FurnaceBuildBonusFuel, lv1Buffer);
+        }
+
+        [Test]
         public void AlchemyCauldronLv1_IsPayableInMediumCrystals_ForColdStart()
         {
             // 再検証3 D1／改善ループ通しプレイ：cold-start の結晶収入はタスク報酬の中結晶。

@@ -127,6 +127,11 @@ public class HideoutManager : MonoBehaviour
 
         if (kind != FacilityKind.ManaFurnace) ConsumeFacilityPower();
         levels[kind] = Level(kind) + 1;
+
+        // 魔力炉を初めて建てたら初期燃料を注ぐ（cold-start の燃料デッドロック対策。再検証5 R2）。
+        if (kind == FacilityKind.ManaFurnace && Level(kind) == 1)
+            furnaceFuel = Math.Min(FuelCapacity, furnaceFuel + HideoutCatalog.FurnaceBuildBonusFuel);
+
         Save();
         Debug.Log("[ハイドアウト] " + HideoutCatalog.Get(kind).name + " を Lv" + Level(kind) + " にした。");
         return true;
