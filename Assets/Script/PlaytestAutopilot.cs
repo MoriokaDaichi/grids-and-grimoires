@@ -206,7 +206,7 @@ public class PlaytestAutopilot : MonoBehaviour
         OnFinished?.Invoke(report);
     }
 
-    private int econTasksClaimed, econBuilds, econCrafts, econTransmutes, econTrades;
+    private int econTasksClaimed, econBuilds, econCrafts, econTransmutes, econTrades, econResearch;
 
     // 周のあいだの貪欲な経済処理。何も進まなくなるまで（上限つき）回す。
     private void RunEconomyPass()
@@ -345,7 +345,27 @@ public class PlaytestAutopilot : MonoBehaviour
                 }
             }
 
-            // 8. Lv2 強化（燃料黒字化＝魔力炉/錬金釜を優先）
+            // 8. 研究割当（研究机が建っていれば）。魔法ノードは常に、ステノードは Atk>Def>Hp>Spd を優先、
+            //    ManaMax/ManaRegen/Luc はスキップ（マナは基本足りる）。小結晶は 20 前後を建材用に残す。
+            var research = ResearchManager.Instance;
+            if (research != null && hideout.IsBuilt(FacilityKind.ResearchDesk))
+            {
+                foreach (var nd in ResearchGraph.Nodes)
+                    if (nd.isMagic && !research.IsIdAllocated(nd.id) && research.CanAllocate(nd.id))
+                    { research.Allocate(nd.id); econResearch++; did = true; }
+
+                foreach (var want in new[] { ResearchStat.Atk, ResearchStat.Def, ResearchStat.Hp, ResearchStat.Spd })
+                {
+                    foreach (var nd in ResearchGraph.Nodes)
+                    {
+                        if (nd.isMagic || nd.stat != want || research.IsIdAllocated(nd.id)) continue;
+                        if (CrystalCount(inv, MaterialType.SmallManaCrystal) < 20) break;
+                        if (research.CanAllocate(nd.id)) { research.Allocate(nd.id); econResearch++; did = true; }
+                    }
+                }
+            }
+
+            // 9. Lv2 強化（燃料黒字化＝魔力炉/錬金釜を優先）
             foreach (var kind in new[] { FacilityKind.ManaFurnace, FacilityKind.AlchemyCauldron, FacilityKind.Workbench, FacilityKind.ResearchDesk })
             {
                 if (hideout.Level(kind) == 1 && hideout.CanAdvance(kind))
@@ -586,7 +606,14 @@ public class PlaytestAutopilot : MonoBehaviour
                 int lc = inv.GetCount(new MaterialCost { materialType = MaterialType.LargeManaCrystal });
                 sb.AppendLine($"- 結晶: 小{sc} 中{mc} 大{lc}");
             }
-            sb.AppendLine($"- 経済アクション: タスク受領{econTasksClaimed} / 建造・強化{econBuilds} / 製作{econCrafts} / 変換{econTransmutes} / 交換{econTrades}");
+            sb.AppendLine($"- 経済アクション: タスク受領{econTasksClaimed} / 建造・強化{econBuilds} / 製作{econCrafts} / 変換{econTransmutes} / 交換{econTrades} / 研究{econResearch}");
+            if (research != null)
+            {
+                int st = 0, mg = 0;
+                foreach (var nd in ResearchGraph.Nodes)
+                    if (research.IsIdAllocated(nd.id)) { if (nd.isMagic) mg++; else st++; }
+                sb.AppendLine($"- 研究ノード: ステ{st} / 魔法{mg}");
+            }
             sb.AppendLine();
         }
 
