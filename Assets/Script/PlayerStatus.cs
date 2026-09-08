@@ -35,6 +35,9 @@ public class PlayerStatus : MonoBehaviour
 
     // 現ウェーブでこれまでに受けた累計ダメージ（バースト即死クランプ用。レポート C2/D5）。
     private int damageThisWave;
+    // ウェーブ開始時の HP 割合。クランプは「開始時に十分健康だったウェーブ」だけに効かせる
+    // （＝満タンからの即死よけであって、削れた run を延命する生存バフではない。再検証4 R1）。
+    private float waveStartHpFraction = 1f;
 
     // 上限値
     private const int HP_MAX = 1000;
@@ -102,6 +105,7 @@ public class PlayerStatus : MonoBehaviour
     public void BeginWave()
     {
         damageThisWave = 0;
+        waveStartHpFraction = hp > 0 ? (float)currentHp / hp : 0f;
     }
 
     // 発動に必要なマナがあるか
@@ -170,11 +174,16 @@ public class PlayerStatus : MonoBehaviour
     {
         if (currentHp <= 0 || amount <= 0) return;
 
-        // バースト即死クランプ（レポート C2/D5）：1ウェーブで最大HPの WaveDamageCapFraction を
-        // 超えるぶんの被弾は無効化する。「脱出」はウェーブ間でしか選べないため、満タン近くから
-        // 1ウェーブで即死すると脱出判断が働かない。超過ぶんを削って次の突破時に判断機会を残す。
-        int allowed = Mathf.Max(0, BattleFormula.WaveDamageCap(hp) - damageThisWave);
-        int applied = Mathf.Min(amount, allowed);
+        // バースト即死クランプ（レポート C2/D5、調整 再検証4 R1）：ウェーブ開始時に十分健康だった
+        // （HP割合 ≥ WaveClampMinStartFraction）ウェーブに限り、1ウェーブで最大HPの WaveDamageCapFraction
+        // を超えるぶんの被弾を無効化する。「脱出」はウェーブ間でしか選べないので満タン近くからの1ウェーブ
+        // 即死を防ぐのが目的。既に削れている run はこのクランプで延命しない（attrition で普通に死ねる）。
+        int applied = amount;
+        if (waveStartHpFraction >= BattleFormula.WaveClampMinStartFraction)
+        {
+            int allowed = Mathf.Max(0, BattleFormula.WaveDamageCap(hp) - damageThisWave);
+            applied = Mathf.Min(amount, allowed);
+        }
         damageThisWave += applied;
 
         currentHp = Mathf.Max(0, currentHp - applied);

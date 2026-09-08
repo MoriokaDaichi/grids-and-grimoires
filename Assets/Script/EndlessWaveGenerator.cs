@@ -32,7 +32,8 @@ public static class EndlessWaveGenerator
     // Atk だけ膝から先をさらに寝かせる。再検証3周（レポート D6）で、プレイヤー Atk が1周で 10→17 しか
     // 伸びないのに敵 Atk は +10%/実効深度で伸び続け、深部ほど「殲滅が遅い→被弾総量が増える／満タンから
     // バーストで即死」が悪化していた。膝までは HP/Def と同じ素の線形なので浅〜中盤の手応えは不変。
-    public const float AtkScalingTaperSlope = 0.25f;
+    // 再検証4 R1: 0.25 は寝かせすぎ（D5 クランプ＋回復と乗算で深部の被弾圧力が消えた）。0.35 に戻す。
+    public const float AtkScalingTaperSlope = 0.35f;
 
     // 深度 d（0始まり）を、膝から先で勾配を落とした「実効深度」に変換する。
     private static float TaperedDepth(int d) => TaperedDepth(d, ScalingTaperSlope);

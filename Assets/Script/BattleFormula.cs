@@ -9,8 +9,11 @@ public static class BattleFormula
 
     // 1ウェーブでプレイヤーが失える最大HPの割合（＝バースト即死のクランプ、レポート C2/D5）。
     // ウェーブ間でしか「脱出」を選べないので、満タン近くから1ウェーブで即死すると脱出判断が働かない。
-    // このぶんを超える被弾は無効化し、次のウェーブ突破時の脱出判断にチャンスを与える（数値は仮）。
-    public const float WaveDamageCapFraction = 0.6f;
+    // このぶんを超える被弾は無効化する（数値は仮）。
+    // 再検証4 R1: 0.6 だと「常に 40% 残る」＋自然回復でフェイルステートが消えたので 0.85 に。
+    // さらに WaveClampMinStartFraction 未満で始まったウェーブには効かせない（延命バフ化を防ぐ）。
+    public const float WaveDamageCapFraction = 0.85f;
+    public const float WaveClampMinStartFraction = 0.55f;
 
     // 1ウェーブで許容する累計被ダメージ（最大HP基準）。
     public static int WaveDamageCap(int maxHp)

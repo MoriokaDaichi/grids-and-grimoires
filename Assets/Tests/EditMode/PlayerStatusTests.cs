@@ -60,12 +60,39 @@ namespace GridsAndGrimoires.EditModeTests
         [Test]
         public void TakeDamage_LowStartingHp_StillDies_WhenHeadroomExceedsCurrentHp()
         {
-            PlayerStatus ps = NewPlayer(100); // cap = 60
+            PlayerStatus ps = NewPlayer(100);
             ps.BeginWave();
             ps.TakeDamage(40); // → 60
             ps.BeginWave();
-            ps.TakeDamage(80); // headroom 60 >= 60 残HP → 死ねる
+            ps.TakeDamage(80); // 死ねる
             Assert.AreEqual(0, ps.currentHp);
+        }
+
+        // 再検証4 R1：ウェーブ開始時に削れていた（HP割合 < WaveClampMinStartFraction）ら
+        // クランプは効かない＝そのウェーブのバーストで一気に落ちうる（延命バフにしない）。
+        [Test]
+        public void TakeDamage_WaveStartedLow_ClampDoesNotEngage()
+        {
+            PlayerStatus ps = NewPlayer(200); // cap = round(0.85*200) = 170
+            // 1ウェーブ目で 50% まで削っておく（クランプ有効な状態から）
+            ps.BeginWave();
+            ps.TakeDamage(100); // → 100 (50%)
+            Assert.AreEqual(100, ps.currentHp);
+
+            // 開始 50% < 0.55 のウェーブでは 170 の上限を無視して一撃で 0 になれる
+            ps.BeginWave();
+            ps.TakeDamage(9999);
+            Assert.AreEqual(0, ps.currentHp);
+        }
+
+        [Test]
+        public void TakeDamage_WaveStartedHealthy_ClampEngages()
+        {
+            PlayerStatus ps = NewPlayer(200);
+            ps.BeginWave(); // 100% ≥ 0.55
+            ps.TakeDamage(9999);
+            Assert.AreEqual(200 - BattleFormula.WaveDamageCap(200), ps.currentHp);
+            Assert.Greater(ps.currentHp, 0);
         }
     }
 }
