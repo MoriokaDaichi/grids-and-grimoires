@@ -119,10 +119,11 @@ public static class HideoutCatalog
                 costByStep = new List<List<MaterialCost>>
                 {
                     new List<MaterialCost> { S(24), Part("ゴブリンの牙", 4) },
-                    // 再検証3 D7：作業台Lv2＝tier2杖の 5×5 グリッド。建材の『竜人の鱗』は
-                    // リザードマン（debut 深度13＝バースト即死帯）待ちで 5周とも建たなかった。
-                    // 同 tier2・Fire の『錆びた短剣』（コボルト debut 深度9）へ差し替えて導線を浅くする。
-                    new List<MaterialCost> { M(7), Frag(MagicAttribute.Fire, 2), Part("錆びた短剣", 2) },
+                    // 再検証3/8 D7：作業台Lv2＝tier2杖の 5×5 グリッド（Mega＋Giga＋AoE が同居できる）。
+                    // 『竜人の鱗』→『錆びた短剣』（コボルト d9）に浅くしても、Mode A で錬金釜Lv2 まで建った
+                    // 周でも 作業台Lv2 は建たなかった（M(7) の中結晶ゲート）。他 Lv2 に合わせ M(7)→M(4)。
+                    // Frag(Fire,2) は残す（錬金釜Lv2 で 錆びた短剣 を変換すれば出る＝中盤の一手を要求）。
+                    new List<MaterialCost> { M(4), Frag(MagicAttribute.Fire, 2), Part("錆びた短剣", 2) },
                     new List<MaterialCost> { L(2), Frag(MagicAttribute.Dark, 3), Part("竜のうろこ", 2) },
                 },
             },

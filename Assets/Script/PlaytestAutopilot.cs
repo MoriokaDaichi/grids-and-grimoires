@@ -250,9 +250,13 @@ public class PlaytestAutopilot : MonoBehaviour
             }
 
             // 2. 結晶を小に崩す（設備Lv1 の建材はほぼ小結晶＝S(12〜24)）。glen の 大→中→小。
-            //    ただし未建造設備が要求する中結晶ぶんは崩さず残す（錬金釜Lv1 は中結晶払い＝D1修正）。
+            //    Lv1 インフラ＋杖が揃ったら中結晶は崩さない（Lv2 強化・tier2 杖・上位研究＝中結晶ゲート用に温存）。
             if (trade != null)
             {
+                bool lv1InfraDone = true;
+                foreach (var k in buildOrder) if (!hideout.IsBuilt(k)) lv1InfraDone = false;
+                bool bootstrapping = !lv1InfraDone || CurrentWandTier(hideout) == 0;
+
                 int keepMedium = 0;
                 foreach (var k in buildOrder)
                 {
@@ -260,6 +264,9 @@ public class PlaytestAutopilot : MonoBehaviour
                     foreach (var c in hideout.NextCost(k) ?? new List<MaterialCost>())
                         if (c != null && c.materialType == MaterialType.MediumManaCrystal) keepMedium += c.amount;
                 }
+                // ブートストラップ完了後は中結晶を全温存（＝大結晶だけ中へ崩す）。
+                if (!bootstrapping) keepMedium = int.MaxValue - 1000;
+
                 var med2small = FindCrystalOffer(trade, MaterialType.MediumManaCrystal, MaterialType.SmallManaCrystal);
                 var large2med = FindCrystalOffer(trade, MaterialType.LargeManaCrystal, MaterialType.MediumManaCrystal);
                 int guard = 0;
@@ -268,7 +275,7 @@ public class PlaytestAutopilot : MonoBehaviour
                     bool moved = false;
                     if (med2small != null && CrystalCount(inv, MaterialType.MediumManaCrystal) > keepMedium && trade.CanTrade(med2small))
                     { trade.TryTrade(med2small); econTrades++; moved = true; }
-                    else if (large2med != null && CrystalCount(inv, MaterialType.LargeManaCrystal) > 0 && trade.CanTrade(large2med))
+                    else if (large2med != null && CrystalCount(inv, MaterialType.LargeManaCrystal) > 0 && bootstrapping && trade.CanTrade(large2med))
                     { trade.TryTrade(large2med); econTrades++; moved = true; }
                     if (!moved) break;
                     did = true;
@@ -318,14 +325,17 @@ public class PlaytestAutopilot : MonoBehaviour
                     did = true;
             }
 
-            // 5. 杖を打つ（無ければ最低 tier を1本）→ グリッド拡大
-            if (CurrentWandTier(hideout) == 0)
+            // 5. 杖を打つ／より上位の杖へ持ち替える（グリッド拡大＝tier1→4×4 / tier2→5×5）。
             {
+                int haveTier = CurrentWandTier(hideout);
+                GearDef bestBuildable = null;
                 foreach (var g in GearCatalog.All)
                 {
-                    if (g.slot != GearSlot.Wand) continue;
-                    if (hideout.CanCraft(g)) { hideout.Craft(g); econCrafts++; did = true; break; }
+                    if (g.slot != GearSlot.Wand || g.recipeGated || g.tier <= haveTier) continue;
+                    if (!hideout.CanCraft(g)) continue;
+                    if (bestBuildable == null || g.tier > bestBuildable.tier) bestBuildable = g;
                 }
+                if (bestBuildable != null) { hideout.Craft(bestBuildable); econCrafts++; did = true; }
             }
             // 6. サステイン系アクセを1つ（ウェーブ間回復＝バースト対策）
             if (!OwnsAccessory(hideout))
