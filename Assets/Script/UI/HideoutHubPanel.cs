@@ -218,8 +218,8 @@ public class HideoutHubPanel : MonoBehaviour
             bool can = hideout.CanCraft(g);
             string stat = ResearchGraph.Label(g.stat);
             string line = g.name + "（" + SlotName(g.slot) + " / " + stat + "）  " + CostText(g.cost);
-            if (owned) line += "  ✓所持";
-            else if (lockedRecipe) line += "  ✎レシピ未取得";
+            if (owned) line += "  （所持済）";
+            else if (lockedRecipe) line += "  （レシピ未取得）";
             GearDef captured = g;
             string btn = owned ? "所持" : (lockedRecipe ? "未解放" : "製作");
             ActionRow(card, line, btn, can, (owned || lockedRecipe) ? DimBtn : OkBtn,
