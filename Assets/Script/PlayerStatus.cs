@@ -33,6 +33,9 @@ public class PlayerStatus : MonoBehaviour
     public float healPerWavePercent;     // ウェーブ突破時に最大HPのこの割合ぶん回復（0..1）
     private float hpRegenCarry;           // 毎秒回復の端数（1未満を持ち越す）
 
+    // 現ウェーブでこれまでに受けた累計ダメージ（バースト即死クランプ用。レポート C2/D5）。
+    private int damageThisWave;
+
     // 上限値
     private const int HP_MAX = 1000;
     private const int OTHER_MAX = 100;
@@ -90,8 +93,15 @@ public class PlayerStatus : MonoBehaviour
         currentHp = hp;
         currentMana = maxMana;
         hpRegenCarry = 0f;
+        damageThisWave = 0;
         OnStatusChanged?.Invoke();
         OnManaChanged?.Invoke();
+    }
+
+    // 新しいウェーブの開始時に DungeonManager が呼ぶ。バースト即死クランプの累計をリセットする。
+    public void BeginWave()
+    {
+        damageThisWave = 0;
     }
 
     // 発動に必要なマナがあるか
@@ -158,11 +168,18 @@ public class PlayerStatus : MonoBehaviour
 
     public void TakeDamage(int amount)
     {
-        if (currentHp <= 0) return;
+        if (currentHp <= 0 || amount <= 0) return;
 
-        currentHp = Mathf.Max(0, currentHp - amount);
+        // バースト即死クランプ（レポート C2/D5）：1ウェーブで最大HPの WaveDamageCapFraction を
+        // 超えるぶんの被弾は無効化する。「脱出」はウェーブ間でしか選べないため、満タン近くから
+        // 1ウェーブで即死すると脱出判断が働かない。超過ぶんを削って次の突破時に判断機会を残す。
+        int allowed = Mathf.Max(0, BattleFormula.WaveDamageCap(hp) - damageThisWave);
+        int applied = Mathf.Min(amount, allowed);
+        damageThisWave += applied;
+
+        currentHp = Mathf.Max(0, currentHp - applied);
         OnStatusChanged?.Invoke();
-        OnDamaged?.Invoke(amount, currentHp);
+        OnDamaged?.Invoke(applied, currentHp);
 
         if (currentHp <= 0) OnDefeated?.Invoke();
     }

@@ -159,6 +159,9 @@ public class DungeonManager : MonoBehaviour
         List<EnemyData> pool = EffectivePool();
         depth++;
 
+        // バースト即死クランプの累計をウェーブ開始でリセット（レポート C2/D5）。
+        if (playerStatus != null) playerStatus.BeginWave();
+
         WaveScaling scaling = EndlessWaveGenerator.ScalingFor(depth);
         int count = EndlessWaveGenerator.EnemyCountFor(depth, roster.Capacity);
         List<int> indices = EndlessWaveGenerator.PickIndices(depth, pool.Count, count, rng);

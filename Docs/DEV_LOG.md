@@ -32,6 +32,43 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 
 ## このセッションで実装したこと（新しい順）
 
+### -8. 改善ループ（自動）：通しプレイ検証ハーネス新設＋深部Atk／cold-start結晶詰み／バースト即死（2026-09-09 その8）
+「検証レポートの指摘を改善 → すぐ通しプレイで検証 → レポート → また改善」を自動で回すセッション。
+`Docs/検証レポート/_改善ループ_進捗.md` に経過、通しプレイ結果は `Docs/検証レポート/_ループ_*.md`。
+
+- **通しプレイ検証ハーネス（新規）** — 以降の改善サイクルの前提:
+  - **[PlaytestAutopilot.cs](../Assets/Script/PlaytestAutopilot.cs)**（Runtime・再生時のみ生成、通常プレイでは不活性）:
+    cold start から複数周を自動プレイ。ステP配分 → 攻撃魔法を greedy first-fit で配置 →
+    出撃 → ウェーブ突破ごとに HP割合＋深度キャップで「進む/脱出」を自動判定 → 報酬帰還 →
+    周のあいだに貪欲な経済（タスク受領／結晶の崩し／設備建造 魔力炉→錬金釜→作業台→研究机／
+    燃料バッファ維持／杖・サステインアクセ製作／モンスター素材の変換〈未建造設備の建材は温存〉／
+    Lv2強化）。到達深度・各深度の最小HP%・コンソール error/warning/exception を収集してレポート化。
+  - **[PlaytestDriver.cs](../Assets/Editor/PlaytestDriver.cs)**（Editor・`[InitializeOnLoad]`）:
+    メニュー `Grimoire > Run Playtest > Cold start x3 / x5`、または `PlaytestDriver.Begin(loops, depthCap)`。
+    セーブ wipe → 再生モード → Autopilot 差し込み → `Docs/検証レポート/_ループ_<日時>.md` 書き出し → 再生停止。
+  - ハーネスの限界: 経済は貪欲近似（人力の結晶配分・杖の手詰めより下手）／魔法配置は回転のみの
+    first-fit／脱出判断はウェーブ間のみ／研究の小ノード割当は未駆動。**このため到達深度の絶対値は
+    人力プレイより低く出る**（cold-start で深度8前後）。バグ検出とバランスの相対比較に使う。
+- **D6-a（深部で敵Atkがプレイヤーを置き去りにする）**（`EndlessWaveGenerator`）:
+  `AtkScalingTaperSlope`(=0.25) を新設。膝（`ScalingTaperKneeDepth`=10）までは HP/Def と同じ素の線形、
+  膝から先だけ敵Atk倍率の伸びを一般テーパー(0.4)より寝かせる。再検証3でプレイヤーAtkが1周 10→17 しか
+  伸びないのに敵Atkは +10%/実効深度で伸び続け、深部の「殲滅が遅い→被弾総量増／満タンから即死」を
+  悪化させていた。浅〜中盤は不変。テスト +2。
+- **D1（cold-start の結晶エンジンが建たない詰み）**（`HideoutCatalog`）:
+  通しプレイで再現＝設備Lv1 の建材はほぼ**小結晶**（S12〜24）だが cold-start の結晶収入はタスク報酬の
+  **中結晶**で、glen の「中→小」崩しを踏まないと錬金釜（＝素材→結晶のエンジン）が建たず貪欲プレイは
+  詰む。錬金釜Lv1 の建材を `S(16)` → `M(2)` に変更（中結晶払い。M(2)=20 は S(16)=16 よりむしろ割高＝
+  甘くはしない）。これで最初のタスク報酬で結晶エンジンを建てられる。テスト +1
+  （`AlchemyCauldronLv1_IsPayableInMediumCrystals_ForColdStart`）。
+- **D5／C2（ウェーブ内バースト即死）**（`BattleFormula` / `PlayerStatus` / `DungeonManager`）:
+  「脱出」はウェーブ間でしか選べないので、満タン近くから1ウェーブで即死すると脱出判断が働かない。
+  `BattleFormula.WaveDamageCap(maxHp)`＝`WaveDamageCapFraction`(=0.6)×maxHp を新設。
+  `PlayerStatus` が現ウェーブの累計被ダメージ `damageThisWave` を持ち、`TakeDamage` でこの上限を
+  超えるぶんを無効化する（`BeginWave` で `DungeonManager.AdvanceWave` からリセット）。
+  100%未満のクランプなので、低HPで次ウェーブに入れば依然そのウェーブで倒れうる（死の無効化ではない）。
+  `BattleManager`/`EnemyStatus` の再入ガードには触れない（`TakeDamage` 内で完結）。テスト +4。
+- EditMode 182 → 187 グリーン。
+
 ### -7. 再検証3のフィードバック反映：cold-start 結晶詰み／中結晶ゲート／5×5 導線／「まず杖」タスク（2026-09-09 その7）
 `Docs/検証レポート/2026-09-09_再検証3_cold-start5周_総括.md` の「次にやるなら（優先度順）」から
 D1・D3・D7 を実装（`HideoutCatalog` のみ）、加えて D2 の一次対応として「杖を作る」タスクを新設

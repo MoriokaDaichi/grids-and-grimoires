@@ -241,17 +241,24 @@ public class PlaytestAutopilot : MonoBehaviour
                 }
             }
 
-            // 2. 結晶を小に崩す（設備Lv1 の建材はすべて小結晶＝S(12〜24)）。glen の 大→中→小。
-            //    小結晶が 45 未満のあいだ、中・大を残さず崩す（燃料は fuel ステップが小結晶の余剰から作る）。
+            // 2. 結晶を小に崩す（設備Lv1 の建材はほぼ小結晶＝S(12〜24)）。glen の 大→中→小。
+            //    ただし未建造設備が要求する中結晶ぶんは崩さず残す（錬金釜Lv1 は中結晶払い＝D1修正）。
             if (trade != null)
             {
+                int keepMedium = 0;
+                foreach (var k in buildOrder)
+                {
+                    if (hideout.IsBuilt(k)) continue;
+                    foreach (var c in hideout.NextCost(k) ?? new List<MaterialCost>())
+                        if (c != null && c.materialType == MaterialType.MediumManaCrystal) keepMedium += c.amount;
+                }
                 var med2small = FindCrystalOffer(trade, MaterialType.MediumManaCrystal, MaterialType.SmallManaCrystal);
                 var large2med = FindCrystalOffer(trade, MaterialType.LargeManaCrystal, MaterialType.MediumManaCrystal);
                 int guard = 0;
                 while (CrystalCount(inv, MaterialType.SmallManaCrystal) < 45 && guard++ < 40)
                 {
                     bool moved = false;
-                    if (med2small != null && CrystalCount(inv, MaterialType.MediumManaCrystal) > 0 && trade.CanTrade(med2small))
+                    if (med2small != null && CrystalCount(inv, MaterialType.MediumManaCrystal) > keepMedium && trade.CanTrade(med2small))
                     { trade.TryTrade(med2small); econTrades++; moved = true; }
                     else if (large2med != null && CrystalCount(inv, MaterialType.LargeManaCrystal) > 0 && trade.CanTrade(large2med))
                     { trade.TryTrade(large2med); econTrades++; moved = true; }

@@ -99,7 +99,11 @@ public static class HideoutCatalog
                 blurb = "モンスター素材を魔力結晶やエレメントに練り直す。",
                 costByStep = new List<List<MaterialCost>>
                 {
-                    new List<MaterialCost> { S(16), Part("大ネズミの尾", 4) },
+                    // 再検証3 D1／改善ループ通しプレイ：cold-start の結晶収入はタスク報酬の**中結晶**で、
+                    // Lv1 建材の小結晶（S16）は glen の「中→小」崩しを踏まないと賄えず、貪欲プレイでは
+                    // 錬金釜（＝素材→結晶の“エンジン”）が建たずに詰む。錬金釜Lv1 だけ中結晶払いにして、
+                    // 最初のタスク報酬で建てられるようにする（M(2)=20 は S(16)=16 よりむしろ割高＝甘くはしない）。
+                    new List<MaterialCost> { M(2), Part("大ネズミの尾", 4) },
                     // 再検証3 D3：中結晶の中盤 faucet が無く、Lv2 の M(5) は「tier2素材を$146売って
                     // $120の大結晶を買い glen で崩す」細い一本道でしか賄えなかった。M(3) に緩める。
                     new List<MaterialCost> { M(3), Part("剛毛", 2), Part("蜘蛛の糸", 2) },

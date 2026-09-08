@@ -7,6 +7,17 @@ public static class BattleFormula
     // 会心（クリティカル）倍率
     public const float CritMultiplier = 1.5f;
 
+    // 1ウェーブでプレイヤーが失える最大HPの割合（＝バースト即死のクランプ、レポート C2/D5）。
+    // ウェーブ間でしか「脱出」を選べないので、満タン近くから1ウェーブで即死すると脱出判断が働かない。
+    // このぶんを超える被弾は無効化し、次のウェーブ突破時の脱出判断にチャンスを与える（数値は仮）。
+    public const float WaveDamageCapFraction = 0.6f;
+
+    // 1ウェーブで許容する累計被ダメージ（最大HP基準）。
+    public static int WaveDamageCap(int maxHp)
+    {
+        return Mathf.Max(1, Mathf.RoundToInt(maxHp * WaveDamageCapFraction));
+    }
+
     // 攻撃魔法1発のダメージ（属性倍率なし＝等倍）。
     public static int AttackDamage(int spellDamage, float effectiveAtk, float damagePercent, int enemyDef)
     {

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEngine;
 
 namespace GridsAndGrimoires.EditModeTests
 {
@@ -24,6 +25,17 @@ namespace GridsAndGrimoires.EditModeTests
         public void AttackDamage_DefExceedsRaw_ClampsToOne()
         {
             Assert.AreEqual(1, BattleFormula.AttackDamage(1, 0f, 0f, 100));
+        }
+
+        // レポート C2/D5：1ウェーブで失える最大HPは WaveDamageCapFraction ぶん。
+        [Test]
+        public void WaveDamageCap_IsFractionOfMaxHp_AndAtLeastOne()
+        {
+            Assert.AreEqual(Mathf.RoundToInt(200 * BattleFormula.WaveDamageCapFraction), BattleFormula.WaveDamageCap(200));
+            Assert.AreEqual(Mathf.RoundToInt(130 * BattleFormula.WaveDamageCapFraction), BattleFormula.WaveDamageCap(130));
+            Assert.AreEqual(1, BattleFormula.WaveDamageCap(0));
+            Assert.Less(BattleFormula.WaveDamageCapFraction, 1f, "クランプは 100% 未満（＝ウェーブ内でも十分低ければ死ねる）");
+            Assert.Greater(BattleFormula.WaveDamageCapFraction, 0f);
         }
 
         [Test]

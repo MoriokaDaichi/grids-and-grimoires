@@ -137,6 +137,24 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
+        public void AlchemyCauldronLv1_IsPayableInMediumCrystals_ForColdStart()
+        {
+            // 再検証3 D1／改善ループ通しプレイ：cold-start の結晶収入はタスク報酬の中結晶。
+            // 錬金釜（素材→結晶のエンジン）が小結晶ゲートで建たないと貪欲プレイは詰む。
+            // Lv1(step0) は小結晶を要求せず、中結晶で賄えること。
+            var step0 = HideoutCatalog.Get(FacilityKind.AlchemyCauldron).costByStep[0];
+            bool hasMedium = false;
+            foreach (MaterialCost c in step0)
+            {
+                if (c == null) continue;
+                Assert.AreNotEqual(MaterialType.SmallManaCrystal, c.materialType,
+                    "錬金釜Lv1 がまだ小結晶を要求している（cold-start の D1 詰みが残る）");
+                if (c.materialType == MaterialType.MediumManaCrystal) hasMedium = true;
+            }
+            Assert.IsTrue(hasMedium, "錬金釜Lv1 に中結晶コストが無い");
+        }
+
+        [Test]
         public void AlchemyCauldronLv2_DoesNotRequireDeepDebutPart()
         {
             // 『古木の芯』は森の番人（debut 深度19）ドロップ。深度16 前後で詰まるプレイヤーが
