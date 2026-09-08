@@ -67,7 +67,18 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
   超えるぶんを無効化する（`BeginWave` で `DungeonManager.AdvanceWave` からリセット）。
   100%未満のクランプなので、低HPで次ウェーブに入れば依然そのウェーブで倒れうる（死の無効化ではない）。
   `BattleManager`/`EnemyStatus` の再入ガードには触れない（`TakeDamage` 内で完結）。テスト +4。
-- EditMode 182 → 187 グリーン。
+- **D1 追い（orca_2 の結晶ゲート）**（`TraderCatalog`）: cold-start の壁は深度8〜9。中盤の結晶
+  faucet `orca_2`（大結晶×2）の到達要件が深度10 だと壁の“先”で永遠に届かない。要件を 深度10→8 へ。
+  テスト +1（`Orca2_CrystalFaucet_IsReachableAtOrBeforeColdStartWall`）。
+- **通しプレイでの効果**（`_ループ_2026-09-09_*.md`。ハーネス自動プレイ・cold start ×5）:
+  - v2baseline: 全周 深度8、5周中2周が戦闘不能、経済は 魔力炉＋研究机 止まり（錬金釜が建たず）。
+  - 4改善後（D6a+D1+D5+orca2）: **5周すべて脱出（戦闘不能ゼロ）**、全4設備＋見習いの杖＋
+    グリッド4×4＋魔法6枚、タスク受領 2→9、変換 0→79。d7 の最小HP% が 22〜58% → 43〜69% に改善、
+    最大深度 9。**到達深度の絶対値（8前後）はハーネス限界**（研究小ノード割当なし・グリッド
+    パッキングが下手）で頭打ち＝人力プレイの深度16 とは別物。相対比較として、cold-start の
+    ブートストラップ不能・バースト即死・深部Atk置き去りはいずれも改善方向。
+  - コンソール Exception/Error/Warning は全周ゼロ。
+- EditMode 182 → 188 グリーン。
 
 ### -7. 再検証3のフィードバック反映：cold-start 結晶詰み／中結晶ゲート／5×5 導線／「まず杖」タスク（2026-09-09 その7）
 `Docs/検証レポート/2026-09-09_再検証3_cold-start5周_総括.md` の「次にやるなら（優先度順）」から
