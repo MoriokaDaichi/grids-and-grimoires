@@ -10,7 +10,7 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 ## 現在の状態（2026-09-09 時点）
 
 - **ブランチ**: `master`。`feat/battle-ui-core-loop` は PR #1 マージ済み（`7ff60e3`）で残置。
-- **EditMode テスト**: 152/152 グリーン（`GridsAndGrimoires.EditModeTests`）。
+- **EditMode テスト**: 158/158 グリーン（`GridsAndGrimoires.EditModeTests`）。
 - **Unity**: 6000.3.9f1 / URL シーン `Assets/Scenes/SampleScene.unity`。
 - アセンブリ分割済み: `GridsAndGrimoires.Runtime`（Assets/Script）/ `.Editor`（Assets/Editor）/
   `.EditModeTests`（Assets/Tests/EditMode）。
@@ -31,6 +31,23 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 ---
 
 ## このセッションで実装したこと（新しい順）
+
+### -2. スキルツリー整形 ／ 戦闘HUDのN体リスト ／ 深部バランス（2026-09-09 その2）
+- **スキルツリーのレイアウト圧縮**（`0de5de2`）: ノードの重なりは元々無いが円盤が半径3560と
+  過大だった。`Ring0Radius` 340→300 / `RingStep` 460→340（最外 ring7 の半径 3560→2680、約25%圧縮、
+  最小エッジ間隔 53px 確保）。`ResearchTreeView` 既定ズーム 0.16→0.22。
+  `ResearchGraphTests` に `NoTwoNodesOverlap` / `AllNodesFitInsideContentBounds` /
+  `NodesInSameRingShareRadius` を追加＝今後ノードを足しても重なりを CI で検出。
+- **戦闘HUDにウェーブ全個体の縦リスト**（`db6c2bc`）: `EnemyRowWidget`（新規・表示専用、名前＋HPバー＋
+  HP数値、撃破で減光、代表個体は枠色）。`BattleHUD` が `enemyRowRoot`/`enemyRowPrefab` を持ち
+  `OnRosterChanged` でプール生成・`Update` で毎フレーム流し込み・`OnDisable` で破棄。
+  `BattleUISceneBuilder` が prefab 生成＋`BattleRoot` 左に `EnemyRowRoot`(VerticalLayoutGroup)。
+  実機（Play）で 5 体ウェーブ表示を確認。代表個体パネルは従来通り。
+- **深部の難度カーブを寝かせる**（`fc511c2`）: `EndlessWaveGenerator.ScalingFor` に taper 導入。
+  `ScalingTaperKneeDepth`(=12) までは従来の (depth-1) と完全一致、そこから先は勾配
+  `ScalingTaperSlope`(=0.5)。`defMult` は `DefMultCap`(=2.5) で頭打ち（絶対防御力は窓の入れ替えで上昇）。
+  `DepthsPerExtraEnemy` 4→5（同時被弾＝バーストが最大の死因）。深度20 で hpMult 3.85→3.33・
+  同時 5→4 体、深度30 で 5.35→4.08。浅〜中盤（1〜13）は不変。テスト 155→158。
 
 ### -1. WIP のコミット整理 ＋ 手動ステータス振り分けの永続化（2026-09-09）
 - **未コミットだった WIP を検証して 3 コミットに整理**（EditMode 147/147 で確認）:
@@ -177,10 +194,12 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 ## 未整備 / 今後の候補
 
 - 新 36 体それぞれ個別のトレーダー変換オファー（今は代表選定にとどめている）。
-- 深部（深度 15+ で基本魔法だけ）の実バランス調整 ＝ 研究/装備/グリッド拡大の出番。
+- 深部バランスは taper でカーブを寝かせたが、**実プレイでの検証は未実施**（研究/装備/グリッド拡大を
+  積んだ状態で深度 15〜30 を踏破できるか。数値は依然すべて仮）。
 - トレーダーの顔アイコン Sprite を `TradePanel.traderIcons` にインスペクタで割り当て（枠は用意済み）。
 - フォント欠字は動的フォールバック（NotoSansJP-Light Dynamic SDF）で補完済み。未収録漢字が
   出た場合はフォールバック未適用の TMP か、フォールバック側にも無い字。要現物確認。
-- 戦闘 HUD の N 体個別ウィジェット、スキルツリーのレイアウト整形、
+- スキルツリーのさらなる手調整（重なり無し・円盤状にはなっている）、
   ハイドアウトの見た目（配置図・アイコン・演出）、装備スロット UI・入替、
   マジックサークルの実時間経過の可視化、Character 画面、AoE 以外の範囲パターン。
+- 戦闘 HUD の N 体個別ウィジェットは実装済み（`EnemyRowWidget`）。位置/サイズは仮、要見た目調整。
