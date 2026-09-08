@@ -38,6 +38,8 @@ public class PlayerStatus : MonoBehaviour
     // ウェーブ開始時の HP 割合。クランプは「開始時に十分健康だったウェーブ」だけに効かせる
     // （＝満タンからの即死よけであって、削れた run を延命する生存バフではない。再検証4 R1）。
     private float waveStartHpFraction = 1f;
+    // 現ウェーブで自然回復（hpRegenPerSecond）で戻した累計（上限は BattleFormula.WaveHealCap。再検証7 R4）。
+    private int regenHealedThisWave;
 
     // 上限値
     private const int HP_MAX = 1000;
@@ -97,14 +99,16 @@ public class PlayerStatus : MonoBehaviour
         currentMana = maxMana;
         hpRegenCarry = 0f;
         damageThisWave = 0;
+        regenHealedThisWave = 0;
         OnStatusChanged?.Invoke();
         OnManaChanged?.Invoke();
     }
 
-    // 新しいウェーブの開始時に DungeonManager が呼ぶ。バースト即死クランプの累計をリセットする。
+    // 新しいウェーブの開始時に DungeonManager が呼ぶ。バースト即死クランプ・自然回復上限の累計をリセットする。
     public void BeginWave()
     {
         damageThisWave = 0;
+        regenHealedThisWave = 0;
         waveStartHpFraction = hp > 0 ? (float)currentHp / hp : 0f;
     }
 
@@ -137,20 +141,28 @@ public class PlayerStatus : MonoBehaviour
 
     // 戦闘中の HP 自然回復（サステイン系アクセサリ）。BattleManager が毎フレーム呼ぶ。
     // currentHp は int なので 1 未満は hpRegenCarry に持ち越す。
+    // 再検証7 R4：深部の長いウェーブで毎秒回復が被弾を上回りフェイルステートが消えるため、
+    // 1ウェーブで戻せる自然回復量を最大HPの WaveHealCapFraction までに制限する
+    // （ウェーブ突破時の HealWaveTick はこの上限の対象外＝クリア報酬として別枠）。
     public void RegenHealth(float deltaTime)
     {
         if (hpRegenPerSecond <= 0f || deltaTime <= 0f) return;
         if (currentHp <= 0 || currentHp >= hp) { hpRegenCarry = 0f; return; }
+        if (regenHealedThisWave >= BattleFormula.WaveHealCap(hp)) return;
 
         hpRegenCarry += hpRegenPerSecond * deltaTime;
         int whole = Mathf.FloorToInt(hpRegenCarry);
         if (whole <= 0) return;
         hpRegenCarry -= whole;
 
+        whole = Mathf.Min(whole, BattleFormula.WaveHealCap(hp) - regenHealedThisWave);
+        if (whole <= 0) return;
+
         int before = currentHp;
         currentHp = Mathf.Min(hp, currentHp + whole);
         int healed = currentHp - before;
         if (healed <= 0) return;
+        regenHealedThisWave += healed;
         OnStatusChanged?.Invoke();
         OnHealed?.Invoke(healed, currentHp);
     }

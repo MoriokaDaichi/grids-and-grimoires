@@ -94,5 +94,23 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.AreEqual(200 - BattleFormula.WaveDamageCap(200), ps.currentHp);
             Assert.Greater(ps.currentHp, 0);
         }
+
+        // 再検証7 R4：毎秒回復で1ウェーブに戻せる量は WaveHealCap まで。
+        [Test]
+        public void RegenHealth_IsCappedPerWave()
+        {
+            PlayerStatus ps = NewPlayer(200);          // WaveHealCap(200) = 100
+            ps.hpRegenPerSecond = 50f;
+            ps.BeginWave();
+            ps.TakeDamage(160);                        // wave start 100% → clamp caps at 170; applied 160 → curHp 40
+            Assert.AreEqual(40, ps.currentHp);
+
+            for (int i = 0; i < 20; i++) ps.RegenHealth(1f); // 50/s ×20s = 1000 want, capped at 100
+            Assert.AreEqual(40 + BattleFormula.WaveHealCap(200), ps.currentHp, "1ウェーブの回復が上限を超えている");
+
+            ps.BeginWave();                            // 次ウェーブで枠が復活
+            for (int i = 0; i < 5; i++) ps.RegenHealth(1f);
+            Assert.Greater(ps.currentHp, 40 + BattleFormula.WaveHealCap(200));
+        }
     }
 }

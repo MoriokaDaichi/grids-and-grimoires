@@ -38,6 +38,17 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.Greater(BattleFormula.WaveDamageCapFraction, 0f);
         }
 
+        // 再検証7 R4：1ウェーブで毎秒回復が戻せる量は最大HPの一部まで。
+        [Test]
+        public void WaveHealCap_IsFractionOfMaxHp_AndLessThanDamageCap()
+        {
+            Assert.AreEqual(Mathf.RoundToInt(300 * BattleFormula.WaveHealCapFraction), BattleFormula.WaveHealCap(300));
+            Assert.AreEqual(1, BattleFormula.WaveHealCap(0));
+            Assert.Greater(BattleFormula.WaveHealCapFraction, 0f);
+            Assert.Less(BattleFormula.WaveHealCapFraction, BattleFormula.WaveDamageCapFraction,
+                "1ウェーブの回復上限が被弾上限以上だと深部で減らなくなる");
+        }
+
         [Test]
         public void AttackDamage_HalfValues_UseBankersRounding()
         {

@@ -15,6 +15,15 @@ public static class BattleFormula
     public const float WaveDamageCapFraction = 0.85f;
     public const float WaveClampMinStartFraction = 0.55f;
 
+    // 1ウェーブでサステインの「毎秒回復」で戻せる最大HPの割合（再検証7 R4：深部の長いウェーブで
+    // 毎秒回復が被弾を上回り続けてフェイルステートが消えるのを防ぐ。ウェーブ突破時の回復は別枠）。
+    public const float WaveHealCapFraction = 0.5f;
+
+    public static int WaveHealCap(int maxHp)
+    {
+        return Mathf.Max(1, Mathf.RoundToInt(maxHp * WaveHealCapFraction));
+    }
+
     // 1ウェーブで許容する累計被ダメージ（最大HP基準）。
     public static int WaveDamageCap(int maxHp)
     {

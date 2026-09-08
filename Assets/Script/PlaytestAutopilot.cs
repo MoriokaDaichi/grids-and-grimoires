@@ -20,7 +20,7 @@ public class PlaytestAutopilot : MonoBehaviour
     public int depthCap = 25;
     public float timeScale = 20f;
     public float escapeHpFraction = 0.35f;   // ウェーブ突破時これ未満なら脱出
-    public float perRunRealTimeout = 150f;   // 1周の実時間上限（保険）
+    public float perRunRealTimeout = 260f;   // 1周の実時間上限（保険。深部まで行く周でも“本当の死深度”を測れるよう長め）
     public bool runEconomy = true;           // 周のあいだに建造/杖製作/変換/交換/タスク受領を貪欲に回す
 
     public Action<string> OnFinished;        // レポート文字列を受け取る（PlaytestDriver が書き出す）
