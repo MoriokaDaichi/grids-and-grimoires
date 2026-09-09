@@ -59,7 +59,7 @@ UnityEditor.EditorApplication.update+=drv;
 return "driver installed";
 ```
 
-終了時は `UnityEditor.EditorPrefs.DeleteKey("gg_driver_installed")` してから `manage_editor stop`。
+終了時は `UnityEditor.EditorPrefs.DeleteKey("gg_driver_installed")` → `manage_editor stop` → **`UnityEditor.EditorUtility.RequestScriptReload()`（ドメインリロード）**。EditorPrefs キーを消しても `EditorApplication.update` に差した匿名デリゲート自体は unsubscribe されず、後の Mode A（`PlaytestDriver`）run に割り込んで WaveClear で強制脱出・Reward で `gg_running=0` を叩き、**経済が全周フリーズ**する（再検証10 で踏んだ）。ドメインリロードで確実に消す。
 
 ---
 
