@@ -121,6 +121,13 @@ public class PlaytestAutopilot : MonoBehaviour
                 grid.ApplyWandTierSize(); // 杖を作ったら 4×4 に広げてから再配置
             }
 
+            // タスク報酬／大結晶変換で貯まったステPを毎周使う（Atk は研究カラム持ちなので HP/Def 寄せ）。
+            {
+                int guard2 = 0;
+                while (player.statsPoint > 0 && guard2++ < 400)
+                    player.AddStat((guard2 % 3 == 0) ? "Def" : "HP");
+            }
+
             EnsureMagicsPlaced(grid, spawner, research);
             int placed = grid.GetPlacedMagics().Count;
             if (placed == 0)
