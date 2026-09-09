@@ -127,7 +127,9 @@ public static class GearCatalog
 
             // --- tier3（作業台 Lv3）---
             G("wand_arch",       "大魔道の杖",   GearSlot.Wand,      3, ResearchStat.Atk, 11f, L(1), Frag(MagicAttribute.Dark, 3)),
-            G("armor_plate",     "彫紋の板金",   GearSlot.Armor,     3, ResearchStat.Hp, 55f, L(1), Part("古木の芯", 3)),
+            // 深部設計（サイクル13）：建材『古木の芯』は森の番人（debut 深度19）ドロップで、
+            // 作業台Lv3 到達直後には採れないことが多い。d13 debut の『竜人の鱗』へ差し替え。
+            G("armor_plate",     "彫紋の板金",   GearSlot.Armor,     3, ResearchStat.Hp, 55f, L(1), Part("竜人の鱗", 3)),
             G("acc_amulet",      "賢者の護符",   GearSlot.Accessory, 3, ResearchStat.ManaRegen, 2.5f, L(1), Frag(MagicAttribute.Light, 3)),
 
             // --- サステイン系アクセサリ（ウェーブ間でHPが回復しない壁への対策。作業台Lvで解禁）---
@@ -152,6 +154,12 @@ public static class GearCatalog
             Gr("wand_stormcaller","嵐呼びの杖",   GearSlot.Wand,      3, ResearchStat.Atk, 14f, L(1), Frag(MagicAttribute.Thunder, 3), Part("竜王のうろこ", 1)),
             Gr("armor_aegis",     "深淵のイージス", GearSlot.Armor,   3, ResearchStat.Def, 9f,  L(1), Frag(MagicAttribute.Dark, 3), Part("首無しの兜", 1)),
             Gr("acc_orb",         "賢者の宝珠",   GearSlot.Accessory, 3, ResearchStat.ManaMax, 45f, L(1), Frag(MagicAttribute.Light, 3), Part("命の宝珠", 1)),
+
+            // 深部設計（サイクル13 案B）：d13〜15 帯で採れる素材（竜人の鱗）で作れる tier3 装備を追加。
+            // 「全投資でも壁 d20」＝投資軸が Atk/HP しか無く tier3 が丸ごとデッド、への対策。
+            // レシピはオルカの深部到達タスク（d18／d22）で解禁。
+            Gr("wand_dragoon",  "竜騎の杖",     GearSlot.Wand,   3, ResearchStat.Atk, 16f, L(1), Frag(MagicAttribute.Fire, 3),  Part("竜人の鱗", 2)),
+            Gr("armor_scale",   "竜鱗の胸甲",   GearSlot.Armor,  3, ResearchStat.Hp,  60f, L(1), Frag(MagicAttribute.Dark, 3),  Part("竜人の鱗", 3)),
         };
     }
 }

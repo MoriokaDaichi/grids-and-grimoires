@@ -107,6 +107,26 @@ public class TraderCatalogTests
             }
     }
 
+    // 深部設計（サイクル13 案A）：オルカの深度到達タスク（d15 以降）は、深さ自体が成長ラインに
+    // なるよう まとまった恒久ステータスP を出す（＝到達すると次の数深度ぶんの体力が手に入る）。
+    [Test]
+    public void CollectorDepthMilestones_D15AndDeeper_GiveMeaningfulStatPoints()
+    {
+        Trader orca = null;
+        foreach (Trader t in TraderCatalog.BuildTraders()) if (t.id == "orca") orca = t;
+        Assert.IsNotNull(orca);
+
+        int milestones = 0;
+        foreach (TraderTask task in orca.tasks)
+        {
+            if (task.kind != TraderTaskKind.ReachDepth || task.targetCount < 15) continue;
+            milestones++;
+            Assert.GreaterOrEqual(task.rewardStatPoints, 5,
+                task.id + "（深度" + task.targetCount + "）のステータスP 報酬が薄い（深部設計）");
+        }
+        Assert.GreaterOrEqual(milestones, 4, "d15 以降の深度到達マイルストーンが少ない");
+    }
+
     [Test]
     public void CollectorTrader_HasReachDepthTask()
     {

@@ -297,15 +297,20 @@ public static class TraderCatalog
             Deliver("orca_3", "orca", "浅層の素材を 3 つずつ蒐集する",
                 Items(Part("スライムゼリー", 3), Part("ゴブリンの牙", 3), Part("大ネズミの尾", 3), Part("番人の樹皮", 3)),
                 Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 1),
-            Depth("orca_4", "orca", "深度 15 まで到達する", 15, null, rewardStat: 1, rewardMoney: 120),
+            // 深部設計（サイクル13 案A）：深度到達それ自体を成長ラインにする。各節目でまとまった
+            // 恒久ステータスP（＝HP/Atk/Def へ振れる）を出し、「d15 に届けば d18 まで戦える体力が手に入る」
+            // という階段を作る。全投資でも壁が d20 で頭打ち（伸びしろ無し）だった診断への対策。
+            Depth("orca_4", "orca", "深度 15 まで到達する", 15, null, rewardStat: 5, rewardMoney: 120),
             Deliver("orca_5", "orca", "遺跡の遺物 と 50 G を納める（石の破片/古びた骨/腐肉 ×5）",
                 Items(Part("石の破片", 5), Part("古びた骨", 5), Part("腐肉", 5)), null, deliverMoney: 50, rewardMoney: 150),
-            Depth("orca_6", "orca", "深度 20 まで到達する", 20, null, rewardRecipe: "armor_aegis"),
+            Depth("orca_5b", "orca", "深度 18 まで到達する", 18, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 5, rewardRecipe: "armor_scale"),
+            Depth("orca_6", "orca", "深度 20 まで到達する", 20, null, rewardStat: 6, rewardRecipe: "armor_aegis"),
             Deliver("orca_7", "orca", "深淵の証と 80 G を捧げる（竜の心臓/深淵の欠片/混沌の核 ×1）",
                 Items(Part("竜の心臓", 1), Part("深淵の欠片", 1), Part("混沌の核", 1)),
                 Items(Elem(MagicAttribute.Dark, 3)), rewardStat: 2, deliverMoney: 80),
-            Depth("orca_8", "orca", "深度 25 まで到達する", 25, null, rewardStat: 2, rewardMoney: 250),
-            Depth("orca_9", "orca", "深度 30 まで到達する", 30, null, rewardStat: 3, rewardGear: "acc_orb"));
+            Depth("orca_7b", "orca", "深度 22 まで到達する", 22, null, rewardStat: 8, rewardRecipe: "wand_dragoon"),
+            Depth("orca_8", "orca", "深度 25 まで到達する", 25, null, rewardStat: 8, rewardMoney: 250),
+            Depth("orca_9", "orca", "深度 30 まで到達する", 30, null, rewardStat: 12, rewardGear: "acc_orb"));
         traders.Add(orca);
 
         return traders;

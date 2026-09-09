@@ -124,7 +124,11 @@ public static class HideoutCatalog
                     // 周でも 作業台Lv2 は建たなかった（M(7) の中結晶ゲート）。他 Lv2 に合わせ M(7)→M(4)。
                     // Frag(Fire,2) は残す（錬金釜Lv2 で 錆びた短剣 を変換すれば出る＝中盤の一手を要求）。
                     new List<MaterialCost> { M(4), Frag(MagicAttribute.Fire, 2), Part("錆びた短剣", 2) },
-                    new List<MaterialCost> { L(2), Frag(MagicAttribute.Dark, 3), Part("竜のうろこ", 2) },
+                    // 深部設計（サイクル13）：作業台Lv3＝tier3 装備の唯一の入口。建材の『竜のうろこ』は
+                    // ドラゴン（pool idx37＝debut 深度37）ドロップで、全投資でも壁 d20 のプレイヤーには
+                    // 永遠に届かず tier3 装備が丸ごとデッド。d13〜15 で採れる tier2『竜人の鱗』（リザードマン
+                    // debut 深度13）へ差し替え、深部の“最後のひと盛り”を d18〜22 帯で開ける。
+                    new List<MaterialCost> { L(2), Frag(MagicAttribute.Dark, 3), Part("竜人の鱗", 2) },
                 },
             },
             new FacilityDef

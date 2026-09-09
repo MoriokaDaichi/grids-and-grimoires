@@ -200,6 +200,18 @@ namespace GridsAndGrimoires.EditModeTests
         }
 
         [Test]
+        public void WorkbenchLv3_DoesNotRequireVeryDeepDebutPart()
+        {
+            // 深部設計（サイクル13）：作業台Lv3 は tier3 装備の唯一の入口。建材が『竜のうろこ』
+            // （ドラゴン＝pool idx37＝debut 深度37）だと、全投資でも壁 d20 のプレイヤーには永遠に
+            // 届かず tier3 が丸ごとデッド。深度 ~13 帯の素材で建つこと。
+            foreach (MaterialCost c in HideoutCatalog.Get(FacilityKind.Workbench).costByStep[2])
+                if (c != null && c.materialType == MaterialType.SpecialItem)
+                    Assert.AreNotEqual("竜のうろこ", c.specialItemName,
+                        "作業台Lv3 が深度37 debut の『竜のうろこ』を要求している（深部設計）");
+        }
+
+        [Test]
         public void WorkbenchLv2_DoesNotRequireBurstBandDebutPart()
         {
             // 再検証3 D7：作業台Lv2 は tier2 杖＝5×5 グリッドのゲート。建材が『竜人の鱗』
