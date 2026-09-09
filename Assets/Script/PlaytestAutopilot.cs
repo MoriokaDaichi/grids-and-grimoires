@@ -22,8 +22,8 @@ public class PlaytestAutopilot : MonoBehaviour
     public float escapeHpFraction = 0.35f;   // ウェーブ突破時これ未満なら脱出
     public float perRunRealTimeout = 260f;   // 1周の実時間上限（保険。深部まで行く周でも“本当の死深度”を測れるよう長め）
     public bool runEconomy = true;           // 周のあいだに建造/杖製作/変換/交換/タスク受領を貪欲に回す
-    public int farmRuns = 2;                  // 最初の N 周は浅く回して低tier素材（スライムゼリー等）を確実に集める
-    public int shallowFarmCap = 4;            // farm 周の深度キャップ
+    public int farmRuns = 3;                  // 最初の N 周は浅く回して低tier素材を確実に集める
+    public int shallowFarmCap = 7;            // farm 周の深度キャップ（ゴブリン d6・森オオカミ d7 まで＝Lv1建材＋杖材料が揃う）
 
     public Action<string> OnFinished;        // レポート文字列を受け取る（PlaytestDriver が書き出す）
 
@@ -250,23 +250,16 @@ public class PlaytestAutopilot : MonoBehaviour
             }
 
             // 2. 結晶を小に崩す（設備Lv1 の建材はほぼ小結晶＝S(12〜24)）。glen の 大→中→小。
-            //    Lv1 インフラ＋杖が揃ったら中結晶は崩さない（Lv2 強化・tier2 杖・上位研究＝中結晶ゲート用に温存）。
+            //    ただし未建造設備が要求する中結晶ぶん＋Lv2 強化1段ぶんは崩さず残す。
             if (trade != null)
             {
-                bool lv1InfraDone = true;
-                foreach (var k in buildOrder) if (!hideout.IsBuilt(k)) lv1InfraDone = false;
-                bool bootstrapping = !lv1InfraDone || CurrentWandTier(hideout) == 0;
-
-                int keepMedium = 0;
+                int keepMedium = 6; // Lv2 強化1段ぶんの中結晶バッファ（M(4〜5)）を常に残す
                 foreach (var k in buildOrder)
                 {
                     if (hideout.IsBuilt(k)) continue;
                     foreach (var c in hideout.NextCost(k) ?? new List<MaterialCost>())
                         if (c != null && c.materialType == MaterialType.MediumManaCrystal) keepMedium += c.amount;
                 }
-                // ブートストラップ完了後は中結晶を全温存（＝大結晶だけ中へ崩す）。
-                if (!bootstrapping) keepMedium = int.MaxValue - 1000;
-
                 var med2small = FindCrystalOffer(trade, MaterialType.MediumManaCrystal, MaterialType.SmallManaCrystal);
                 var large2med = FindCrystalOffer(trade, MaterialType.LargeManaCrystal, MaterialType.MediumManaCrystal);
                 int guard = 0;
@@ -275,7 +268,7 @@ public class PlaytestAutopilot : MonoBehaviour
                     bool moved = false;
                     if (med2small != null && CrystalCount(inv, MaterialType.MediumManaCrystal) > keepMedium && trade.CanTrade(med2small))
                     { trade.TryTrade(med2small); econTrades++; moved = true; }
-                    else if (large2med != null && CrystalCount(inv, MaterialType.LargeManaCrystal) > 0 && bootstrapping && trade.CanTrade(large2med))
+                    else if (large2med != null && CrystalCount(inv, MaterialType.LargeManaCrystal) > 0 && trade.CanTrade(large2med))
                     { trade.TryTrade(large2med); econTrades++; moved = true; }
                     if (!moved) break;
                     did = true;
@@ -352,10 +345,15 @@ public class PlaytestAutopilot : MonoBehaviour
             if (hideout.IsBuilt(FacilityKind.AlchemyCauldron))
             {
                 var protectedParts = CollectProtectedParts(hideout);
+                // 杖がまだ無いあいだは、最安杖の建材（ゴブリンの牙 等）は絶対に変換しない。
+                var wandParts = new HashSet<string>();
+                if (CurrentWandTier(hideout) == 0) AddParts(wandParts, CheapestGearCost(hideout, GearSlot.Wand));
+
                 foreach (var kv in new List<KeyValuePair<string, int>>(inv.Counts))
                 {
                     var sample = inv.Sample(kv.Key);
                     if (sample == null || sample.materialType != MaterialType.SpecialItem) continue;
+                    if (wandParts.Contains(sample.specialItemName)) continue;
                     int keep = protectedParts.Contains(sample.specialItemName) ? 5 : 0;
                     int safety = 0;
                     while (inv.GetCount(sample) > keep && hideout.CanTransmute(sample, 1) && hideout.Transmute(sample, 1) && safety++ < 40)
