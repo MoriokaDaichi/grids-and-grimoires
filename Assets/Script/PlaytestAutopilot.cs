@@ -448,7 +448,9 @@ public class PlaytestAutopilot : MonoBehaviour
                 }
             }
 
-            // 8. 研究割当（研究机が建っていれば）。魔法ノードは常に、ステノードは Atk>Def>Hp>Spd を優先、
+            // 8. 研究割当（研究机が建っていれば）。魔法ノードは常に、ステノードは
+            //    Hp/Def を Atk と同ペースで伸ばす（S18: Atk 放射カラムが安く貪欲が Atk へ全振り＝グラスキャノン化して
+            //    depth10 前後で即死していた）。ラウンドごとに各ステ 1 ノードずつ、Hp/Def を厚めに。
             //    ManaMax/ManaRegen/Luc はスキップ（マナは基本足りる）。小結晶は 20 前後を建材用に残す。
             var research = ResearchManager.Instance;
             if (research != null && hideout.IsBuilt(FacilityKind.ResearchDesk))
@@ -457,14 +459,26 @@ public class PlaytestAutopilot : MonoBehaviour
                     if (nd.isMagic && !research.IsIdAllocated(nd.id) && research.CanAllocate(nd.id))
                     { research.Allocate(nd.id); econResearch++; did = true; }
 
-                foreach (var want in new[] { ResearchStat.Atk, ResearchStat.Def, ResearchStat.Hp, ResearchStat.Spd })
+                var wantOrder = new[]
                 {
-                    foreach (var nd in ResearchGraph.Nodes)
+                    ResearchStat.Hp, ResearchStat.Def, ResearchStat.Atk,
+                    ResearchStat.Hp, ResearchStat.Def, ResearchStat.Spd,
+                };
+                for (int round = 0; round < 400; round++)
+                {
+                    if (CrystalCount(inv, MaterialType.SmallManaCrystal) < 20) break;
+                    bool anyThisRound = false;
+                    foreach (var want in wantOrder)
                     {
-                        if (nd.isMagic || nd.stat != want || research.IsIdAllocated(nd.id)) continue;
-                        if (CrystalCount(inv, MaterialType.SmallManaCrystal) < 20) break;
-                        if (research.CanAllocate(nd.id)) { research.Allocate(nd.id); econResearch++; did = true; }
+                        foreach (var nd in ResearchGraph.Nodes)
+                        {
+                            if (nd.isMagic || nd.stat != want || research.IsIdAllocated(nd.id)) continue;
+                            if (CrystalCount(inv, MaterialType.SmallManaCrystal) < 20) break;
+                            if (research.CanAllocate(nd.id))
+                            { research.Allocate(nd.id); econResearch++; did = true; anyThisRound = true; break; }
+                        }
                     }
+                    if (!anyThisRound) break;
                 }
             }
 
