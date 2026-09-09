@@ -69,9 +69,13 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 - **ハーネス改良（`PlaytestAutopilot`）**: (a) 研究割当、(b) farm 周（最初の3周は深度7で回して素材集め）、
   (c) 杖の上位持ち替え＋杖材料の絶対保護、(d) ブートストラップ後の中結晶温存（Lv2 ゲート用）。
   → Mode A の cold-start push 到達推移が **旧「全周8」→ 8→11→12→13→15→16** と人力 再検証3（11→…→16）に一致。
+- **導線バグ（`TraderCatalog`）**: ダグの連鎖で『森の番人 ×3』（debut 深度19）が dag_2 直後にあり、
+  その先の dag_4（ゴブリンの牙×12→中結晶×3）以降が壁の“先”で全ロックされていた。ID 据え置きで
+  並びだけアクセス順に（dag_4→dag_5→dag_7→dag_3→dag_6→dag_8/9）。テスト +1。
 - **検証まとめ**: フェイルステートは 最弱キット d8 / 中キット d12〜15 / 強キット d15 でいずれも decisive death。
-  EditMode **180 → 195 グリーン**（回帰なし）。Mode A 多数＋Mode B 複数（〜25 run）で例外・ソフトロック・
-  コンソール error/warning ゼロ。検証レポートは `Docs/検証レポート/_ループ_*.md` `_再検証4〜6_*.md` `_改善ループ_進捗.md`。
+  EditMode **180 → 196 グリーン**（回帰なし）。Mode A 十数回＋Mode B 複数（〜30 run）で例外・ソフトロック・
+  コンソール error/warning ゼロ。Mode A cold-start push の到達推移は 旧「全周8」→ **8→12→13→16**（人力 再検証3 相当）。
+  検証レポートは `Docs/検証レポート/_ループ_*.md` `_再検証4〜6_*.md` `_改善ループ_進捗.md`。
 
 ### -9. 通しプレイ検証を Claude Code スキル化（2026-09-09 その9）
 `.claude/skills/gg-playtest/`（`SKILL.md` ＋ `references/manual-run.md`）。cold-start 通しプレイ検証の手順を
