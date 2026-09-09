@@ -294,7 +294,7 @@ public static class TraderCatalog
         // 繰り返し討伐（無限）。dag_1（討伐10）達成で解放。回すたびに 中結晶×3＋ステP+1。
         // 再検証7 R7-2：成長ループのレートが遅い（+1 ステP/周）ので、撃破数 25→20・報酬を 中×4＋ステP+2 に。
         dag.tasks.Add(RepeatKill("dag_grind", "dag", "討伐を回す（繰り返し・魔物 20 体ごと）", "dag_1", 20,
-            Items(M(MaterialType.MediumManaCrystal, 4)), rewardStat: 2));
+            Items(M(MaterialType.MediumManaCrystal, 4)), rewardStat: 3)); // S5: +2→+3
         traders.Add(dag);
 
         // ================================================ 蒐集家 オルカ（深層）
@@ -309,9 +309,10 @@ public static class TraderCatalog
         orca.offers.Add(Buy("120 G → 大結晶 ×1", 120, M(MaterialType.LargeManaCrystal, 1)));
         // 深部設計（サイクル14）：中層で貯めた結晶を恒久ステータスへ変換して更に深層を目指す、を回せるように。
         // 大結晶（＝中層の錬金釜Lv2＋深部farmで貯まる）→ ステータスポイント。繰り返し可（交換は常時）。
-        orca.offers.Add(Offer("大結晶 ×2 → ステータスポイント +2", M(MaterialType.LargeManaCrystal, 2), null, bonusStat: 2));
-        orca.offers.Add(Offer("大結晶 ×5 → ステータスポイント +6", M(MaterialType.LargeManaCrystal, 5), null, bonusStat: 6));
-        orca.offers.Add(Offer("中結晶 ×12 → ステータスポイント +1", M(MaterialType.MediumManaCrystal, 12), null, bonusStat: 1));
+        // 再検証10（S5）：cold start ~20 周で d25 に届かせるにはレートが遅い（+1 深度/2周）。約 1.5 倍に。
+        orca.offers.Add(Offer("大結晶 ×2 → ステータスポイント +3", M(MaterialType.LargeManaCrystal, 2), null, bonusStat: 3));
+        orca.offers.Add(Offer("大結晶 ×5 → ステータスポイント +9", M(MaterialType.LargeManaCrystal, 5), null, bonusStat: 9));
+        orca.offers.Add(Offer("中結晶 ×10 → ステータスポイント +1", M(MaterialType.MediumManaCrystal, 10), null, bonusStat: 1));
         Chain(orca,
             Depth("orca_1", "orca", "深度 5 まで到達する", 5, Items(M(MaterialType.MediumManaCrystal, 5)), rewardMoney: 40),
             // 再検証3 D1／改善ループ通しプレイ：cold-start の壁は深度8〜9 で、大結晶×2 の注入（＝中盤の
@@ -339,18 +340,18 @@ public static class TraderCatalog
             Deliver("orca_5", "orca", "遺跡の遺物 と 50 G を納める（石の破片/古びた骨/腐肉 ×5）",
                 Items(Part("石の破片", 5), Part("古びた骨", 5), Part("腐肉", 5)), null, deliverMoney: 50, rewardMoney: 150),
             Depth("orca_5b", "orca", "深度 18 まで到達する", 18, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 5, rewardRecipe: "armor_scale"),
-            Depth("orca_6", "orca", "深度 20 まで到達する", 20, null, rewardStat: 6, rewardRecipe: "armor_aegis"),
+            Depth("orca_6", "orca", "深度 20 まで到達する", 20, null, rewardStat: 8, rewardRecipe: "armor_aegis"),
             Deliver("orca_7", "orca", "深淵の証と 80 G を捧げる（竜の心臓/深淵の欠片/混沌の核 ×1）",
                 Items(Part("竜の心臓", 1), Part("深淵の欠片", 1), Part("混沌の核", 1)),
                 Items(Elem(MagicAttribute.Dark, 3)), rewardStat: 2, deliverMoney: 80),
             Depth("orca_7b", "orca", "深度 22 まで到達する", 22, null, rewardStat: 8, rewardRecipe: "wand_dragoon"),
-            Depth("orca_8", "orca", "深度 25 まで到達する", 25, null, rewardStat: 8, rewardMoney: 250),
+            Depth("orca_8", "orca", "深度 25 まで到達する", 25, null, rewardStat: 12, rewardMoney: 250),
             Depth("orca_9", "orca", "深度 30 まで到達する", 30, null, rewardStat: 12, rewardGear: "acc_orb"));
         // 繰り返し討伐（無限・深部向け）。orca_4（深度15到達）達成で解放。
         // ＝「中層で狩る → 大結晶をステPへ変換 → さらに深層」のループ。再検証7 R7-2 で 40→30体。
         // 再検証9（S2）：cold start から 20 周で d25 に届かせるにはレートが足りない。25 体ごと・大結晶×2＋ステP+3 に。
         orca.tasks.Add(RepeatKill("orca_grind", "orca", "澱みを狩り続ける（繰り返し・魔物 25 体ごと）", "orca_4", 25,
-            Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 3));
+            Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 5)); // S5: +3→+5
         traders.Add(orca);
 
         return traders;

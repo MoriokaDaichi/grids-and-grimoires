@@ -149,6 +149,36 @@ public class TraderCatalogTests
         Assert.GreaterOrEqual(repeatables, 2, "繰り返し討伐タスクが少ない（dag / orca に想定）");
     }
 
+    // 再検証10（S5）：cold start ~20 周で d25 に届かせるには成長ループのレートが要る。
+    // 深層の繰り返し討伐（orca_grind）は恒久ステP を厚めに出し、大結晶→ステP 交換のレートも
+    // 「大2でステP+3 以上」であること。
+    [Test]
+    public void GrowthLoop_Rate_IsSteepEnough()
+    {
+        TraderTask orcaGrind = null;
+        TradeOffer bestLargeToStat = null;
+        foreach (Trader t in TraderCatalog.BuildTraders())
+        {
+            foreach (TraderTask task in t.tasks)
+                if (task.id == "orca_grind") orcaGrind = task;
+            foreach (TradeOffer o in t.offers)
+            {
+                if (o.bonusStatPoints <= 0 || o.giveMoney > 0 || o.give == null || o.give.Count != 1) continue;
+                if (o.give[0].materialType != MaterialType.LargeManaCrystal) continue;
+                // 大結晶1個あたりのステP効率が最大のオファーを選ぶ
+                float eff = (float)o.bonusStatPoints / o.give[0].amount;
+                if (bestLargeToStat == null ||
+                    eff > (float)bestLargeToStat.bonusStatPoints / bestLargeToStat.give[0].amount)
+                    bestLargeToStat = o;
+            }
+        }
+        Assert.IsNotNull(orcaGrind, "orca_grind が無い");
+        Assert.GreaterOrEqual(orcaGrind.rewardStatPoints, 4, "orca_grind の恒久ステP が薄い（成長ループのレート）");
+        Assert.IsNotNull(bestLargeToStat, "大結晶→ステP の交換オファーが無い");
+        Assert.GreaterOrEqual((float)bestLargeToStat.bonusStatPoints / bestLargeToStat.give[0].amount, 1.5f,
+            "大結晶→ステP のレートが 大1あたり +1.5 未満（成長ループが遅い）");
+    }
+
     // 再検証9（S2）：大結晶の入手が中盤の最大ボトルネック。中層 farm 帯（d15）の節目タスクと、
     // その先の繰り返し討伐タスクが 大結晶 を出して、6×6（tier3 杖）・作業台Lv3・大結晶→ステP を回せること。
     [Test]
