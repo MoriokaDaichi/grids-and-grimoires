@@ -155,11 +155,40 @@ public static class ResearchGraph
             Magic(l.buff + "PassiveLv1", l.buff, 5, a + 20f);
             Magic(l.buff + "PassiveLv2", l.buff + "PassiveLv1", 6, a + 21f);
             Magic(l.buff + "PassiveLv3", l.buff + "PassiveLv2", 7, a + 22f);
+
+            // 円盤の外周（ring4〜7）は既存枝が status 側（a-20〜a-10）と buff/扇 側（a+20〜a+46）へ
+            // 寄っていて、属性ライン中央（a-10〜a+10）と Mega全体〜バフの間（a+10〜a+20）がぽっかり空く。
+            // そこへ Atk 小ノードの放射カラムを5本挿してノード密度を均す（5カラム×4リング×5ライン＝100）。
+            // 各カラムは小結晶コストで ring4→7 を一直線に繋ぎ、親は隣接する ring3 の小ノード
+            // （単体側 node_*_a / 全体側 node_*_b）。角度は ±10° の Mega 魔法（半径75）から
+            // 4.2°以上（＝92px以上）離れるよう中央帯 a-5〜a+5.5 に寄せ、5本目だけ a+15 の隙間へ。
+            BuildAtkColumns(l.stem, a);
         }
 
         // 共通の補助魔法：マナリジェネ扇の中腹から、扇の空き角へ伸ばす
         Magic("AddSpell", "nsp_ManaRegen_8", 5, 34f);
         Magic("DualSpell", "AddSpell", 6, 34f);
+    }
+
+    // 属性ラインの中央の空き角へ、Atk 小ノードの放射カラムを5本ぶん敷く。
+    // カラムごとに ring4→ring7 を直列（親＝1つ内側の同カラムノード、根は ring3 の隣接小ノード）。
+    private static readonly float[] AtkColAngleOffsets = { -5f, -1.5f, 2f, 5.5f, 15f };
+
+    private static void BuildAtkColumns(string stem, float baseAngle)
+    {
+        for (int ci = 0; ci < AtkColAngleOffsets.Length; ci++)
+        {
+            // 内側4本は単体側（node_*_a）、5本目（a+15 側）は全体側（node_*_b）にぶら下げる。
+            string parent = ci < 4 ? "node_" + stem + "_a" : "node_" + stem + "_b";
+            for (int ring = 4; ring <= 7; ring++)
+            {
+                string id = "node_atk_" + stem + "_c" + ci + "_r" + ring;
+                Stat(id, ResearchStat.Atk, Amount(ResearchStat.Atk), parent, ring,
+                    baseAngle + AtkColAngleOffsets[ci],
+                    Label(ResearchStat.Atk), Title(ResearchStat.Atk), Sm(2 + ring));
+                parent = id;
+            }
+        }
     }
 
     private static void Magic(string id, string parentId, int ring, float angleDeg)
