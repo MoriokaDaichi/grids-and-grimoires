@@ -22,8 +22,8 @@ public class PlaytestAutopilot : MonoBehaviour
     public float escapeHpFraction = 0.35f;   // ウェーブ突破時これ未満なら脱出
     public float perRunRealTimeout = 260f;   // 1周の実時間上限（保険。深部まで行く周でも“本当の死深度”を測れるよう長め）
     public bool runEconomy = true;           // 周のあいだに建造/杖製作/変換/交換/タスク受領を貪欲に回す
-    public int farmRuns = 3;                  // 最初の N 周は浅く回して低tier素材を確実に集める
-    public int shallowFarmCap = 7;            // farm 周の深度キャップ（ゴブリン d6・森オオカミ d7 まで＝Lv1建材＋杖材料が揃う）
+    public int farmRuns = 2;                  // 最初の N 周は浅く回して低tier素材を確実に集める（再検証11 S7: 3→2＝壁7固定の周を減らす）
+    public int shallowFarmCap = 8;            // farm 周の深度キャップ（d8＝orca_2 の大結晶×2 まで踏めるとブートストラップが速い。S7: 7→8）
 
     public Action<string> OnFinished;        // レポート文字列を受け取る（PlaytestDriver が書き出す）
 
