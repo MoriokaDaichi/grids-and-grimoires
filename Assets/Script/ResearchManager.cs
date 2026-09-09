@@ -78,7 +78,9 @@ public class ResearchManager : MonoBehaviour
         foreach (string id in allocated)
         {
             ResearchNodeDef def = ResearchGraph.Get(id);
-            if (def != null && !def.isMagic) playerStatus.ApplyResearchDelta(def.stat, def.statAmount * mult);
+            if (def == null || def.isMagic) continue;
+            if (def.IsPerk) playerStatus.ApplyResearchPerk(def.perk, def.perkAmount); // 防御特性は机レベルで増やさない
+            else playerStatus.ApplyResearchDelta(def.stat, def.statAmount * mult);
         }
     }
 
@@ -135,7 +137,10 @@ public class ResearchManager : MonoBehaviour
         allocated.Add(id);
 
         if (!def.isMagic && playerStatus != null)
-            playerStatus.ApplyResearchDelta(def.stat, def.statAmount * BonusMult);
+        {
+            if (def.IsPerk) playerStatus.ApplyResearchPerk(def.perk, def.perkAmount);
+            else playerStatus.ApplyResearchDelta(def.stat, def.statAmount * BonusMult);
+        }
 
         Save();
         OnUnlocksChanged?.Invoke();
@@ -199,7 +204,7 @@ public class ResearchManager : MonoBehaviour
     {
         ResearchNodeDef def = ResearchGraph.Get(id);
         if (def == null) return "";
-        if (!def.isMagic) return def.title;
+        if (!def.isMagic) return string.IsNullOrEmpty(def.detail) ? def.title : def.detail;
         MagicData md;
         if (byId.TryGetValue(id, out md) && md != null)
             return Sanitize(string.IsNullOrEmpty(md.effectDescription) ? md.category.ToString() : md.effectDescription);

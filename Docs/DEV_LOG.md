@@ -32,6 +32,88 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
 
 ## このセッションで実装したこと（新しい順）
 
+### -15. O1（研究深部に Def/Hp を戻す）／O2（Mana/Spd/Luc をゲートとして取る）／O7（釜Lv2前の炎フラグ faucet）（2026-09-10）
+`Docs/検証レポート/2026-09-10_ModeB手動ディープラン_cold-start7サイクル_d34.md` の O1/O2/O7。
+
+- **O1**：108° の扇をマナ主体（`BuildSpoke("ManaMax", …ManaMax/ManaRegen…)`）→ **防御主体 `BuildSpoke("Bulwark", 108f, Def, Hp, …)`** に付け替え。
+  Hp/Def 寄せのスコアリングでも深部フロンティアが「Atk カラム＋ManaRegen/ManaMax 扇」ばかりで、壁（累積被弾 > 回復）に対して
+  研究で Def/Hp を伸ばせなかった。マナの投資先は 36° 扇＋ライン小ノード（Light_e/b・Dark_a・Thunder_d 等）で残す。
+  `EveryStatKindAppearsAsSmallNode` は不変（ManaMax/ManaRegen はライン側で担保）。テストに `DeepFrontier_HasMoreDefHpThanMana` 追加
+  （ring6-7 の Def+Hp が マナ小ノードの3倍超／`nsp_Bulwark_*` は Def/Hp のみ）。ノード数 277 不変。
+- **O2**：`PlaytestAutopilot` の研究割当が「ManaMax/ManaRegen/Luc はスキップ」で、純粋な木の Mana/Spd/Luc 小ノードを
+  開けず Mega AoE 群・Giga・受動バフ・深部カラムに届かず d20〜31 でプラトーしていた。優先度づけ（Hp/Def>Atk…）のあとに
+  **種類を問わず取れる小ノードを全部掃く sweep** を追加（小ノード→魔法/特性の連鎖解放も `AllocateMagicAndPerks` で取り直し）。
+  小結晶 20 の建材リザーブは維持。手順書 `.claude/skills/gg-playtest/references/manual-run.md` の 5. も
+  「cold-start だけ Hp/Def/Atk に絞り、それ以降は Mana/Spd/Luc もゲートとして拾う」に更新。
+- **O7**：釜Lv2 前は tier2 属性パーツを変換できず（＝炎欠片を自作できず）、**作業台Lv2** の `炎欠片×2` と
+  **`wand_oak`（tier2杖＝5×5 グリッド入口）** の `炎欠片×2` がリーゼ購入頼みの細い faucet だった。
+  - 作業台Lv2：`{ M(4), 炎欠片×2, 錆びた短剣×2 }` → `{ M(4), 錆びた短剣×2, 蜘蛛の糸×2 }`（別の tier2 farm パーツに）。
+  - `wand_oak`：`{ M(6), 炎欠片×2 }` → `{ M(8) }`（中結晶のみ＝5×5 到達を属性フラグ購入に縛らない）。
+  釜Lv2 以降は属性フラグが余る（O7）ので、緩めたのは序盤の一点だけ。
+- テスト 219→**220** グリーン。
+- **Mode B 再検証済み**（`Docs/検証レポート/2026-09-10_ModeB再検証_改善後7サイクル_d33.md`）：cold-start 7サイクルで壁
+  9→18→25→31→31→33→33（改善前 9→12→19→22→31→31→34）。d31 帯への到達がサイクル5→4 に前倒し、
+  N1/O6/O1/O2/O7 すべて実地で発火を確認。例外・error・warning・ソフトロック 0。深部 ceiling（d33-34）は不変。
+  新規所見 O8（雷/光の t2-3 モンスター素材が皆無で該当エレメント欠片が精製できず研究末端5ノードが恒久ロック）・
+  O11（防御特性 tier2-3 が大結晶ゲートで最後まで取れない）・O9（精製エレメントの sink 無し）・O10（大結晶 faucet が中盤細い）。
+
+### -14. 研究フロンティア枯渇（O6）対策：釜Lv3 で欠片→エレメント精製＋机Lv3 建材の浅化（2026-09-10）
+`Docs/検証レポート/2026-09-10_ModeB手動ディープラン_cold-start7サイクル_d34.md` O6：深部（res≈238/277）で
+`CanAllocate` が全 false になり小結晶 1343 個が死蔵。原因は残ノードが「机Lv3 か、ギガ全体魔法などの
+`requiredMaterials`（`Element`＝エレメント）ゲート」で、`Element` の入手が **交換／マジックサークルの
+レア以上ブリューのみ**（`HideoutRules.CircleReward` / `TraderCatalog`）＝facility ループから到達できなかった。
+一方で属性エレメントの**欠片**は釜Lv2 以降あり余る（O7：Fire 38・Wind 55 が余剰）。
+
+- **釜Lv3：欠片 → エレメント精製**（`HideoutRules.Transmute` に `cauldronLevel` 引数を追加、
+  `ElementRefinePerElement=5`）。属性欠片 5個 → 対応属性のエレメント1個。`yieldMult` は掛けず比率を固定、
+  端数の欠片は UI 側で 5 の倍数を投入させて出さない。`HideoutManager.CanTransmute`/`Transmute` が
+  `ElementFragment` 入力を Lv3 のときだけ受ける（`TransmuteInput` ヘルパーで投入コストを共通化）。
+- **ハブUI**（`HideoutHubPanel.BuildCauldronSection`）：Lv3 のとき属性ごとに「精製」行を出す
+  （所持 ≥5 のもののみ、`min(所持−端数, 50)` を1アクションで）。
+- **研究机 Lv3 の建材**：`世界樹の若枝`(tier4／森の番人より深い debut) → `若木の枝`(tier2／d10〜13)。
+  作業台Lv3（竜人の鱗 d13）と同じ深度帯で建ち、コスト減(0.78→0.6)・ボーナス増(1.3→1.7)がデッドにならない。
+- **ハーネス**（`PlaytestAutopilot` 経済ステップ 7b）：釜Lv3 のとき各属性の欠片を 8 個温存して超過を精製。
+- テスト 218→**219**（`HideoutRulesTests.Transmute_RefinesFragmentsToElement_OnlyAtCauldronLv3`）。
+- 同レポートの残り O1/O2/O7 は次エントリ -15 で対応。N1 は -13。**これで 2026-09-10 レポートの指摘は全て一次対応済み**
+  （実地での再検証＝gg-playtest 通しはまだ）。
+
+### -13. 手動ステ振りキャップを「合計値」→「手動加算分」で判定（2026-09-10）
+`Docs/検証レポート/2026-09-10_ModeB手動ディープラン_cold-start7サイクル_d34.md` N1：
+`PlayerStatus.AddStat` の HP/Atk キャップ（`HP_MAX=1000` / `OTHER_MAX=100`）は**研究・装備込みの合計値**
+（`hp`/`atk` フィールド）で判定していた。深部ランでは研究ノードだけで HP>1000 / Atk>100 に達し、以降
+タスク報酬でまとまって入るステP（`rewardStatPoints`・大結晶→stP 交換）の HP/Atk 割り当て分が
+**`statsPoint` を消費せず加算もされず無言で死蔵**（d31 プラトーの一因）。
+
+- 定数を `HP_MAX/OTHER_MAX` → `MANUAL_HP_MAX=3000` / `MANUAL_OTHER_MAX=300`（手動 300pt ぶん）へ。
+  判定対象を `manualHp`/`manualAtk`/… に変更（研究 `ApplyResearchDelta`・装備 `ApplyGearDelta` は無関係）。
+- `PlayerStatus.CanAddStat(type)` を新設（ポイント切れ・手動上限・未知typeで false）。`AddStat` はこれで
+  ガードし、振れたときだけ `statsPoint--`。未知 type ではポイントを消費しない。
+- `StatusUIManager` の + ボタン活性判定を合計値比較 → `playerStatus.CanAddStat(...)` に。バー表示の基準値
+  （1000/100）は据え置き（合計が超えたら満タン表示でよい）。Def/Spd/Luc も手動 300 まで有効に。
+- テスト 215→**218** グリーン（`PlayerStatusTests` に手動キャップ 3件）。
+
+### -12. 研究に「特性」の大ノード（防御＋攻撃）＋主ステータスカラムを Atk 一色から4種へ（2026-09-10）
+`Docs/検証レポート/2026-09-10_ModeB手動ディープラン_cold-start6サイクル_d28.md` O1：研究の深部フロンティアが
+`BuildAtkColumns`（Atk 小ノード100本）一色で、投資するほどグラスキャノン化（最終 HP555/Atk318/Def43）。
+ユーザー要求：①Def/Luc なども Atk と同じくらい伸ばす ②魔法解禁以外の大ノード（特殊能力）を追加、攻撃特性も。
+
+- **中央帯の放射カラムを Atk 一色 → Atk/Def/Luc/Hp の4種**（`BuildAtkColumns`→`BuildStatColumns`、`StatColKinds`）。
+  各カラム ring4→7・小結晶コスト・親 `node_*_a`＝**各20ノードを小結晶だけで到達可**（`ResearchGraphTests.StatColumns_GiveAtkDefLucHpEqualReach`）。id は `node_col_*`（旧 `node_atk_*`）。ノード数は不変80。
+- **`ResearchGraph` に特性ノード**（`ResearchPerk` enum 10種。`isMagic=false` だが大サイズ描画、魔法サブセット非対象、
+  研究机レベル倍率なし）。`BuildTraitColumn(l, offensive)`＝ring5→7 の3tier列。ring4 は隣の Mega（半径75）が近く不可。
+  - **防御**（`a+15°`・親＝全体メガ）: 炎 報復のトゲ〈反射15/20/25%〉/ 雷 鉄壁〈固定 -3/-4/-5〉/ 風 見切り〈-6/-8/-10%上限40%〉/ 光 聖盾〈ウェーブ開始時 最大HP×8/12/16% のバリア〉/ 闇 不屈〈HP≤35%で -15/20/25%〉。
+  - **攻撃**（`a-15°`・親＝単体メガ。`AttrBuff` を `a-16°→a-20°` へ寄せて場所を確保）: 炎 魔力増幅〈魔法ダメ +8/12/16%〉/ 雷 痛撃〈会心倍率 +15/25/35%、上限+0.5〉/ 風 詠唱加速〈発動間隔 -4/6/8%、上限40%〉/ 光 貫通〈敵防御 -3/-5/-8〉/ 闇 処刑〈HP25%以下の敵へ +20/30/40%〉。
+  - 研究ノード 267→**277**（魔法67 / 特性30 / ステ180）。
+- **適用**: `PlayerStatus.ApplyResearchPerk`（加算のみ・机レベル倍率なし）。防御は `TakeDamage` で 固定→割合→不屈→
+  バリア吸収 の順→その後で既存のバースト即死クランプ（`WaveDamageCap`）＝クランプ/回復上限は不変。反射は
+  `BattleManager.EnemyAttackFrom`。攻撃は `BattleManager.HitOne`（魔力増幅=damagePercent／貫通=敵Def引き／
+  処刑=瀕死判定／痛撃=会心倍率）＋`CastIntervalScale`（詠唱加速、下限0.4）。起動時 `ApplyAllStatNodes` で再適用。
+  `BattleHUD` はプレイヤーHPに `(+N)` でバリア表示。
+- **ハーネス**: `PlaytestAutopilot` が特性ノードを魔法と同じく「取れれば常に取る」。ステ貪欲は Atk/Def/Luc/Hp を同ペースに。
+- テスト 206→**215** グリーン（`ResearchGraphTests` に `StatColumns_...` ＋ `PerkNodesAreWellFormed` を 30/10種へ、
+  `PlayerStatusTests` に perk 7件）。Mode A ×3 回帰: 例外/error/warning 0、d8前後（従来どおり。特性は ring5-7 ゲートで
+  cold start 数周では未到達＝狙いどおり深部の投資先）。
+
 ### -11. 深部（d16→d25）設計：投資ラダー＋無限リソースループ（2026-09-09 その11）
 `Docs/検証レポート/2026-09-09_深部設計_診断.md`。診断: 全投資（Atk238・研究251ノード）でも壁 d20＝
 伸びしろが無い（投資先が Atk/HP しか無く tier3 装備・設備Lv3 が実質未到達、原因は同時4体×単体火力偏重）。
@@ -376,7 +458,7 @@ D1・D3・D7 を実装（`HideoutCatalog` のみ）、加えて D2 の一次対�
 - 提案（レポート「次にやるなら」）: `CauldronYieldMult(1)` 1.0→1.5 か `FurnaceFuelPerAction(1)` 2→1 で Lv1変換を薄く黒字に／「まず杖」導線／orca_2 の要件を深度10→8／錬金釜Lv2 の中結晶 ×5→×3。
 
 ### -5. 再検証2（cold start 5周）のフィードバック反映：Lv2 設備ゲート／tier2 素材の出口／序盤の中結晶（2026-09-09 その5）
-`Docs/検証レポート/2026-09-09_再検証2_{1〜5}周目*.md`（改善「-4.」反映後の cold start 5周）。
+`Docs/検証レポート/_アーカイブ/2026-09-09_再検証2_{1〜5}周目*.md`（改善「-4.」反映後の cold start 5周）。
 バグ・ソフトロックはゼロ。到達深度は 11→16 と投資に比例して伸び、狙い（火力ゲート・即死の緩和）は達成。
 残る所見はいずれも中盤の導線で、総括の「次にやるなら（優先度順）」の 1〜3 を実装。テスト 169→172。
 
@@ -403,7 +485,7 @@ D1・D3・D7 を実装（`HideoutCatalog` のみ）、加えて D2 の一次対�
   サークル頼み）、「まず杖」導線、farm テンポの単調さ。次は改善反映後の cold start 5周で深度推移を再計測。
 
 ### -4. 再検証3周のフィードバック反映：N1（新規敵保証の副作用）／C1（グリッド火力ゲート）／C2（深部の即死）（2026-09-09 その4）
-`Docs/検証レポート/2026-09-09_再検証_{1,2,3}周目*.md`（改善「-3.」の cold start 3周検証）。バグ・ソフトロックはゼロ、
+`Docs/検証レポート/_アーカイブ/2026-09-09_再検証_{1,2,3}周目*.md`（改善「-3.」の cold start 3周検証）。バグ・ソフトロックはゼロ、
 指摘は全てバランス／導線。レポートの「次にやるなら（優先度順）」から N1・C1・C2 を実装。テスト 166→169。
 
 - **問題（N1）**: `EnemyCountFor` は深度2〜5で1体/ウェーブ。そこへ `NewlyOpenedIndexFor` の debut 敵保証枠が
@@ -440,7 +522,7 @@ D1・D3・D7 を実装（`HideoutCatalog` のみ）、加えて D2 の一次対�
   panic 脱出が間に合わない即死ウェーブの被弾総量クランプ、farm テンポの単調さ。
 
 ### -3. 通し検証3周のフィードバック反映：入場料セーフティ／新規敵保証／サステイン装備（2026-09-09 その3）
-`Docs/検証レポート/` の3周分（バグ・ソフトロックはゼロ、指摘は全てバランス／導線）から3点を実装。テスト 158→166。
+`Docs/検証レポート/_アーカイブ/2026-09-09_通し検証_*周目*.md` の3周分（バグ・ソフトロックはゼロ、指摘は全てバランス／導線）から3点を実装。テスト 158→166。
 
 - **入場料セーフティ（後払い）**（`DungeonEconomy.EffectiveEntryFee(currentMoney)`）: 所持金が `BaseEntryFee`(15G)
   未満なら入場無料。タスク報酬が現物中心でお金が枯れ「潜れない」詰みに近づく所見への対策。

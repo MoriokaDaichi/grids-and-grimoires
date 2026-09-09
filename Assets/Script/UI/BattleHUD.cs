@@ -245,7 +245,11 @@ public class BattleHUD : MonoBehaviour
         if (player == null) return;
         float ratio = player.hp > 0 ? (float)player.currentHp / player.hp : 0f;
         if (playerHpFill != null) playerHpFill.fillAmount = Mathf.Clamp01(ratio);
-        if (playerHpText != null) playerHpText.text = Mathf.Max(0, player.currentHp) + " / " + player.hp;
+        if (playerHpText != null)
+        {
+            string barrier = player.BarrierCurrent > 0 ? " (+" + player.BarrierCurrent + ")" : "";
+            playerHpText.text = Mathf.Max(0, player.currentHp) + " / " + player.hp + barrier;
+        }
     }
 
     private void RefreshPlayerMana()

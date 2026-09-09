@@ -29,6 +29,8 @@ public class StatusUIManager : MonoBehaviour
     public Button spdButton;
     public Button lucButton;
 
+    // バー表示の基準値（実際の振り分け可否は PlayerStatus.CanAddStat が持つ。
+    // 研究・装備で合計はこれを超えうるが、その場合バーは満タン表示でよい）。
     private const int HP_MAX = 1000;
     private const int OTHER_MAX = 100;
 
@@ -68,13 +70,12 @@ public class StatusUIManager : MonoBehaviour
         spdBarImage.fillAmount = Mathf.Clamp01((float)playerStatus.spd / OTHER_MAX);
         lucBarImage.fillAmount = Mathf.Clamp01((float)playerStatus.luc / OTHER_MAX);
 
-        // ボタンの活性化設定
-        bool hasPoint = playerStatus.statsPoint > 0;
-        hpButton.interactable = hasPoint && playerStatus.hp < HP_MAX;
-        atkButton.interactable = hasPoint && playerStatus.atk < OTHER_MAX;
-        defButton.interactable = hasPoint && playerStatus.def < OTHER_MAX;
-        spdButton.interactable = hasPoint && playerStatus.spd < OTHER_MAX;
-        lucButton.interactable = hasPoint && playerStatus.luc < OTHER_MAX;
+        // ボタンの活性化設定（手動振り分けの上限＝PlayerStatus 側。合計値ではなく手動加算分で判定）
+        hpButton.interactable = playerStatus.CanAddStat("HP");
+        atkButton.interactable = playerStatus.CanAddStat("Atk");
+        defButton.interactable = playerStatus.CanAddStat("Def");
+        spdButton.interactable = playerStatus.CanAddStat("Spd");
+        lucButton.interactable = playerStatus.CanAddStat("Luc");
     }
 
     private void OnDestroy()

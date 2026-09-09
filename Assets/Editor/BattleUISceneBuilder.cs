@@ -43,6 +43,9 @@ public static class BattleUISceneBuilder
         DestroyExisting(canvasT, "WaveClearRoot");
         DestroyExisting(canvasT, "RewardRoot");
         DestroyExisting(canvasT, "InventoryPanel");
+        DestroyExisting(canvasT, "MaterialsTab");
+        DestroyExisting(canvasT, "MaterialsRoot");
+        DestroyExisting(canvasT, "ChestButton");
         DestroyExisting(canvasT, "HideoutRoot");
         DestroyExisting(canvasT, "ResearchRoot");
         DestroyExisting(canvasT, "HideoutButton");
@@ -62,10 +65,12 @@ public static class BattleUISceneBuilder
         GameObject battleRoot = BuildBattleRoot(canvasT);
         GameObject waveClearRoot = BuildWaveClearRoot(canvasT);
         GameObject rewardRoot = BuildRewardRoot(canvasT);
-        GameObject inventoryPanel = BuildInventoryPanel(canvasT);
+        GameObject chestButton;
+        GameObject materialsRoot = BuildMaterialsPage(canvasT, out chestButton);
         GameObject researchRoot = BuildResearchRoot(canvasT);
         GameObject hideoutRoot = BuildHideoutRoot(canvasT);
         GameObject tradeRoot = BuildTradeRoot(canvasT);
+        BuildEquipmentUI(canvasT);   // CharacterPanel の装備スロット＋選択ポップアップ（既存枠を再配線）
 
         // シーンの MenuPanel に既にあるボタンを使う（左下のコーナーボタンは作らない）。
         // Button (2) = トレード / Button (3) = ハイドアウト。ラベルはシーン側の指定を尊重して触らない。
@@ -107,7 +112,7 @@ public static class BattleUISceneBuilder
             Transform t = canvasT.Find(n);
             if (t != null) buildObjs.Add(t.gameObject);
         }
-        buildObjs.Add(inventoryPanel);
+        buildObjs.Add(chestButton);   // 下部バー右下の「宝箱」ボタン（構築フェーズでのみ表示）
         // ハイドアウト/トレードボタンは MenuPanel の子なので、MenuPanel と一緒に表示切替される
 
         SerializedObject so = new SerializedObject(gpm);
@@ -121,9 +126,11 @@ public static class BattleUISceneBuilder
         so.FindProperty("battleRoot").objectReferenceValue = battleRoot;
         so.FindProperty("waveClearRoot").objectReferenceValue = waveClearRoot;
         so.FindProperty("rewardRoot").objectReferenceValue = rewardRoot;
+        so.FindProperty("materialsRoot").objectReferenceValue = materialsRoot;
         so.FindProperty("sortieButton").objectReferenceValue = sortie;
         so.FindProperty("hideoutButton").objectReferenceValue = hideoutButton;
         so.FindProperty("tradeButton").objectReferenceValue = tradeButton;
+        so.FindProperty("materialsButton").objectReferenceValue = chestButton.GetComponent<Button>();
         AssignButtonArray(so, "extraHideoutButtons", navHideoutButton);
         AssignButtonArray(so, "extraTradeButtons", navTradeButton);
         so.ApplyModifiedPropertiesWithoutUndo();
@@ -134,6 +141,7 @@ public static class BattleUISceneBuilder
         battleRoot.SetActive(false);
         waveClearRoot.SetActive(false);
         rewardRoot.SetActive(false);
+        materialsRoot.SetActive(false);
 
         EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
         Debug.Log("[Grimoire] Battle UI 構築完了。シーンを保存してください (Ctrl+S)。");
@@ -365,43 +373,208 @@ public static class BattleUISceneBuilder
         return root.gameObject;
     }
 
-    // ---------------------------------------------------------------- InventoryPanel（構築画面 左上）
+    // ---------------------------------------------------------------- 所持素材ページ（MaterialsRoot）＋宝箱ボタン
+    // 旧・構築画面 左上の常設パネルは廃止。下部バー右下（設定の上）の「宝箱」ボタンから
+    // 全画面ページへ遷移する（GamePhaseManager.GamePhase.Materials）。「戻る」で構築画面へ。
+    // MaterialsRoot を返し、宝箱ボタンは out で返す（Build() が buildPhaseObjects に積む）。
 
-    private static GameObject BuildInventoryPanel(Transform canvas)
+    private static GameObject BuildMaterialsPage(Transform canvas, out GameObject chestButton)
     {
-        RectTransform root = NewUI("InventoryPanel", canvas);
-        Frame(root, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -16f), new Vector2(300f, 260f));
-        AddImage(root, new Color(0f, 0f, 0f, 0.4f), false);
+        // --- 宝箱ボタン（下部バー右下、設定の上）。構築フェーズでのみ表示 ---
+        RectTransform chestRt = NewUI("ChestButton", canvas);
+        Frame(chestRt, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-96f, 86f), new Vector2(76f, 76f));
+        Image chestImg = AddImage(chestRt, new Color(0.46f, 0.33f, 0.15f, 1f), true);
+        Button chestBtn = chestRt.gameObject.AddComponent<Button>();
+        chestBtn.targetGraphic = chestImg;
+        TMP_Text chestLbl = AddText(chestRt.gameObject.transform, "Label", "宝箱", 22, TextAlignmentOptions.Center);
+        Stretch(chestLbl.rectTransform);
+        chestButton = chestRt.gameObject;
 
-        TMP_Text title = AddText(root, "Title", "所持素材", 20, TextAlignmentOptions.TopLeft);
-        Frame(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -8f), new Vector2(160f, 28f));
+        // --- 全画面ページ本体 ---
+        RectTransform root = NewUI("MaterialsRoot", canvas);
+        Stretch(root);
+        AddImage(root, new Color(0.09f, 0.10f, 0.13f, 1f), true);
 
-        TMP_Text moneyText = AddText(root, "MoneyText", "所持金 0 G", 16, TextAlignmentOptions.TopRight);
-        Frame(moneyText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -10f), new Vector2(160f, 24f));
+        TMP_Text title = AddText(root, "Title", "所持素材", 34, TextAlignmentOptions.Center);
+        Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(700f, 52f));
+
+        TMP_Text moneyText = AddText(root, "MoneyText", "所持金 0 G", 20, TextAlignmentOptions.Right);
+        Frame(moneyText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-40f, -40f), new Vector2(280f, 34f));
         moneyText.color = new Color(1f, 0.92f, 0.6f, 1f);
         WireMoneyLabel(moneyText);
 
-        RectTransform listRoot = NewUI("ListRoot", root);
-        Frame(listRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -40f), new Vector2(284f, 210f));
+        // 縦スクロール（素材が多いのでビューポートでクリップ）
+        RectTransform viewport = NewUI("Viewport", root);
+        Frame(viewport, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -6f), new Vector2(640f, 640f));
+        AddImage(viewport, new Color(0f, 0f, 0f, 0.25f), true);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false; scroll.vertical = true; scroll.scrollSensitivity = 28f;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+
+        RectTransform listRoot = NewUI("ListRoot", viewport);
+        listRoot.anchorMin = new Vector2(0f, 1f);
+        listRoot.anchorMax = new Vector2(1f, 1f);
+        listRoot.pivot = new Vector2(0.5f, 1f);
+        listRoot.offsetMin = new Vector2(8f, 0f);
+        listRoot.offsetMax = new Vector2(-8f, 0f);
         VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 4f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
         vlg.childControlWidth = true; vlg.childControlHeight = true;
-        vlg.padding = new RectOffset(4, 4, 4, 4);
+        vlg.padding = new RectOffset(6, 6, 6, 6);
         ContentSizeFitter csf = listRoot.gameObject.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.content = listRoot;
+        scroll.viewport = viewport;
 
-        TMP_Text empty = AddText(root, "EmptyLabel", "（まだ何も持っていない）", 16, TextAlignmentOptions.TopLeft);
-        Frame(empty.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(12f, -44f), new Vector2(276f, 24f));
+        TMP_Text empty = AddText(root, "EmptyLabel", "（まだ何も持っていない）", 18, TextAlignmentOptions.Center);
+        Frame(empty.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420f, 40f));
         empty.color = new Color(1f, 1f, 1f, 0.6f);
+
+        // 戻るボタン（InventoryPanel.backButton → GamePhaseManager.ReturnToBuild）
+        RectTransform backRt = NewUI("BackButton", root);
+        Frame(backRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(220f, 54f));
+        Image backImg = AddImage(backRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
+        Button backBtn = backRt.gameObject.AddComponent<Button>();
+        backBtn.targetGraphic = backImg;
+        TMP_Text backLbl = AddText(backRt.gameObject.transform, "Label", "戻る", 22, TextAlignmentOptions.Center);
+        Stretch(backLbl.rectTransform);
 
         InventoryPanel panel = root.gameObject.AddComponent<InventoryPanel>();
         SerializedObject so = new SerializedObject(panel);
         so.FindProperty("listRoot").objectReferenceValue = listRoot;
         so.FindProperty("rowPrefab").objectReferenceValue = Load("DropRow");
         so.FindProperty("emptyLabel").objectReferenceValue = empty;
+        so.FindProperty("backButton").objectReferenceValue = backBtn;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         return root.gameObject;
+    }
+
+    // ---------------------------------------------------------------- 装備スロット（CharacterPanel の既存枠を再配線）
+    // CharacterPanel は手組み。ここでは既存の枠 GameObject（EquipSlot_Wand / _Armor / _Accessory）に
+    // Button と「種別ラベル」「装備名ラベル」を用意し、選択ポップアップ(EquipChooser)を作って
+    // EquipmentPanel に配線するだけ。枠が見つからなければ警告して続行（枠は手動命名が前提）。
+    private static void BuildEquipmentUI(Transform canvas)
+    {
+        Transform cp = canvas.Find("CharacterPanel");
+        if (cp == null)
+        {
+            Debug.LogWarning("[Grimoire] CharacterPanel が無いため装備スロットUIをスキップしました。");
+            return;
+        }
+
+        DestroyExisting(cp, "EquipChooser");
+
+        // --- 選択ポップアップ（既定は非アクティブ）---
+        RectTransform chooser = NewUI("EquipChooser", cp);
+        Stretch(chooser);
+        AddImage(chooser, new Color(0.03f, 0.03f, 0.05f, 0.92f), true);
+
+        RectTransform panel = NewUI("Panel", chooser);
+        Frame(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(720f, 620f));
+        AddImage(panel, new Color(0.10f, 0.11f, 0.14f, 1f), true);
+
+        TMP_Text title = AddText(panel, "Title", "装備を選ぶ", 26, TextAlignmentOptions.Center);
+        Frame(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -32f), new Vector2(680f, 48f));
+
+        RectTransform viewport = NewUI("Viewport", panel);
+        viewport.anchorMin = new Vector2(0f, 0f);
+        viewport.anchorMax = new Vector2(1f, 1f);
+        viewport.pivot = new Vector2(0.5f, 0.5f);
+        viewport.offsetMin = new Vector2(16f, 76f);
+        viewport.offsetMax = new Vector2(-16f, -64f);
+        AddImage(viewport, new Color(0f, 0f, 0f, 0.25f), true);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        ScrollRect scroll = viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false; scroll.vertical = true; scroll.scrollSensitivity = 26f;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+
+        RectTransform listRoot = NewUI("ListRoot", viewport);
+        listRoot.anchorMin = new Vector2(0f, 1f);
+        listRoot.anchorMax = new Vector2(1f, 1f);
+        listRoot.pivot = new Vector2(0.5f, 1f);
+        listRoot.offsetMin = new Vector2(6f, 0f);
+        listRoot.offsetMax = new Vector2(-6f, 0f);
+        VerticalLayoutGroup vlg = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 6f; vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.padding = new RectOffset(6, 6, 6, 6);
+        listRoot.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.content = listRoot;
+        scroll.viewport = viewport;
+
+        RectTransform closeRt = NewUI("CloseButton", panel);
+        Frame(closeRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(200f, 48f));
+        Image closeImg = AddImage(closeRt, new Color(0.3f, 0.3f, 0.36f, 1f), true);
+        Button closeBtn = closeRt.gameObject.AddComponent<Button>();
+        closeBtn.targetGraphic = closeImg;
+        TMP_Text closeLbl = AddText(closeRt.gameObject.transform, "Label", "閉じる", 20, TextAlignmentOptions.Center);
+        Stretch(closeLbl.rectTransform);
+
+        chooser.gameObject.SetActive(false);
+
+        // --- 装備枠（既存の GameObject を再配線）。順に EquipSlot.Wand/Armor/Accessory1/Accessory2 ---
+        string[] names = { "EquipSlot_Wand", "EquipSlot_Armor", "EquipSlot_Accessory", "EquipSlot_Accessory2" };
+        string[] types = { "杖", "防具", "アクセサリー", "アクセサリー2" };
+        Button[] slotBtns = new Button[names.Length];
+        TMP_Text[] slotLbls = new TMP_Text[names.Length];
+        for (int i = 0; i < names.Length; i++)
+        {
+            Transform box = cp.Find(names[i]);
+            if (box == null)
+            {
+                Debug.LogWarning("[Grimoire] " + names[i] + " が CharacterPanel に見つかりません。装備スロットの枠を手動で命名してください。");
+                continue;
+            }
+            Image img = box.GetComponent<Image>();
+            if (img == null) img = box.gameObject.AddComponent<Image>();
+            img.raycastTarget = true;
+            Button b = box.GetComponent<Button>();
+            if (b == null) b = box.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            slotBtns[i] = b;
+
+            TMP_Text st = EnsureChildLabel(box, "SlotTypeLabel", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(4f, -40f), new Vector2(-4f, -6f));
+            st.text = types[i]; st.fontSize = 24; st.color = new Color(1f, 1f, 1f, 0.8f);
+
+            TMP_Text gl = EnsureChildLabel(box, "GearLabel", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(4f, 8f), new Vector2(-4f, 64f));
+            gl.text = "（空）"; gl.fontSize = 22; gl.color = Color.white;
+            slotLbls[i] = gl;
+        }
+
+        // --- EquipmentPanel コンポーネント ---
+        EquipmentPanel ep = cp.GetComponent<EquipmentPanel>();
+        if (ep == null) ep = cp.gameObject.AddComponent<EquipmentPanel>();
+        SerializedObject so = new SerializedObject(ep);
+        SerializedProperty arr = so.FindProperty("slots");
+        arr.arraySize = names.Length;
+        for (int i = 0; i < names.Length; i++)
+        {
+            SerializedProperty e = arr.GetArrayElementAtIndex(i);
+            e.FindPropertyRelative("slot").enumValueIndex = i; // EquipSlot: Wand=0 / Armor=1 / Accessory1=2 / Accessory2=3
+            e.FindPropertyRelative("button").objectReferenceValue = slotBtns[i];
+            e.FindPropertyRelative("label").objectReferenceValue = slotLbls[i];
+        }
+        so.FindProperty("chooserRoot").objectReferenceValue = chooser.gameObject;
+        so.FindProperty("chooserTitle").objectReferenceValue = title;
+        so.FindProperty("chooserListRoot").objectReferenceValue = listRoot;
+        so.FindProperty("chooserCloseButton").objectReferenceValue = closeBtn;
+        if (JpFont != null) so.FindProperty("font").objectReferenceValue = JpFont;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // box の子に name のラベルが無ければ作り、アンカー/オフセットを設定して返す。
+    private static TMP_Text EnsureChildLabel(Transform box, string name, Vector2 aMin, Vector2 aMax, Vector2 pivot, Vector2 offMin, Vector2 offMax)
+    {
+        Transform t = box.Find(name);
+        TMP_Text lbl = t != null ? t.GetComponent<TMP_Text>() : AddText(box, name, "", 20, TextAlignmentOptions.Center);
+        RectTransform rt = lbl.rectTransform;
+        rt.anchorMin = aMin; rt.anchorMax = aMax; rt.pivot = pivot;
+        rt.offsetMin = offMin; rt.offsetMax = offMax;
+        lbl.raycastTarget = false;
+        lbl.transform.SetAsLastSibling();
+        return lbl;
     }
 
     // TMP_Text に MoneyLabel を付けて label 参照を配線する。

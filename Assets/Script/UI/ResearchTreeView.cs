@@ -83,7 +83,7 @@ public class ResearchTreeView : MonoBehaviour, IDragHandler, IScrollHandler
 
             ResearchNodeWidget w = go.GetComponent<ResearchNodeWidget>();
             if (w == null) continue;
-            w.Setup(def.id, research != null ? research.NodeShortLabel(def.id) : def.id, def.isMagic, OnNodeClicked);
+            w.Setup(def.id, research != null ? research.NodeShortLabel(def.id) : def.id, def.isMagic || def.IsPerk, OnNodeClicked);
             widgets[def.id] = w;
         }
 

@@ -80,7 +80,7 @@ public static class TraderCatalog
 
     private static TraderTask Deliver(string id, string trader, string title, List<MaterialCost> items,
         List<MaterialCost> reward, int rewardStat = 0, int rewardMoney = 0, int deliverMoney = 0,
-        string rewardGear = null, string rewardRecipe = null)
+        string rewardGear = null, string rewardRecipe = null, bool rewardUnlockAccessorySlot = false)
     {
         return new TraderTask
         {
@@ -88,6 +88,7 @@ public static class TraderCatalog
             deliverItems = items, deliverMoney = deliverMoney,
             rewardItems = reward ?? new List<MaterialCost>(), rewardStatPoints = rewardStat,
             rewardMoney = rewardMoney, rewardGearId = rewardGear, rewardRecipeId = rewardRecipe,
+            rewardUnlocksAccessorySlot = rewardUnlockAccessorySlot,
         };
     }
 
@@ -351,6 +352,12 @@ public static class TraderCatalog
                 Items(Part("竜の心臓", 1), Part("深淵の欠片", 1), Part("混沌の核", 1)),
                 Items(Elem(MagicAttribute.Dark, 3)), rewardStat: 2, deliverMoney: 80),
             Depth("orca_7b", "orca", "深度 22 まで到達する", 22, null, rewardStat: 8, rewardRecipe: "wand_dragoon"),
+            // アクセサリー枠の増設。d22 の直後＝深度25 に手が届く体力になった頃にクリアできる難易度。
+            // 深淵の欠片＋大結晶＋現金の「特注品」納品。報酬＝2つ目のアクセサリー装備枠＋大結晶×2＋ステP。
+            Deliver("orca_slot2", "orca", "意匠具の受けを打たせる（深淵の欠片 ×1 / 大結晶 ×3 と 120 G）",
+                Items(Part("深淵の欠片", 1), M(MaterialType.LargeManaCrystal, 3)),
+                Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 3, deliverMoney: 120,
+                rewardUnlockAccessorySlot: true),
             Depth("orca_8", "orca", "深度 25 まで到達する", 25, null, rewardStat: 12, rewardMoney: 250),
             Depth("orca_9", "orca", "深度 30 まで到達する", 30, null, rewardStat: 12, rewardGear: "acc_orb"));
         // 繰り返し討伐（無限・深部向け）。orca_4（深度15到達）達成で解放。

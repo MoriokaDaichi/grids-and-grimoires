@@ -35,12 +35,14 @@ public class MagicGridManager : MonoBehaviour
     {
         phase = Object.FindFirstObjectByType<GamePhaseManager>();
         if (phase != null) phase.OnPhaseChanged += HandlePhaseChanged;
+        if (HideoutManager.Instance != null) HideoutManager.Instance.OnHideoutChanged += ApplyWandTierSize;
         ApplyWandTierSize();
     }
 
     void OnDestroy()
     {
         if (phase != null) phase.OnPhaseChanged -= HandlePhaseChanged;
+        if (HideoutManager.Instance != null) HideoutManager.Instance.OnHideoutChanged -= ApplyWandTierSize;
     }
 
     private void HandlePhaseChanged(GamePhaseManager.GamePhase p)
@@ -51,19 +53,15 @@ public class MagicGridManager : MonoBehaviour
 
     // ---------------------------------------------------------------- 杖 tier → グリッドサイズ
 
-    // 現在所持している杖のうち最上位の tier を返す（作業台未製作／杖なしは 0）。
+    // いま装備している杖の tier を返す（杖を外している／未製作は 0）。
+    // グリッドの広さは「所有」ではなく「実際に握っている杖」で決まる。
     public static int CurrentWandTier()
     {
         HideoutManager h = HideoutManager.Instance;
         if (h == null) return 0;
 
-        int best = 0;
-        foreach (string id in h.OwnedGear)
-        {
-            GearDef g = GearCatalog.Get(id);
-            if (g != null && g.slot == GearSlot.Wand && g.tier > best) best = g.tier;
-        }
-        return best;
+        GearDef wand = h.EquippedGear(EquipSlot.Wand);
+        return wand != null ? wand.tier : 0;
     }
 
     public int WandTierToSize(int tier)

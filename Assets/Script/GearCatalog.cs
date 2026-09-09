@@ -10,6 +10,16 @@ public enum GearSlot
     Accessory = 2,
 }
 
+// 装備を挿す「枠」。カテゴリ(GearSlot)は同じでもアクセサリーは2枠ある。
+// Accessory2 はトレーダーのタスク報酬で開放するまで使えない。
+public enum EquipSlot
+{
+    Wand = 0,
+    Armor = 1,
+    Accessory1 = 2,
+    Accessory2 = 3,
+}
+
 public class GearDef
 {
     public string id;
@@ -49,6 +59,19 @@ public static class GearCatalog
         Ensure();
         foreach (GearDef g in _all) if (g.id == id) return g;
         return null;
+    }
+
+    // 装備枠 → 装備カテゴリ。
+    public static GearSlot CategoryOf(EquipSlot s)
+    {
+        if (s == EquipSlot.Wand) return GearSlot.Wand;
+        if (s == EquipSlot.Armor) return GearSlot.Armor;
+        return GearSlot.Accessory;
+    }
+
+    public static bool IsAccessorySlot(EquipSlot s)
+    {
+        return s == EquipSlot.Accessory1 || s == EquipSlot.Accessory2;
     }
 
     // 作業台レベル level で常時製作可能なもの（tier <= level かつ レシピ制でない）。
@@ -121,7 +144,10 @@ public static class GearCatalog
             G("acc_charm",       "小さな護符",   GearSlot.Accessory, 1, ResearchStat.Luc, 2f, S(15), Part("大ネズミの尾", 3)),
 
             // --- tier2（作業台 Lv2）---
-            G("wand_oak",        "樫の杖",       GearSlot.Wand,      2, ResearchStat.Atk, 6f, M(6), Frag(MagicAttribute.Fire, 2)),
+            // 検証レポート 2026-09-10 O7：樫の杖＝tier2杖＝5×5 グリッドの入口。建材の『炎欠片×2』は
+            // 釜Lv2 前は自作できず（tier2 属性パーツの変換に釜Lv2 が要る）リーゼからの購入頼み＝細い faucet。
+            // 5×5 到達を属性フラグの購入に縛らないよう中結晶のみに（釜Lv2 以降は炎フラグは余る＝O7）。
+            G("wand_oak",        "樫の杖",       GearSlot.Wand,      2, ResearchStat.Atk, 6f, M(8)),
             G("armor_leather",   "堅革の鎧",     GearSlot.Armor,     2, ResearchStat.Def, 5f, M(6), Part("番人の樹皮", 3)),
             G("acc_ring",        "魔力の指輪",   GearSlot.Accessory, 2, ResearchStat.ManaMax, 25f, M(6), Frag(MagicAttribute.Thunder, 2)),
 

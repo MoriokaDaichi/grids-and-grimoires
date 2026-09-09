@@ -119,14 +119,33 @@ public static class HideoutRules
         return cauldronLevel >= 1 && partTier <= HideoutCatalog.CauldronMaxTier(cauldronLevel);
     }
 
+    // 錬金釜Lv3：属性エレメントの欠片 N 個 → 対応属性のエレメント 1 個（この数）。
+    // 検証レポート 2026-09-10 O6：エレメントの入手が交換／マジックサークル頼みで、深部で研究フロンティアが
+    // 枯れる（ギガ全体魔法＝Element×3 ゲートに facility 経由で届かない）。欠片は釜Lv2 以降あり余るので、
+    // その余剰をエレメントへ精製する経路を釜Lv3 に足す。
+    public const int ElementRefinePerElement = 5;
+
     // モンスター素材 → 結晶/エレメントの欠片。産出は素材の tier で決まり、yieldMult で増える（floor、最低1）。
     //  ・属性を持つ tier2+ 素材 → 対応属性の欠片（tier で 1/1/2/3 個/個）
     //  ・それ以外 → tier1:小結晶×2 / tier2:中結晶×1 / tier3:中結晶×2 / tier4:大結晶×1 / tier5:大結晶×3（1個あたり）
     // 未登録の素材は tier1 相当（小結晶×2）として扱う。
-    public static List<MaterialCost> Transmute(MaterialCost part, int times, float yieldMult)
+    // cauldronLevel>=3 のときは属性エレメントの欠片も入力に取れる（欠片 ElementRefinePerElement 個 → エレメント1個。
+    // yieldMult は掛けない＝比率を読みやすく保つ。端数の欠片は消費されるので UI 側で 5 の倍数を投入させる）。
+    public static List<MaterialCost> Transmute(MaterialCost part, int times, float yieldMult, int cauldronLevel = 0)
     {
         List<MaterialCost> outp = new List<MaterialCost>();
-        if (part == null || times <= 0 || part.materialType != MaterialType.SpecialItem) return outp;
+        if (part == null || times <= 0) return outp;
+
+        if (part.materialType == MaterialType.ElementFragment)
+        {
+            if (cauldronLevel < 3 || part.attribute == MagicAttribute.None) return outp;
+            int made = times / ElementRefinePerElement;
+            if (made <= 0) return outp;
+            outp.Add(new MaterialCost { materialType = MaterialType.Element, attribute = part.attribute, amount = made });
+            return outp;
+        }
+
+        if (part.materialType != MaterialType.SpecialItem) return outp;
 
         int tier = Math.Max(1, MonsterPartCatalog.TierOf(part.specialItemName));
         MagicAttribute attr = MonsterPartCatalog.AttributeOf(part.specialItemName);

@@ -90,7 +90,10 @@ public static class HideoutCatalog
                 {
                     new List<MaterialCost> { S(20), Part("毒針", 4) },
                     new List<MaterialCost> { M(6), Frag(MagicAttribute.Light, 2), Part("古びた骨", 2) },
-                    new List<MaterialCost> { L(2), M(20), Part("世界樹の若枝", 2) },
+                    // 検証レポート 2026-09-10 O6：机Lv3 の建材『世界樹の若枝』は tier4（森の番人より深い debut）で、
+                    // 壁が d20 台のプレイヤーには永遠に届かず、研究コスト減(0.78→0.6)・ボーナス増(1.3→1.7)が
+                    // デッド。作業台Lv3（竜人の鱗 d13 t2）と同様、d10〜13 で採れる tier2『若木の枝』へ差し替える。
+                    new List<MaterialCost> { L(2), M(20), Part("若木の枝", 2) },
                 },
             },
             new FacilityDef
@@ -122,8 +125,9 @@ public static class HideoutCatalog
                     // 再検証3/8 D7：作業台Lv2＝tier2杖の 5×5 グリッド（Mega＋Giga＋AoE が同居できる）。
                     // 『竜人の鱗』→『錆びた短剣』（コボルト d9）に浅くしても、Mode A で錬金釜Lv2 まで建った
                     // 周でも 作業台Lv2 は建たなかった（M(7) の中結晶ゲート）。他 Lv2 に合わせ M(7)→M(4)。
-                    // Frag(Fire,2) は残す（錬金釜Lv2 で 錆びた短剣 を変換すれば出る＝中盤の一手を要求）。
-                    new List<MaterialCost> { M(4), Frag(MagicAttribute.Fire, 2), Part("錆びた短剣", 2) },
+                    // 検証レポート 2026-09-10 O7：釜Lv2 前は炎フラグを自作できず（tier2 属性パーツの変換に釜Lv2 が要る）
+                    // 『炎欠片×2』ゲートがリーゼ購入頼みの細い faucet。属性フラグ → 別の tier2 farm パーツ（蜘蛛の糸 d10）に。
+                    new List<MaterialCost> { M(4), Part("錆びた短剣", 2), Part("蜘蛛の糸", 2) },
                     // 深部設計（サイクル13）：作業台Lv3＝tier3 装備の唯一の入口。建材の『竜のうろこ』は
                     // ドラゴン（pool idx37＝debut 深度37）ドロップで、全投資でも壁 d20 のプレイヤーには
                     // 永遠に届かず tier3 装備が丸ごとデッド。d13〜15 で採れる tier2『竜人の鱗』（リザードマン

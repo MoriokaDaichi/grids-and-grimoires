@@ -133,7 +133,7 @@ return grid.width+"x"+grid.height+" ["+string.Join(",",got.ToArray())+"]";
 2. 設備 Lv1 建造（魔力炉→作業台→研究机→錬金釜。マジックサークルは低優先）。
 3. **見習いの杖を最優先で製作**（小×15＋ゴブリンの牙×3 → グリッド 4×4）。次にサステイン系アクセ1個、防具1個。**同スロットの churn（作り直し）はしない**。
 4. モンスター素材の変換: 錬金釜 Lv1 では tier1 が燃料中立〜微益なので**無理に回さない**。錬金釜 Lv2＋魔力炉 Lv2 になって初めて tier1 が純増（-1燃料+小2）→ 溜めた素材を一気に結晶化（前例: 80個超 → 小 277）。未建造設備・未製作装備の建材素材は keep する。
-5. 研究割当: `foreach ResearchGraph.Nodes → rm.CanAllocate/Allocate`。魔法ノードは常に、ステノードは Atk>Def>Hp>Spd を優先、**ManaMax/ManaRegen/Luc はスキップ**（マナは基本足りる、1トライ目で全部溶かした失敗例あり）。小結晶を 20 前後は残す。
+5. 研究割当: `foreach ResearchGraph.Nodes → rm.CanAllocate/Allocate`。魔法ノード・特性ノード（`nd.IsPerk`）は常に取る。ステノードの優先度は **cold-start（最初の2周・小結晶が枯れがち）だけ Hp≒Def≒Atk>その他** に絞り、小結晶を 20 前後残す。**それ以降は Mana/Spd/Luc の小ノードもスキップしない**——純粋な木なので `nsp_*`・`node_*_e/b` の Mana/Spd/Luc を通らないと Mega AoE 群・Giga・受動バフ・深部の Def/Hp カラムに一切届かず、d20〜31 でプラトーする（検証レポート 2026-09-10 O2：サイクル5 でここを開けた瞬間に 117 ノードが開き d22→d31）。中盤以降は「取れる小ノードは全部取る（Hp/Def を厚めに、Mana/Spd/Luc も奥へのゲートとして拾う）」でよい。
 6. 設備 Lv2 強化（魔力炉/錬金釜を優先＝燃料黒字化）。
 7. タスク受領: `foreach trader.tasks → tm.CanClaim/ClaimTask`。
 8. 余剰の tier2 素材はダグに売却（$150 未満のときだけ）。

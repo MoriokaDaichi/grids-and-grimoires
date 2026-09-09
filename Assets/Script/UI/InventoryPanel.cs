@@ -1,19 +1,29 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
-// 所持素材の一覧（構築画面に常設）。PlayerInventory.OnInventoryChanged を購読して再描画する。
+// 所持素材の一覧ページ（MaterialsRoot）。下部バー右下の「宝箱」ボタンから遷移し、
+// 「戻る」で構築画面へ帰る（GamePhaseManager.GamePhase.Materials）。
+// PlayerInventory.OnInventoryChanged を購読して再描画する。
 public class InventoryPanel : MonoBehaviour
 {
     [SerializeField] private RectTransform listRoot;
     [SerializeField] private GameObject rowPrefab;
     [SerializeField] private TMP_Text emptyLabel;
+    [SerializeField] private Button backButton;
 
     private PlayerInventory inventory;
 
     void Awake()
     {
         inventory = Object.FindFirstObjectByType<PlayerInventory>();
+
+        if (backButton != null)
+        {
+            GamePhaseManager phase = Object.FindFirstObjectByType<GamePhaseManager>();
+            if (phase != null) backButton.onClick.AddListener(phase.ReturnToBuild);
+        }
     }
 
     void OnEnable()

@@ -178,7 +178,9 @@ public class BattleManager : MonoBehaviour
 
     private float CastIntervalScale()
     {
-        return BattleFormula.SpdCastMultiplier(EffectiveSpd());
+        // 研究の攻撃特性「詠唱加速」＝発動間隔をさらに短縮（下限 0.4）。
+        float haste = Mathf.Clamp01(1f - playerStatus.castHastePercent);
+        return Mathf.Max(0.4f, BattleFormula.SpdCastMultiplier(EffectiveSpd()) * haste);
     }
 
     void Update()
@@ -325,12 +327,21 @@ public class BattleManager : MonoBehaviour
         int hpBefore = target.hp;
 
         float effectiveAtk = playerStatus.atk * (1f + TotalStatPercent(BuffStat.Atk) / 100f);
-        float damagePercent = TotalStatPercent(BuffStat.Damage) + GetOrZero(passiveAttrDamagePercent, data.attribute);
+        // 研究の攻撃特性「魔力増幅」＝魔法ダメージ%、「貫通」＝敵防御を無視。
+        float damagePercent = TotalStatPercent(BuffStat.Damage) + GetOrZero(passiveAttrDamagePercent, data.attribute)
+            + playerStatus.spellPowerPercent;
         float resist = target.ResistanceTo(data.attribute);
-        int damage = BattleFormula.AttackDamage(data.damage, effectiveAtk, damagePercent, target.def, resist);
+        int effectiveEnemyDef = Mathf.Max(0, target.def - playerStatus.armorPierce);
+        int damage = BattleFormula.AttackDamage(data.damage, effectiveAtk, damagePercent, effectiveEnemyDef, resist);
+
+        // 研究の攻撃特性「処刑」＝HP25%以下の敵へのダメージを上乗せ。
+        if (playerStatus.executeBonusPercent > 0f && target.maxHp > 0
+            && (float)target.hp / target.maxHp <= 0.25f)
+            damage = Mathf.RoundToInt(damage * (1f + playerStatus.executeBonusPercent));
 
         bool crit = Random.Range(0, 100) < BattleFormula.LucCritChance(EffectiveLuc());
-        if (crit) damage = Mathf.RoundToInt(damage * BattleFormula.CritMultiplier);
+        // 研究の攻撃特性「痛撃」＝会心倍率への加算。
+        if (crit) damage = Mathf.RoundToInt(damage * (BattleFormula.CritMultiplier + playerStatus.critMultBonus));
 
         int hpAfterThisHit = Mathf.Max(0, hpBefore - damage);
         bool willDefeat = hpAfterThisHit <= 0;
@@ -413,6 +424,22 @@ public class BattleManager : MonoBehaviour
         {
             battleActive = false;
             Debug.Log("プレイヤーは倒れた… 敗北。");
+            return;
+        }
+
+        // 研究の防御特性「報復のトゲ」：敵の一撃ぶんを攻撃者へ反射する。
+        // 反射で敵が全滅すると roster が次ウェーブへ連鎖しうるが、呼び出し元の Update ループが
+        // roster.Generation / battleActive の変化を見て打ち切るので、ここでは撃破チェックだけ退避する。
+        float thorns = playerStatus.thornsPercent;
+        if (thorns > 0f && e != null && e.hp > 0)
+        {
+            int reflect = Mathf.RoundToInt(damage * thorns);
+            if (reflect > 0)
+            {
+                string attacker = e.enemyName;
+                e.TakeDamage(reflect);
+                Debug.Log($"{attacker} に反射ダメージ！ {reflect}");
+            }
         }
     }
 

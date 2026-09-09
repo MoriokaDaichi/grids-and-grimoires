@@ -245,6 +245,36 @@ public class TraderCatalogTests
         Assert.GreaterOrEqual(grindLarge, 2, "繰り返し討伐が大結晶を出さない（成長ループのレート）");
     }
 
+    // 2つ目のアクセサリー装備枠は、d25 に手が届く頃にクリアできる難易度のタスク報酬で開放する。
+    [Test]
+    public void AccessorySlot2Unlock_IsExactlyOneTask_GatedByDeepProgress()
+    {
+        List<Trader> traders = TraderCatalog.BuildTraders();
+        int count = 0;
+        foreach (Trader t in traders)
+        {
+            for (int i = 0; i < t.tasks.Count; i++)
+            {
+                TraderTask task = t.tasks[i];
+                if (!task.rewardUnlocksAccessorySlot) continue;
+                count++;
+
+                // 通常の報酬判定（TaskIdsAreGloballyUnique...）を満たすため、慣例の報酬も併せ持つこと
+                bool hasNormalReward = task.rewardItems.Count > 0 || task.rewardStatPoints > 0 || task.rewardMoney > 0
+                    || !string.IsNullOrEmpty(task.rewardGearId) || !string.IsNullOrEmpty(task.rewardRecipeId);
+                Assert.IsTrue(hasNormalReward, task.id + " は枠開放以外の報酬も持つべき");
+
+                // 連鎖のそれ以前に「深度20以上への到達」タスクがある＝終盤の難易度で解禁される
+                bool deepGate = false;
+                for (int j = 0; j < i; j++)
+                    if (t.tasks[j].kind == TraderTaskKind.ReachDepth && t.tasks[j].targetCount >= 20)
+                        deepGate = true;
+                Assert.IsTrue(deepGate, task.id + " が深部（深度20+）到達の後に来ていない");
+            }
+        }
+        Assert.AreEqual(1, count, "アクセサリー枠を開放するタスクはちょうど1つであるべき");
+    }
+
     [Test]
     public void CollectorTrader_HasReachDepthTask()
     {

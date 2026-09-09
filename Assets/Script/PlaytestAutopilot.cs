@@ -446,23 +446,41 @@ public class PlaytestAutopilot : MonoBehaviour
                     while (inv.GetCount(sample) > keep && hideout.CanTransmute(sample, 1) && hideout.Transmute(sample, 1) && safety++ < 40)
                     { econTransmutes++; did = true; }
                 }
+
+                // 7b. 余った属性エレメントの欠片をエレメントへ精製（釜Lv3。検証レポート 2026-09-10 O6：
+                //     ギガ全体魔法＝Element×3 の研究フロンティア枯渇対策）。研究の欠片ノード・設備強化用に
+                //     各属性 8 個は温存し、超過ぶんを精製単位（5個）に丸めて回す。
+                if (hideout.Level(FacilityKind.AlchemyCauldron) >= 3)
+                {
+                    foreach (MagicAttribute fa in new[]
+                        { MagicAttribute.Fire, MagicAttribute.Thunder, MagicAttribute.Wind, MagicAttribute.Light, MagicAttribute.Dark })
+                    {
+                        var frag = new MaterialCost { materialType = MaterialType.ElementFragment, attribute = fa, amount = 1 };
+                        int surplus = inv.GetCount(frag) - 8;
+                        int units = surplus / HideoutRules.ElementRefinePerElement * HideoutRules.ElementRefinePerElement;
+                        if (units >= HideoutRules.ElementRefinePerElement
+                            && hideout.CanTransmute(frag, units) && hideout.Transmute(frag, units))
+                        { econTransmutes++; did = true; }
+                    }
+                }
             }
 
-            // 8. 研究割当（研究机が建っていれば）。魔法ノードは常に、ステノードは
+            // 8. 研究割当（研究机が建っていれば）。魔法・特性ノードは常に、ステノードは
             //    Hp/Def を Atk と同ペースで伸ばす（S18: Atk 放射カラムが安く貪欲が Atk へ全振り＝グラスキャノン化して
             //    depth10 前後で即死していた）。ラウンドごとに各ステ 1 ノードずつ、Hp/Def を厚めに。
-            //    ManaMax/ManaRegen/Luc はスキップ（マナは基本足りる）。小結晶は 20 前後を建材用に残す。
+            //    そのあと Mana/Spd/Luc を含めて「取れる小ノードは全部取る」掃きを1回（検証レポート 2026-09-10 O2：
+            //    純粋な木なので Mana/Spd/Luc の小ノードを開けないと Mega AoE 群・Giga・受動バフ・深部カラムに
+            //    一切届かず d20〜31 でプラトーする）。小結晶は 20 前後を建材用に残す。
             var research = ResearchManager.Instance;
             if (research != null && hideout.IsBuilt(FacilityKind.ResearchDesk))
             {
-                foreach (var nd in ResearchGraph.Nodes)
-                    if (nd.isMagic && !research.IsIdAllocated(nd.id) && research.CanAllocate(nd.id))
-                    { research.Allocate(nd.id); econResearch++; did = true; }
+                AllocateMagicAndPerks(research, ref did);
 
+                // 中央帯カラムが Atk/Def/Luc/Hp の4種になったので貪欲も4種を同ペースで拾う。
                 var wantOrder = new[]
                 {
-                    ResearchStat.Hp, ResearchStat.Def, ResearchStat.Atk,
-                    ResearchStat.Hp, ResearchStat.Def, ResearchStat.Spd,
+                    ResearchStat.Hp, ResearchStat.Def, ResearchStat.Atk, ResearchStat.Luc,
+                    ResearchStat.Hp, ResearchStat.Def, ResearchStat.Atk, ResearchStat.Spd,
                 };
                 for (int round = 0; round < 400; round++)
                 {
@@ -472,13 +490,30 @@ public class PlaytestAutopilot : MonoBehaviour
                     {
                         foreach (var nd in ResearchGraph.Nodes)
                         {
-                            if (nd.isMagic || nd.stat != want || research.IsIdAllocated(nd.id)) continue;
+                            if (nd.isMagic || nd.IsPerk || nd.stat != want || research.IsIdAllocated(nd.id)) continue;
                             if (CrystalCount(inv, MaterialType.SmallManaCrystal) < 20) break;
                             if (research.CanAllocate(nd.id))
                             { research.Allocate(nd.id); econResearch++; did = true; anyThisRound = true; break; }
                         }
                     }
                     if (!anyThisRound) break;
+                }
+
+                // O2: 種類を問わず取れる小ノードを掃く（Mana/Spd/Luc の“ゲート”を開け残さない）。
+                //     小ノードを開けると魔法/特性が新たに解放されうるので、掃くたびに取り直す。
+                for (int sweep = 0; sweep < 400; sweep++)
+                {
+                    if (CrystalCount(inv, MaterialType.SmallManaCrystal) < 20) break;
+                    bool any = false;
+                    foreach (var nd in ResearchGraph.Nodes)
+                    {
+                        if (nd.isMagic || nd.IsPerk || research.IsIdAllocated(nd.id)) continue;
+                        if (CrystalCount(inv, MaterialType.SmallManaCrystal) < 20) break;
+                        if (research.CanAllocate(nd.id))
+                        { research.Allocate(nd.id); econResearch++; did = true; any = true; }
+                    }
+                    if (!any) break;
+                    AllocateMagicAndPerks(research, ref did);
                 }
             }
 
@@ -498,6 +533,22 @@ public class PlaytestAutopilot : MonoBehaviour
             }
 
             if (!did) break;
+        }
+    }
+
+    // 取れる魔法・特性ノードを全部取る（小ノードを開けた直後に呼ぶと連鎖解放を吸い切れる）。
+    private void AllocateMagicAndPerks(ResearchManager research, ref bool did)
+    {
+        bool any = true;
+        for (int guard = 0; any && guard < 64; guard++)
+        {
+            any = false;
+            foreach (var nd in ResearchGraph.Nodes)
+            {
+                if (!(nd.isMagic || nd.IsPerk) || research.IsIdAllocated(nd.id)) continue;
+                if (research.CanAllocate(nd.id))
+                { research.Allocate(nd.id); econResearch++; did = true; any = true; }
+            }
         }
     }
 
@@ -785,10 +836,10 @@ public class PlaytestAutopilot : MonoBehaviour
             sb.AppendLine($"- 経済アクション: タスク受領{econTasksClaimed} / 建造・強化{econBuilds} / 製作{econCrafts} / 変換{econTransmutes} / 交換{econTrades} / 研究{econResearch}");
             if (research != null)
             {
-                int st = 0, mg = 0;
+                int st = 0, mg = 0, pk = 0;
                 foreach (var nd in ResearchGraph.Nodes)
-                    if (research.IsIdAllocated(nd.id)) { if (nd.isMagic) mg++; else st++; }
-                sb.AppendLine($"- 研究ノード: ステ{st} / 魔法{mg}");
+                    if (research.IsIdAllocated(nd.id)) { if (nd.isMagic) mg++; else if (nd.IsPerk) pk++; else st++; }
+                sb.AppendLine($"- 研究ノード: ステ{st} / 特性{pk} / 魔法{mg}");
             }
             sb.AppendLine();
         }

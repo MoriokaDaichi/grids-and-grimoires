@@ -37,6 +37,9 @@ namespace GridsAndGrimoires.EditModeTests
             src.furnaceFuel = 137;
             src.magicCircleBrews.Add(new BrewRecord { startUnixSeconds = 1000.5, hours = 6f, inputRarity = 1, inputLabel = "ゴブリンの牙" });
             src.craftedGearIds.Add("wand_oak");
+            src.craftedGearIds.Add("wand_apprentice");
+            src.equippedGearIds.Add("wand_apprentice");
+            src.accessorySlot2Unlocked = true;
 
             SaveData dst = SaveManager.Deserialize(SaveManager.Serialize(src));
 
@@ -48,6 +51,9 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.AreEqual(6f, dst.magicCircleBrews[0].hours);
             Assert.AreEqual("ゴブリンの牙", dst.magicCircleBrews[0].inputLabel);
             Assert.AreEqual("wand_oak", dst.craftedGearIds[0]);
+            Assert.AreEqual(1, dst.equippedGearIds.Count);
+            Assert.AreEqual("wand_apprentice", dst.equippedGearIds[0]);
+            Assert.IsTrue(dst.accessorySlot2Unlocked);
         }
 
         [Test]
@@ -57,6 +63,7 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.IsNotNull(d.facilityLevels);
             Assert.IsNotNull(d.magicCircleBrews);
             Assert.IsNotNull(d.craftedGearIds);
+            Assert.IsNotNull(d.equippedGearIds);
             Assert.IsNotNull(d.unlockedGearRecipes);
             Assert.AreEqual(0, d.furnaceFuel);
         }

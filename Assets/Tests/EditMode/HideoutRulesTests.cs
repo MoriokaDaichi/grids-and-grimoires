@@ -7,6 +7,7 @@ namespace GridsAndGrimoires.EditModeTests
     {
         private static MaterialCost Small(int n) { return new MaterialCost { materialType = MaterialType.SmallManaCrystal, amount = n }; }
         private static MaterialCost Part(string name, int n) { return new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = name, amount = n }; }
+        private static MaterialCost Frag(MagicAttribute a, int n) { return new MaterialCost { materialType = MaterialType.ElementFragment, attribute = a, amount = n }; }
 
         [Test]
         public void NextCost_NullWhenMaxed()
@@ -133,6 +134,31 @@ namespace GridsAndGrimoires.EditModeTests
 
             // 非モンスター素材は変換不可
             Assert.AreEqual(0, HideoutRules.Transmute(Small(5), 1, 1f).Count);
+        }
+
+        // 検証レポート 2026-09-10 O6：釜Lv3 は属性エレメントの欠片 5個 → エレメント1個 を精製できる
+        // （エレメントの facility 経路。ギガ全体魔法＝Element×3 のフロンティア枯渇対策）。
+        [Test]
+        public void Transmute_RefinesFragmentsToElement_OnlyAtCauldronLv3()
+        {
+            // Lv3 未満では欠片を入力にできない
+            Assert.AreEqual(0, HideoutRules.Transmute(Frag(MagicAttribute.Fire, 10), 10, 1.9f, 2).Count);
+
+            // Lv3：5個 → エレメント1個（同属性、yieldMult は掛けない）
+            List<MaterialCost> one = HideoutRules.Transmute(Frag(MagicAttribute.Fire, 5), 5, 1.9f, 3);
+            Assert.AreEqual(1, one.Count);
+            Assert.AreEqual(MaterialType.Element, one[0].materialType);
+            Assert.AreEqual(MagicAttribute.Fire, one[0].attribute);
+            Assert.AreEqual(1, one[0].amount);
+
+            // 12個 → 2個（端数2個は切り捨て）
+            List<MaterialCost> two = HideoutRules.Transmute(Frag(MagicAttribute.Wind, 12), 12, 1.9f, 3);
+            Assert.AreEqual(2, two[0].amount);
+            Assert.AreEqual(MagicAttribute.Wind, two[0].attribute);
+
+            // 精製単位に満たない / 無属性は不可
+            Assert.AreEqual(0, HideoutRules.Transmute(Frag(MagicAttribute.Fire, 4), 4, 1.9f, 3).Count);
+            Assert.AreEqual(0, HideoutRules.Transmute(Frag(MagicAttribute.None, 10), 10, 1.9f, 3).Count);
         }
 
         [Test]

@@ -6,23 +6,25 @@ using UnityEngine.UI;
 // （企画書のTarkov型ホームハブ Character/Trade は後続フェーズ）
 public class GamePhaseManager : MonoBehaviour
 {
-    public enum GamePhase { Build, Hideout, Research, Trade, Battle, WaveClear, Reward }
+    public enum GamePhase { Build, Hideout, Research, Trade, Battle, WaveClear, Reward, Materials }
 
     [Header("構築フェーズで表示するオブジェクト（杖グリッド/魔法一覧/ステータス/出撃ボタン等）")]
     [SerializeField] private GameObject[] buildPhaseObjects;
 
-    [Header("ハイドアウト・研究・トレード・戦闘・ウェーブ突破・報酬の画面ルート")]
+    [Header("ハイドアウト・研究・トレード・戦闘・ウェーブ突破・報酬・所持素材の画面ルート")]
     [SerializeField] private GameObject hideoutRoot;    // 設備ハブ
     [SerializeField] private GameObject researchRoot;   // スキルツリー（ハブの研究机から入る）
     [SerializeField] private GameObject tradeRoot;
     [SerializeField] private GameObject battleRoot;
     [SerializeField] private GameObject waveClearRoot;
     [SerializeField] private GameObject rewardRoot;
+    [SerializeField] private GameObject materialsRoot;  // 所持素材ページ（宝箱ボタンから）
 
     [Header("ボタン（Awakeでクリックを配線）")]
     [SerializeField] private Button sortieButton;
     [SerializeField] private Button hideoutButton;
     [SerializeField] private Button tradeButton;
+    [SerializeField] private Button materialsButton;    // 下部バー右下の「宝箱」
 
     [Header("追加のナビゲーションボタン（下部バーなど。同じ遷移を複数箇所から呼びたいとき）")]
     [SerializeField] private Button[] extraHideoutButtons;
@@ -40,6 +42,7 @@ public class GamePhaseManager : MonoBehaviour
         if (sortieButton != null) sortieButton.onClick.AddListener(StartSortie);
         if (hideoutButton != null) hideoutButton.onClick.AddListener(GoToHideout);
         if (tradeButton != null) tradeButton.onClick.AddListener(GoToTrade);
+        if (materialsButton != null) materialsButton.onClick.AddListener(GoToMaterials);
         WireAll(extraHideoutButtons, GoToHideout);
         WireAll(extraTradeButtons, GoToTrade);
     }
@@ -93,6 +96,7 @@ public class GamePhaseManager : MonoBehaviour
         if (battleRoot != null) battleRoot.SetActive(phase == GamePhase.Battle);
         if (waveClearRoot != null) waveClearRoot.SetActive(phase == GamePhase.WaveClear);
         if (rewardRoot != null) rewardRoot.SetActive(phase == GamePhase.Reward);
+        if (materialsRoot != null) materialsRoot.SetActive(phase == GamePhase.Materials);
 
         OnPhaseChanged?.Invoke(phase);
     }
@@ -119,6 +123,12 @@ public class GamePhaseManager : MonoBehaviour
     public void GoToTrade()
     {
         if (Current == GamePhase.Build) GoTo(GamePhase.Trade);
+    }
+
+    // 下部バー右下の「宝箱」ボタンから呼ぶ（所持素材ページ）
+    public void GoToMaterials()
+    {
+        if (Current == GamePhase.Build) GoTo(GamePhase.Materials);
     }
 
     // 出撃ボタンから呼ぶ。杖に発動可能な魔法が無ければ構築画面に留まる。

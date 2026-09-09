@@ -263,6 +263,8 @@ public class TradeManager : MonoBehaviour
             HideoutManager.Instance.UnlockRecipe(task.rewardRecipeId);
         if (!string.IsNullOrEmpty(task.rewardGearId) && HideoutManager.Instance != null)
             HideoutManager.Instance.GrantGear(task.rewardGearId);
+        if (task.rewardUnlocksAccessorySlot && HideoutManager.Instance != null)
+            HideoutManager.Instance.UnlockAccessory2Slot();
 
         if (task.repeatable)
         {

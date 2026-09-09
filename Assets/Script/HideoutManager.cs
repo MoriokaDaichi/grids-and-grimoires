@@ -18,7 +18,13 @@ public class HideoutManager : MonoBehaviour
     private long furnaceFuel;
     private readonly List<BrewRecord> brews = new List<BrewRecord>();
     private readonly HashSet<string> craftedGear = new HashSet<string>();
+    // いま装備している装備（枠→装備ID）。所有していても装備中とは限らない。
+    private readonly Dictionary<EquipSlot, string> equipped = new Dictionary<EquipSlot, string>();
+    private bool accessory2Unlocked;   // 2つ目のアクセサリー枠（トレーダーのタスク報酬で開放）
     private readonly HashSet<string> unlockedRecipes = new HashSet<string>();
+
+    private static readonly EquipSlot[] AllSlots =
+        { EquipSlot.Wand, EquipSlot.Armor, EquipSlot.Accessory1, EquipSlot.Accessory2 };
 
     private PlayerStatus playerStatus;
     private bool gearApplied;
@@ -33,7 +39,7 @@ public class HideoutManager : MonoBehaviour
     void Start()
     {
         playerStatus = UnityEngine.Object.FindFirstObjectByType<PlayerStatus>();
-        ApplyOwnedGear();
+        ApplyEquippedGear();
     }
 
     void OnDestroy()
@@ -62,6 +68,118 @@ public class HideoutManager : MonoBehaviour
     public IReadOnlyList<BrewRecord> Brews { get { return brews; } }
     public bool HasGear(string id) { return craftedGear.Contains(id); }
     public IEnumerable<string> OwnedGear { get { return craftedGear; } }
+
+    // ---------------------------------------------------------------- 装備（所有の中から枠ごとに1個を選ぶ）
+
+    // 2つ目のアクセサリー枠が開放済みか。
+    public bool Accessory2Unlocked { get { return accessory2Unlocked; } }
+
+    // トレーダーのタスク報酬で2つ目のアクセサリー枠を開放する。
+    public void UnlockAccessory2Slot()
+    {
+        if (accessory2Unlocked) return;
+        accessory2Unlocked = true;
+        Save();
+        Debug.Log("[装備] アクセサリーの装備枠を1つ増設した。");
+    }
+
+    // 枠に装備中の装備ID（何も装備していなければ null）。
+    public string EquippedId(EquipSlot slot)
+    {
+        string id;
+        return equipped.TryGetValue(slot, out id) ? id : null;
+    }
+
+    public GearDef EquippedGear(EquipSlot slot) { return GearCatalog.Get(EquippedId(slot)); }
+
+    public bool IsEquipped(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return false;
+        foreach (string v in equipped.Values) if (v == id) return true;
+        return false;
+    }
+
+    // そのカテゴリで所有している装備ID（弱→強、tier昇順）。装備選択UI用。
+    public List<string> OwnedGearForSlot(GearSlot category)
+    {
+        List<string> outp = new List<string>();
+        foreach (string id in craftedGear)
+        {
+            GearDef g = GearCatalog.Get(id);
+            if (g != null && g.slot == category) outp.Add(id);
+        }
+        outp.Sort((a, b) =>
+        {
+            GearDef ga = GearCatalog.Get(a), gb = GearCatalog.Get(b);
+            int ta = ga != null ? ga.tier : 0, tb = gb != null ? gb.tier : 0;
+            return ta != tb ? ta.CompareTo(tb) : string.CompareOrdinal(a, b);
+        });
+        return outp;
+    }
+
+    // 枠に装備する。id=null なら外す。未開放枠／所有していない／カテゴリ不一致なら false。
+    public bool Equip(EquipSlot slot, string id)
+    {
+        if (slot == EquipSlot.Accessory2 && !accessory2Unlocked) return false;
+
+        if (string.IsNullOrEmpty(id))
+        {
+            if (EquippedId(slot) == null) return true; // 既に空
+        }
+        else
+        {
+            GearDef gear = GearCatalog.Get(id);
+            if (gear == null || gear.slot != GearCatalog.CategoryOf(slot) || !HasGear(id)) return false;
+            if (EquippedId(slot) == id) return true;
+        }
+
+        SwapEquip(slot, id);
+        Save();
+        Debug.Log("[装備] " + slot + " ← " + (string.IsNullOrEmpty(id) ? "（外す）" : GearCatalog.Get(id).name));
+        return true;
+    }
+
+    public void Unequip(EquipSlot slot) { Equip(slot, null); }
+
+    // 新しく手に入れた装備をどの枠に入れるか（製作・タスク付与時）。
+    private EquipSlot DefaultEquipSlotFor(GearSlot category)
+    {
+        if (category == GearSlot.Wand) return EquipSlot.Wand;
+        if (category == GearSlot.Armor) return EquipSlot.Armor;
+        if (!equipped.ContainsKey(EquipSlot.Accessory1)) return EquipSlot.Accessory1;
+        if (accessory2Unlocked && !equipped.ContainsKey(EquipSlot.Accessory2)) return EquipSlot.Accessory2;
+        return EquipSlot.Accessory1; // 両枠が埋まっていれば1枠目を置換
+    }
+
+    // 旧装備のボーナスを外し、新装備のボーナスを付ける（Save はしない）。id 空なら外すだけ。
+    private void SwapEquip(EquipSlot slot, string newId)
+    {
+        // 同じアクセを別のアクセ枠から移してくる場合は、旧枠の割り当て・ボーナスを先に外す
+        if (!string.IsNullOrEmpty(newId) && GearCatalog.IsAccessorySlot(slot))
+        {
+            EquipSlot other = slot == EquipSlot.Accessory1 ? EquipSlot.Accessory2 : EquipSlot.Accessory1;
+            string otherId;
+            if (equipped.TryGetValue(other, out otherId) && otherId == newId)
+            {
+                GearDef od = GearCatalog.Get(otherId);
+                if (gearApplied && playerStatus != null && od != null) playerStatus.ApplyGearDelta(od, -1);
+                equipped.Remove(other);
+            }
+        }
+
+        string cur;
+        if (equipped.TryGetValue(slot, out cur) && cur != newId)
+        {
+            GearDef curDef = GearCatalog.Get(cur);
+            if (gearApplied && playerStatus != null && curDef != null) playerStatus.ApplyGearDelta(curDef, -1);
+        }
+
+        if (string.IsNullOrEmpty(newId)) { equipped.Remove(slot); return; }
+
+        equipped[slot] = newId;
+        GearDef newDef = GearCatalog.Get(newId);
+        if (gearApplied && playerStatus != null && newDef != null) playerStatus.ApplyGearDelta(newDef, +1);
+    }
 
     public bool RecipeUnlocked(string id) { return !string.IsNullOrEmpty(id) && unlockedRecipes.Contains(id); }
     public IEnumerable<string> UnlockedRecipes { get { return unlockedRecipes; } }
@@ -163,28 +281,47 @@ public class HideoutManager : MonoBehaviour
     public bool CanTransmute(MaterialCost part, int times)
     {
         if (!IsBuilt(FacilityKind.AlchemyCauldron) || part == null || times <= 0) return false;
-        if (part.materialType != MaterialType.SpecialItem) return false;
-        // 錬金釜のレベルで扱える tier に制限（Lv1:tier1 / Lv2:tier1〜3 / Lv3:tier1〜5）
-        if (!HideoutRules.CanCauldronProcess(Level(FacilityKind.AlchemyCauldron), MonsterPartCatalog.TierOf(part.specialItemName))) return false;
+        int level = Level(FacilityKind.AlchemyCauldron);
+
+        if (part.materialType == MaterialType.ElementFragment)
+        {
+            // 欠片→エレメントの精製は錬金釜Lv3 以上、かつ精製単位（5個）以上を投入するときのみ（O6 対策）
+            if (level < 3 || part.attribute == MagicAttribute.None) return false;
+            if (times < HideoutRules.ElementRefinePerElement) return false;
+        }
+        else if (part.materialType == MaterialType.SpecialItem)
+        {
+            // 錬金釜のレベルで扱える tier に制限（Lv1:tier1 / Lv2:tier1〜3 / Lv3:tier1〜5）
+            if (!HideoutRules.CanCauldronProcess(level, MonsterPartCatalog.TierOf(part.specialItemName))) return false;
+        }
+        else return false;
+
         if (!CanPowerFacilityAction()) return false;
         PlayerInventory inv = PlayerInventory.Instance;
-        MaterialCost need = new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = part.specialItemName, amount = times };
-        return inv != null && inv.CanAfford(new List<MaterialCost> { need });
+        return inv != null && inv.CanAfford(new List<MaterialCost> { TransmuteInput(part, times) });
     }
 
     public bool Transmute(MaterialCost part, int times)
     {
         if (!CanTransmute(part, times)) return false;
         PlayerInventory inv = PlayerInventory.Instance;
+        int level = Level(FacilityKind.AlchemyCauldron);
 
-        MaterialCost need = new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = part.specialItemName, amount = times };
-        if (!inv.TrySpend(new List<MaterialCost> { need })) return false;
+        if (!inv.TrySpend(new List<MaterialCost> { TransmuteInput(part, times) })) return false;
 
-        List<MaterialCost> yield = HideoutRules.Transmute(part, times, HideoutCatalog.CauldronYieldMult(Level(FacilityKind.AlchemyCauldron)));
+        List<MaterialCost> yield = HideoutRules.Transmute(part, times, HideoutCatalog.CauldronYieldMult(level), level);
         inv.Add(yield);
         ConsumeFacilityPower();
         Save();
         return true;
+    }
+
+    // 変換に投入する素材（モンスター素材 or 属性エレメントの欠片）を times 個ぶんの MaterialCost にする。
+    private static MaterialCost TransmuteInput(MaterialCost part, int times)
+    {
+        return part.materialType == MaterialType.ElementFragment
+            ? new MaterialCost { materialType = MaterialType.ElementFragment, attribute = part.attribute, amount = times }
+            : new MaterialCost { materialType = MaterialType.SpecialItem, specialItemName = part.specialItemName, amount = times };
     }
 
     // ---------------------------------------------------------------- マジックサークル
@@ -283,21 +420,8 @@ public class HideoutManager : MonoBehaviour
         GearDef gear = GearCatalog.Get(gearId);
         if (gear == null || HasGear(gear.id)) return;
 
-        List<string> toRemove = new List<string>();
-        foreach (string ownedId in craftedGear)
-        {
-            GearDef o = GearCatalog.Get(ownedId);
-            if (o != null && o.slot == gear.slot) toRemove.Add(ownedId);
-        }
-        foreach (string id in toRemove)
-        {
-            craftedGear.Remove(id);
-            GearDef o = GearCatalog.Get(id);
-            if (o != null && playerStatus != null) playerStatus.ApplyGearDelta(o, -1);
-        }
-
         craftedGear.Add(gear.id);
-        if (playerStatus != null) playerStatus.ApplyGearDelta(gear, +1);
+        SwapEquip(DefaultEquipSlotFor(gear.slot), gear.id);   // 受け取った装備を装備する（同カテゴリの旧装備は所有のまま残る）
         Save();
         Debug.Log("[作業台] " + gear.name + " を受け取った（タスク報酬）。");
     }
@@ -308,22 +432,10 @@ public class HideoutManager : MonoBehaviour
         PlayerInventory inv = PlayerInventory.Instance;
         if (!inv.TrySpend(gear.cost)) return false;
 
-        // 同じスロットの旧装備は置き換え（ボーナスを外す）
-        List<string> toRemove = new List<string>();
-        foreach (string ownedId in craftedGear)
-        {
-            GearDef o = GearCatalog.Get(ownedId);
-            if (o != null && o.slot == gear.slot) toRemove.Add(ownedId);
-        }
-        foreach (string id in toRemove)
-        {
-            craftedGear.Remove(id);
-            GearDef o = GearCatalog.Get(id);
-            if (o != null && playerStatus != null) playerStatus.ApplyGearDelta(o, -1);
-        }
-
+        // 製作した装備を所有に加え、そのまま装備する。同カテゴリの旧装備は所有のまま
+        // 残り、キャラクター画面でいつでも付け替えられる。
         craftedGear.Add(gear.id);
-        if (playerStatus != null) playerStatus.ApplyGearDelta(gear, +1);
+        SwapEquip(DefaultEquipSlotFor(gear.slot), gear.id);
 
         ConsumeFacilityPower();
         Save();
@@ -331,12 +443,12 @@ public class HideoutManager : MonoBehaviour
         return true;
     }
 
-    // 所持している装備のボーナスを PlayerStatus に反映（起動時に1回。PlayerStatus はセーブされないため）。
-    private void ApplyOwnedGear()
+    // 装備中の装備のボーナスを PlayerStatus に反映（起動時に1回。PlayerStatus はセーブされないため）。
+    private void ApplyEquippedGear()
     {
         if (gearApplied || playerStatus == null) return;
         gearApplied = true;
-        foreach (string id in craftedGear)
+        foreach (string id in equipped.Values)
         {
             GearDef g = GearCatalog.Get(id);
             if (g != null) playerStatus.ApplyGearDelta(g, +1);
@@ -381,6 +493,28 @@ public class HideoutManager : MonoBehaviour
         craftedGear.Clear();
         if (d.craftedGearIds != null)
             foreach (string g in d.craftedGearIds) if (!string.IsNullOrEmpty(g)) craftedGear.Add(g);
+
+        accessory2Unlocked = d.accessorySlot2Unlocked;
+
+        // 装備中の枠を復元。equippedGearIds は Wand→Armor→Accessory1→Accessory2 の順で書かれた
+        // フラットな所有IDリスト（枠が空ならスキップ）。空 or 旧セーブは所有品から移行
+        // ＝旧仕様は「1カテゴリ1個・所有＝装備」だったので、所有品をそのまま装備する。
+        equipped.Clear();
+        List<string> equipSource = (d.equippedGearIds != null && d.equippedGearIds.Count > 0)
+            ? d.equippedGearIds
+            : new List<string>(craftedGear);
+        List<string> accIds = new List<string>();
+        foreach (string id in equipSource)
+        {
+            GearDef g = GearCatalog.Get(id);
+            if (g == null || !craftedGear.Contains(id)) continue;
+            if (g.slot == GearSlot.Wand) { if (!equipped.ContainsKey(EquipSlot.Wand)) equipped[EquipSlot.Wand] = id; }
+            else if (g.slot == GearSlot.Armor) { if (!equipped.ContainsKey(EquipSlot.Armor)) equipped[EquipSlot.Armor] = id; }
+            else accIds.Add(id);
+        }
+        if (accIds.Count > 0) equipped[EquipSlot.Accessory1] = accIds[0];
+        if (accIds.Count > 1 && accessory2Unlocked) equipped[EquipSlot.Accessory2] = accIds[1];
+
         unlockedRecipes.Clear();
         if (d.unlockedGearRecipes != null)
             foreach (string r in d.unlockedGearRecipes) if (!string.IsNullOrEmpty(r)) unlockedRecipes.Add(r);
@@ -396,6 +530,13 @@ public class HideoutManager : MonoBehaviour
         d.furnaceFuel = furnaceFuel;
         d.magicCircleBrews = new List<BrewRecord>(brews);
         d.craftedGearIds = new List<string>(craftedGear);
+        d.equippedGearIds = new List<string>();
+        foreach (EquipSlot s in AllSlots)   // Wand→Armor→Accessory1→Accessory2 の順で並べる
+        {
+            string id;
+            if (equipped.TryGetValue(s, out id) && !string.IsNullOrEmpty(id)) d.equippedGearIds.Add(id);
+        }
+        d.accessorySlot2Unlocked = accessory2Unlocked;
         d.unlockedGearRecipes = new List<string>(unlockedRecipes);
 
         SaveManager.Save(d);

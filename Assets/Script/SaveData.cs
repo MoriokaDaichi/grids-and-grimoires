@@ -58,10 +58,15 @@ public class SaveData
     public long furnaceFuel;
     // マジックサークルで進行中の捧げもの
     public List<BrewRecord> magicCircleBrews = new List<BrewRecord>();
-    // 作業台で製作済みの装備ID（所有で PlayerStatus に永続ボーナス）
+    // 作業台で製作済み（＝所有）の装備ID。所有していても装備中とは限らない。
     public List<string> craftedGearIds = new List<string>();
+    // いま装備しているの装備ID（スロットごとに最大1個。空なら未記載）。
+    // PlayerStatus への恒久ボーナスは「装備中」のぶんだけ。空/旧セーブは craftedGearIds から移行（1スロット1個だったため全て装備）。
+    public List<string> equippedGearIds = new List<string>();
     // 作業台で解禁済みの装備レシピID（recipeGated な GearDef はこれが無いと製作できない）
     public List<string> unlockedGearRecipes = new List<string>();
+    // 2つ目のアクセサリー装備枠を開放済みか（トレーダーのタスク報酬で開放）
+    public bool accessorySlot2Unlocked;
 
     // お金（ゴールド）。トレード・タスク納金・ダンジョン入場料で使う。
     public int money;

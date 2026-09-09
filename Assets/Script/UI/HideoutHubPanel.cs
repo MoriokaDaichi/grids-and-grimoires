@@ -193,13 +193,39 @@ public class HideoutHubPanel : MonoBehaviour
                 continue;
             }
 
-            List<MaterialCost> outp = HideoutRules.Transmute(part, times, mult);
+            List<MaterialCost> outp = HideoutRules.Transmute(part, times, mult, level);
             string outText = outp.Count > 0 ? MaterialCatalog.DisplayName(outp[0]) + " ×" + outp[0].amount : "?";
             bool can = hideout.CanTransmute(part, times);
             MaterialCost captured = part; int t = times;
             ActionRow(card, mp.name + " ×" + times + " → " + outText + "（tier" + mp.tier + " / 所持 " + have + "）", "変換",
                 can, OkBtn, () => hideout.Transmute(captured, t));
         }
+
+        // 錬金釜Lv3：属性エレメントの欠片 → エレメント（O6 対策。ギガ全体魔法のゲート解消）。
+        if (level >= 3)
+        {
+            int unit = HideoutRules.ElementRefinePerElement;
+            foreach (MagicAttribute attr in new[]
+                { MagicAttribute.Fire, MagicAttribute.Thunder, MagicAttribute.Wind, MagicAttribute.Light, MagicAttribute.Dark })
+            {
+                MaterialCost frag = new MaterialCost { materialType = MaterialType.ElementFragment, attribute = attr, amount = 1 };
+                int haveFrag = inventory != null ? inventory.GetCount(frag) : 0;
+                if (haveFrag < unit) continue;
+
+                int refineTimes = Mathf.Min(haveFrag - haveFrag % unit, unit * 10); // 5 の倍数、1アクション上限 50個
+                int made = refineTimes / unit;
+                MaterialCost capturedFrag = frag; int rt = refineTimes;
+                ActionRow(card,
+                    MaterialCatalog.DisplayName(frag) + " ×" + refineTimes + " → " + AttrElementName(attr) + " ×" + made
+                        + "（所持 " + haveFrag + "）",
+                    "精製", hideout.CanTransmute(frag, refineTimes), OkBtn, () => hideout.Transmute(capturedFrag, rt));
+            }
+        }
+    }
+
+    private static string AttrElementName(MagicAttribute attr)
+    {
+        return MaterialCatalog.DisplayName(new MaterialCost { materialType = MaterialType.Element, attribute = attr, amount = 1 });
     }
 
     // ---------------------------------------------------------------- 作業台
