@@ -62,10 +62,16 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
   ＝SKILL.md の「研究未割当＝深度が低く出る主因」を解消。(b) `farmRuns`(=2)/`shallowFarmCap`(=4)＝
   最初の2周は深度4で回して低tier素材（スライムゼリー等）を確実に集める＝経済初動の分散を抑える。
   (c) `perRunRealTimeout` 150→260。
-- **再測（Mode A）**: サイクル6（全改善＋研究割当）で push 7→8→11→12→16（人力 再検証3 の 11→12→15→14→16
-  に一致）。サイクル8（R4＋farm周）で farm×2→push 8→12→13→14、魔力炉Lv2＋錬金釜Lv2 が貪欲で建ち、
-  深部の HP 推移が「きれいに減って死ぬ」形（d11:96%→d14:0%）に。全周 例外・ソフトロック・error/warning ゼロ。
-- EditMode 190 → 195 グリーン。
+- **D7（4×4 に Giga＋強AoE 同居不可）**（`HideoutCatalog`）: 作業台Lv2 step1 の中結晶 `M(7)→M(4)`
+  （他 Lv2 に合わせる。tier2杖＝5×5 グリッドの導線）。モードB で強キット注入して push → **5×5 に
+  GigaFire＋GigaThunder＋MegaFire＋MegaThunder＋Fire が同居**、深度15 で decisive death を確認
+  （`2026-09-09_再検証6_*.md`）。
+- **ハーネス改良（`PlaytestAutopilot`）**: (a) 研究割当、(b) farm 周（最初の3周は深度7で回して素材集め）、
+  (c) 杖の上位持ち替え＋杖材料の絶対保護、(d) ブートストラップ後の中結晶温存（Lv2 ゲート用）。
+  → Mode A の cold-start push 到達推移が **旧「全周8」→ 8→11→12→13→15→16** と人力 再検証3（11→…→16）に一致。
+- **検証まとめ**: フェイルステートは 最弱キット d8 / 中キット d12〜15 / 強キット d15 でいずれも decisive death。
+  EditMode **180 → 195 グリーン**（回帰なし）。Mode A 多数＋Mode B 複数（〜25 run）で例外・ソフトロック・
+  コンソール error/warning ゼロ。検証レポートは `Docs/検証レポート/_ループ_*.md` `_再検証4〜6_*.md` `_改善ループ_進捗.md`。
 
 ### -9. 通しプレイ検証を Claude Code スキル化（2026-09-09 その9）
 `.claude/skills/gg-playtest/`（`SKILL.md` ＋ `references/manual-run.md`）。cold-start 通しプレイ検証の手順を
