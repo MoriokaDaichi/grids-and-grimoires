@@ -249,6 +249,28 @@ public class PlaytestAutopilot : MonoBehaviour
                 }
             }
 
+            // 1b. ブートストラップ後は 大結晶 → ステータスP 変換を回す（＝中層で貯めた結晶を恒久ステに）。
+            //     設備Lv1＋杖が揃った後の余剰 大結晶（≥2）を bonusStatPoints オファーに流す。
+            if (trade != null)
+            {
+                bool infra = true;
+                foreach (var k in buildOrder) if (!hideout.IsBuilt(k)) infra = false;
+                if (infra && CurrentWandTier(hideout) >= 1)
+                {
+                    foreach (var offer in trade.Offers)
+                    {
+                        if (offer == null || offer.bonusStatPoints <= 0 || offer.giveMoney > 0) continue;
+                        if (offer.give == null || offer.give.Count != 1) continue;
+                        if (offer.give[0].materialType != MaterialType.LargeManaCrystal) continue;
+                        // 大結晶は tier3 装備・作業台Lv3（L(1)〜L(2)）用に 6 個は残す。
+                        int safety = 0;
+                        while (CrystalCount(inv, MaterialType.LargeManaCrystal) > 6 + offer.give[0].amount
+                               && trade.CanTrade(offer) && safety++ < 30)
+                        { trade.TryTrade(offer); econTrades++; did = true; }
+                    }
+                }
+            }
+
             // 2. 結晶を小に崩す（設備Lv1 の建材はほぼ小結晶＝S(12〜24)）。glen の 大→中→小。
             //    ただし未建造設備が要求する中結晶ぶん＋Lv2 強化1段ぶんは崩さず残す。
             if (trade != null)
