@@ -124,19 +124,20 @@ public class EndlessWaveGeneratorTests
     public void EnemyCountFor_TapersInDeepEnd()
     {
         int knee = EndlessWaveGenerator.EnemyCountTaperKneeDepth;
-        // 膝まで（d1..knee）は従来式と一致
+
+        // 膝まで（d1..knee）は従来式と一致：素の 5 深度ごと +1（深度2以降は最低2体）
         for (int d = 1; d <= knee; d++)
         {
-            int plain = Mathf.Clamp(Mathf.Max(1 + (d - 1) / EndlessWaveGenerator.DepthsPerExtraEnemy,
-                d >= EndlessWaveGenerator.MinTwoEnemyDepth ? 2 : 1), 1, 6);
+            int plain = 1 + (d - 1) / EndlessWaveGenerator.DepthsPerExtraEnemy;
+            if (d >= EndlessWaveGenerator.MinTwoEnemyDepth && plain < 2) plain = 2;
             Assert.AreEqual(plain, EndlessWaveGenerator.EnemyCountFor(d, 6), "depth " + d + " は膝まで不変");
         }
+
         // 膝から先は「テーパー無しの素の式」より同時数が少ない（または同じ）
         for (int d = knee + 1; d <= 40; d++)
-        {
-            int plain = 1 + (d - 1) / EndlessWaveGenerator.DepthsPerExtraEnemy;
-            Assert.LessOrEqual(EndlessWaveGenerator.EnemyCountFor(d, 6), plain, "depth " + d);
-        }
+            Assert.LessOrEqual(EndlessWaveGenerator.EnemyCountFor(d, 6),
+                1 + (d - 1) / EndlessWaveGenerator.DepthsPerExtraEnemy, "depth " + d);
+
         // d21〜d26 の同時数は 4 のまま（素の式なら 5〜6 になる帯）
         for (int d = 21; d <= 26; d++)
             Assert.AreEqual(4, EndlessWaveGenerator.EnemyCountFor(d, 6), "depth " + d + " は 4 体で保たれる");
