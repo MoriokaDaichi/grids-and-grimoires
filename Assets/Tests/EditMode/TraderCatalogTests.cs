@@ -149,6 +149,35 @@ public class TraderCatalogTests
         Assert.GreaterOrEqual(repeatables, 2, "繰り返し討伐タスクが少ない（dag / orca に想定）");
     }
 
+    // 再検証9（S2）：大結晶の入手が中盤の最大ボトルネック。中層 farm 帯（d15）の節目タスクと、
+    // その先の繰り返し討伐タスクが 大結晶 を出して、6×6（tier3 杖）・作業台Lv3・大結晶→ステP を回せること。
+    [Test]
+    public void MidGame_LargeCrystalFaucet_ExistsAtD15MilestoneAndRepeatable()
+    {
+        Trader orca = null;
+        foreach (Trader t in TraderCatalog.BuildTraders()) if (t.id == "orca") orca = t;
+        Assert.IsNotNull(orca);
+
+        TraderTask d15 = null, grind = null;
+        foreach (TraderTask task in orca.tasks)
+        {
+            if (task.kind == TraderTaskKind.ReachDepth && task.targetCount == 15) d15 = task;
+            if (task.repeatable) grind = task;
+        }
+        Assert.IsNotNull(d15, "orca の d15 到達タスクが無い");
+        Assert.IsNotNull(grind, "orca の繰り返し討伐タスクが無い");
+
+        int d15Large = 0, grindLarge = 0;
+        foreach (MaterialCost c in d15.rewardItems)
+            if (c != null && c.materialType == MaterialType.LargeManaCrystal) d15Large += c.amount;
+        if (grind.rewardItems != null)
+            foreach (MaterialCost c in grind.rewardItems)
+                if (c != null && c.materialType == MaterialType.LargeManaCrystal) grindLarge += c.amount;
+
+        Assert.GreaterOrEqual(d15Large, 2, "d15 の節目が大結晶を出さない（S2 の中層 faucet）");
+        Assert.GreaterOrEqual(grindLarge, 2, "繰り返し討伐が大結晶を出さない（成長ループのレート）");
+    }
+
     [Test]
     public void CollectorTrader_HasReachDepthTask()
     {

@@ -329,8 +329,12 @@ public static class TraderCatalog
             // 深部設計（サイクル13 案A）：深度到達それ自体を成長ラインにする。各節目でまとまった
             // 恒久ステータスP（＝HP/Atk/Def へ振れる）を出し、「d15 に届けば d18 まで戦える体力が手に入る」
             // という階段を作る。全投資でも壁が d20 で頭打ち（伸びしろ無し）だった診断への対策。
+            // 再検証9（S2）：大結晶の入手が中盤の最大ボトルネック（tier3 杖＝6×6・作業台Lv3・
+            // orca 大結晶→ステP がどれも大結晶ゲート、faucet が glen 中×10→大×1 しか無い）。
+            // 中層farm の節目 d15 に 大結晶×3 を出して、6×6 と成長ループの初動を一気に開く。
             Depth("orca_4", "orca", "深度 15 まで到達する", 15,
-                Items(Frag(MagicAttribute.Light, 3), Frag(MagicAttribute.Wind, 3), M(MaterialType.MediumManaCrystal, 6)),
+                Items(Frag(MagicAttribute.Light, 3), Frag(MagicAttribute.Wind, 3),
+                      M(MaterialType.MediumManaCrystal, 6), M(MaterialType.LargeManaCrystal, 3)),
                 rewardStat: 5, rewardMoney: 120),
             Deliver("orca_5", "orca", "遺跡の遺物 と 50 G を納める（石の破片/古びた骨/腐肉 ×5）",
                 Items(Part("石の破片", 5), Part("古びた骨", 5), Part("腐肉", 5)), null, deliverMoney: 50, rewardMoney: 150),
@@ -342,10 +346,11 @@ public static class TraderCatalog
             Depth("orca_7b", "orca", "深度 22 まで到達する", 22, null, rewardStat: 8, rewardRecipe: "wand_dragoon"),
             Depth("orca_8", "orca", "深度 25 まで到達する", 25, null, rewardStat: 8, rewardMoney: 250),
             Depth("orca_9", "orca", "深度 30 まで到達する", 30, null, rewardStat: 12, rewardGear: "acc_orb"));
-        // 繰り返し討伐（無限・深部向け）。orca_4（深度15到達）達成で解放。撃破数 40→30・報酬 大結晶×1＋ステP+3。
-        // ＝「中層で狩る → 大結晶をステPへ変換 → さらに深層」のループのレートを上げる（再検証7 R7-2）。
-        orca.tasks.Add(RepeatKill("orca_grind", "orca", "澱みを狩り続ける（繰り返し・魔物 30 体ごと）", "orca_4", 30,
-            Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 3));
+        // 繰り返し討伐（無限・深部向け）。orca_4（深度15到達）達成で解放。
+        // ＝「中層で狩る → 大結晶をステPへ変換 → さらに深層」のループ。再検証7 R7-2 で 40→30体。
+        // 再検証9（S2）：cold start から 20 周で d25 に届かせるにはレートが足りない。25 体ごと・大結晶×2＋ステP+3 に。
+        orca.tasks.Add(RepeatKill("orca_grind", "orca", "澱みを狩り続ける（繰り返し・魔物 25 体ごと）", "orca_4", 25,
+            Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 3));
         traders.Add(orca);
 
         return traders;
