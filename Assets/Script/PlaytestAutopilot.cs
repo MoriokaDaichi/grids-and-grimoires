@@ -376,13 +376,14 @@ public class PlaytestAutopilot : MonoBehaviour
                            && trade.CanTrade(med2large) && g1++ < 10)
                     { trade.TryTrade(med2large); econTrades++; did = true; }
 
-                    // (ii) 炎・闇の欠片を 4 つずつ確保（樫の杖=炎2 / 大魔道の杖=闇3 / 作業台Lv2=炎2 / Lv3=闇3）。
+                    // (ii) 属性欠片を確保。炎: 樫の杖2＋作業台Lv2 2。闇: 大魔道の杖3＋作業台Lv3 3 ＝闇は多めに。
                     foreach (var att in new[] { MagicAttribute.Fire, MagicAttribute.Dark })
                     {
+                        int target = att == MagicAttribute.Dark ? 7 : 4;
                         int g2 = 0;
-                        while (FragCount(inv, att) < 4
+                        while (FragCount(inv, att) < target
                                && CrystalCount(inv, MaterialType.MediumManaCrystal) > 24
-                               && TryBuyFragment(trade, att) && g2++ < 8)
+                               && TryBuyFragment(trade, att) && g2++ < 10)
                         { econTrades++; did = true; }
                     }
                 }
@@ -455,6 +456,14 @@ public class PlaytestAutopilot : MonoBehaviour
             foreach (var kind in new[] { FacilityKind.ManaFurnace, FacilityKind.AlchemyCauldron, FacilityKind.Workbench, FacilityKind.ResearchDesk })
             {
                 if (hideout.Level(kind) == 1 && hideout.CanAdvance(kind))
+                { hideout.Advance(kind); econBuilds++; did = true; }
+            }
+
+            // 9b. Lv3 強化（S4）。作業台Lv3＝tier3 杖＝6×6 が深部設計 D の要。
+            //     錬金釜Lv3＝tier4-5 変換（深部素材→大結晶）、魔力炉Lv3＝燃料バッファ増も深部で効く。
+            foreach (var kind in new[] { FacilityKind.Workbench, FacilityKind.AlchemyCauldron, FacilityKind.ManaFurnace, FacilityKind.ResearchDesk })
+            {
+                if (hideout.Level(kind) == 2 && hideout.CanAdvance(kind))
                 { hideout.Advance(kind); econBuilds++; did = true; }
             }
 
@@ -587,23 +596,32 @@ public class PlaytestAutopilot : MonoBehaviour
         }
     }
 
-    // 解放済みの攻撃魔法を、形状の小さい順に greedy first-fit でグリッドへ置く。
+    // 解放済みの攻撃魔法をグリッドへ置く。
+    // 深部（同時4体）の壁は AoE throughput で決まる（再検証9 の S1）ので、
+    // まず AoE を大きい（＝強い Giga/Mega）順に詰め、余りを単体で小さい順に埋める。
     private void EnsureMagicsPlaced(MagicGridManager grid, MagicSpawner spawner, ResearchManager research)
     {
         if (grid.GetPlacedMagics().Count > 0) return;
         if (spawner.magicDataList == null) return;
 
-        var candidates = new List<MagicData>();
+        var aoe = new List<MagicData>();
+        var single = new List<MagicData>();
         foreach (var md in spawner.magicDataList)
         {
             if (md == null) continue;
             if (md.category != MagicCategory.Attack) continue;
             if (research != null && !research.IsUnlocked(md)) continue;
-            candidates.Add(md);
+            if (md.range == MagicRange.AoE) aoe.Add(md); else single.Add(md);
         }
-        candidates.Sort((a, b) => a.shapeNodes.Count.CompareTo(b.shapeNodes.Count));
+        // AoE は大きい順（Giga>Mega>基本）、単体は小さい順（隙間埋め）。
+        aoe.Sort((a, b) => b.shapeNodes.Count.CompareTo(a.shapeNodes.Count));
+        single.Sort((a, b) => a.shapeNodes.Count.CompareTo(b.shapeNodes.Count));
 
-        foreach (var md in candidates)
+        var ordered = new List<MagicData>();
+        ordered.AddRange(aoe);
+        ordered.AddRange(single);
+
+        foreach (var md in ordered)
         {
             var inst = Instantiate(md);
             inst.name = md.name;
@@ -740,7 +758,7 @@ public class PlaytestAutopilot : MonoBehaviour
         AppendSample(sb, "Warning 例", logWarnings);
         sb.AppendLine();
         sb.AppendLine("---");
-        sb.AppendLine("_ハーネスの限界: 経済は貪欲エージェント近似（人力の結晶配分・杖の手詰めより下手）。魔法配置は greedy first-fit で回転のみ（Mega/Giga＋大型AoE の手詰めはしない）。「脱出」判定はウェーブ間だけ（1ウェーブ内のバースト即死は拾えるが事前脱出はできない）。研究割当は Atk>Def>Hp>Spd の貪欲（Luc/マナはスキップ）。_");
+        sb.AppendLine("_ハーネスの限界: 経済は貪欲エージェント近似（人力の結晶配分・手詰めより下手）。魔法配置は AoE 優先の greedy first-fit（回転4方向・大きい AoE から詰める）。設備は Lv3・tier3 杖まで貪欲で追う。「脱出」判定はウェーブ間だけ（1ウェーブ内のバースト即死は拾えるが事前脱出はできない）。研究割当は Atk>Def>Hp>Spd の貪欲（Luc/マナはスキップ）。_");
         return sb.ToString();
     }
 
