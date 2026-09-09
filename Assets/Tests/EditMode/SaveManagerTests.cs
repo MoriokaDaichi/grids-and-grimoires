@@ -86,5 +86,20 @@ namespace GridsAndGrimoires.EditModeTests
             Assert.AreEqual(0, d.money);
             Assert.IsFalse(d.moneyInitialized);
         }
+
+        [Test]
+        public void RepeatableTaskFields_RoundTrip()
+        {
+            SaveData src = new SaveData();
+            src.repeatableTaskBaselines.Add(new StringIntPair { key = "dag_grind", value = 125 });
+            src.repeatableTaskClaims.Add(new StringIntPair { key = "dag_grind", value = 5 });
+
+            SaveData dst = SaveManager.Deserialize(SaveManager.Serialize(src));
+
+            Assert.AreEqual(1, dst.repeatableTaskBaselines.Count);
+            Assert.AreEqual("dag_grind", dst.repeatableTaskBaselines[0].key);
+            Assert.AreEqual(125, dst.repeatableTaskBaselines[0].value);
+            Assert.AreEqual(5, dst.repeatableTaskClaims[0].value);
+        }
     }
 }

@@ -127,6 +127,28 @@ public class TraderCatalogTests
         Assert.GreaterOrEqual(milestones, 4, "d15 以降の深度到達マイルストーンが少ない");
     }
 
+    // 深部設計（サイクル14）：無限に資源を稼ぐための繰り返し討伐タスクが戦闘/深層トレーダーにある。
+    [Test]
+    public void RepeatableKillTasks_ExistAndAreWellFormed()
+    {
+        int repeatables = 0;
+        foreach (Trader t in TraderCatalog.BuildTraders())
+        {
+            foreach (TraderTask task in t.tasks)
+            {
+                if (!task.repeatable) continue;
+                repeatables++;
+                Assert.AreEqual(TraderTaskKind.DefeatEnemies, task.kind, task.id + " は討伐タスクであるべき");
+                Assert.IsTrue(string.IsNullOrEmpty(task.targetEnemyName), task.id + " は種類指定なし（累計）であるべき");
+                Assert.Greater(task.targetCount, 0);
+                Assert.IsTrue(task.rewardStatPoints > 0 || (task.rewardItems != null && task.rewardItems.Count > 0),
+                    task.id + " に報酬が無い");
+                Assert.IsFalse(string.IsNullOrEmpty(task.requires), task.id + " は early タスクに繋いで解放されるべき");
+            }
+        }
+        Assert.GreaterOrEqual(repeatables, 2, "繰り返し討伐タスクが少ない（dag / orca に想定）");
+    }
+
     [Test]
     public void CollectorTrader_HasReachDepthTask()
     {

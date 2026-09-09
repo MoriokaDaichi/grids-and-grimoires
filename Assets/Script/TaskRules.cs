@@ -30,6 +30,10 @@ public class TraderTask
     public int rewardMoney;                                   // 報酬のお金
     public string rewardGearId;                               // 報酬で完成品を直接付与する装備ID（GearCatalog）
     public string rewardRecipeId;                             // 報酬で作業台レシピを解禁する装備ID（GearCatalog）
+
+    // 繰り返し受注できるタスク（DefeatEnemies・種類指定なしのみ対応）。達成しても completedTaskIds には
+    // 入らず、受取ごとに「前回受取時からの累計撃破数」を基準に進捗をリセットする。無限に資源を稼げる導線。
+    public bool repeatable;
 }
 
 // タスク進捗の判定に必要な値（純粋関数に渡す）。

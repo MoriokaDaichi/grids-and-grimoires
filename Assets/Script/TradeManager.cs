@@ -31,6 +31,9 @@ public class TradeManager : MonoBehaviour
     private readonly Dictionary<string, int> killsByName = new Dictionary<string, int>();
     private int lifetimeKills;
     private int bestDepth;
+    // 繰り返しタスク（repeatable）: taskId → 前回受取時の累計撃破数 / 受取回数。
+    private readonly Dictionary<string, int> repeatBaseline = new Dictionary<string, int>();
+    private readonly Dictionary<string, int> repeatClaims = new Dictionary<string, int>();
 
     private DungeonManager dungeon;
 
@@ -131,6 +134,24 @@ public class TradeManager : MonoBehaviour
         };
     }
 
+    // タスク個別の進捗。繰り返しタスクは「前回受取時からの撃破数」で判定する。
+    private TaskProgress ProgressForTask(TraderTask task)
+    {
+        TaskProgress p = BuildProgress();
+        if (task != null && task.repeatable)
+        {
+            repeatBaseline.TryGetValue(task.id, out int baseline);
+            p.enemiesDefeated = System.Math.Max(0, lifetimeKills - baseline);
+        }
+        return p;
+    }
+
+    public int RepeatableClaimCount(TraderTask task)
+    {
+        if (task == null) return 0;
+        return repeatClaims.TryGetValue(task.id, out int n) ? n : 0;
+    }
+
     // 所持中の装備のうち、そのスロットの最上位 tier（無ければ 0）。CraftGear タスクの判定用。
     // 装備所持は HideoutManager から都度導出する（在庫数と同じく永続化はしない）。
     private static int OwnedGearTierOf(GearSlot slot)
@@ -195,14 +216,17 @@ public class TradeManager : MonoBehaviour
 
     public string TaskProgressText(TraderTask task)
     {
-        return TaskRules.ProgressText(task, BuildProgress());
+        string s = TaskRules.ProgressText(task, ProgressForTask(task));
+        if (task != null && task.repeatable) s += "（繰り返し・受取 " + RepeatableClaimCount(task) + " 回）";
+        return s;
     }
 
     public bool CanClaim(TraderTask task)
     {
-        if (task == null || completedTaskIds.Contains(task.id)) return false;
+        if (task == null) return false;
+        if (!task.repeatable && completedTaskIds.Contains(task.id)) return false;
         if (!IsTaskUnlocked(task)) return false;
-        return TaskRules.IsComplete(task, BuildProgress());
+        return TaskRules.IsComplete(task, ProgressForTask(task));
     }
 
     public bool ClaimTask(TraderTask task)
@@ -240,7 +264,16 @@ public class TradeManager : MonoBehaviour
         if (!string.IsNullOrEmpty(task.rewardGearId) && HideoutManager.Instance != null)
             HideoutManager.Instance.GrantGear(task.rewardGearId);
 
-        completedTaskIds.Add(task.id);
+        if (task.repeatable)
+        {
+            // completedTaskIds には入れず、進捗基準を「今」に進める＝再びゼロから貯めれば受け取れる。
+            repeatBaseline[task.id] = lifetimeKills;
+            repeatClaims[task.id] = (repeatClaims.TryGetValue(task.id, out int n) ? n : 0) + 1;
+        }
+        else
+        {
+            completedTaskIds.Add(task.id);
+        }
         SaveProgress();
         OnTasksChanged?.Invoke();
         Debug.Log($"[タスク] 「{task.title}」を達成した。");
@@ -280,6 +313,15 @@ public class TradeManager : MonoBehaviour
         foreach (StringIntPair kv in data.enemyKillCounts)
             if (kv != null && !string.IsNullOrEmpty(kv.key)) killsByName[kv.key] = kv.value;
 
+        repeatBaseline.Clear();
+        if (data.repeatableTaskBaselines != null)
+            foreach (StringIntPair kv in data.repeatableTaskBaselines)
+                if (kv != null && !string.IsNullOrEmpty(kv.key)) repeatBaseline[kv.key] = kv.value;
+        repeatClaims.Clear();
+        if (data.repeatableTaskClaims != null)
+            foreach (StringIntPair kv in data.repeatableTaskClaims)
+                if (kv != null && !string.IsNullOrEmpty(kv.key)) repeatClaims[kv.key] = kv.value;
+
         lifetimeKills = data.lifetimeEnemyKills;
         bestDepth = data.bestDungeonDepth;
     }
@@ -294,6 +336,13 @@ public class TradeManager : MonoBehaviour
         data.enemyKillCounts = new List<StringIntPair>();
         foreach (KeyValuePair<string, int> kv in killsByName)
             data.enemyKillCounts.Add(new StringIntPair { key = kv.Key, value = kv.Value });
+
+        data.repeatableTaskBaselines = new List<StringIntPair>();
+        foreach (KeyValuePair<string, int> kv in repeatBaseline)
+            data.repeatableTaskBaselines.Add(new StringIntPair { key = kv.Key, value = kv.Value });
+        data.repeatableTaskClaims = new List<StringIntPair>();
+        foreach (KeyValuePair<string, int> kv in repeatClaims)
+            data.repeatableTaskClaims.Add(new StringIntPair { key = kv.Key, value = kv.Value });
 
         SaveManager.Save(data);
     }

@@ -47,6 +47,10 @@ public class SaveData
     public int lifetimeEnemyKills;
     public int bestDungeonDepth;
     public List<StringIntPair> enemyKillCounts = new List<StringIntPair>();
+    // 繰り返しタスク（repeatable）の「前回受取時の累計撃破数」。key = taskId。
+    public List<StringIntPair> repeatableTaskBaselines = new List<StringIntPair>();
+    // 繰り返しタスクを何回受け取ったか（表示用・報酬スケール用）。key = taskId。
+    public List<StringIntPair> repeatableTaskClaims = new List<StringIntPair>();
 
     // ハイドアウト：設備レベル（key = (FacilityKind).ToString(), value = 0..3）
     public List<StringIntPair> facilityLevels = new List<StringIntPair>();
