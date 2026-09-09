@@ -526,14 +526,16 @@ public class PlaytestAutopilot : MonoBehaviour
         return best;
     }
 
-    // 未建造の設備の次コスト＋未所持スロットの最安装備コストに含まれるモンスター素材名。
+    // 未マックスの設備の「次コスト」＋未所持スロットの最安装備コストに含まれるモンスター素材名。
+    // ※建造済み設備の Lv2/Lv3 強化コスト（錆びた短剣・竜人の鱗 等 tier2+ の素材）も保護する。
+    //   これを入れないと貪欲エージェントが手に入れた端から全部変換して、作業台Lv2/Lv3＝tier2/3 杖＝
+    //   5×5/6×6 に一生届かない（サイクル17/18 の Mode A で顕在化）。
     private static HashSet<string> CollectProtectedParts(HideoutManager h)
     {
         var set = new HashSet<string>();
         foreach (FacilityKind k in Enum.GetValues(typeof(FacilityKind)))
         {
-            if (h.IsBuilt(k)) continue;
-            AddParts(set, h.NextCost(k));
+            AddParts(set, h.NextCost(k)); // NextCost はマックスで null（＝何も足さない）
         }
         AddParts(set, CheapestGearCost(h, GearSlot.Wand));
         AddParts(set, CheapestGearCost(h, GearSlot.Accessory));
