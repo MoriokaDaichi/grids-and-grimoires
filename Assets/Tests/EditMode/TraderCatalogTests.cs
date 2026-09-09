@@ -167,6 +167,27 @@ public class TraderCatalogTests
                     Assert.IsTrue(known.Contains(task.targetEnemyName), "未知の討伐対象: " + task.targetEnemyName);
     }
 
+    // 改善ループ サイクル12：ダグの連鎖で、中盤の中結晶 faucet（dag_4＝ゴブリンの牙×12→中×3）が
+    // 深部 debut の敵を要求するタスク（森の番人 d19／オーガ d22／ドラゴン d37）より“前”に来ていること。
+    [Test]
+    public void DagChain_MediumCrystalFaucet_ComesBeforeDeepEnemyKillTasks()
+    {
+        Trader dag = null;
+        foreach (Trader t in TraderCatalog.BuildTraders()) if (t.id == "dag") dag = t;
+        Assert.IsNotNull(dag);
+
+        int faucetPos = -1;
+        var deepKillNames = new HashSet<string> { "森の番人", "オーガ", "ドラゴン" };
+        for (int i = 0; i < dag.tasks.Count; i++)
+        {
+            if (dag.tasks[i].id == "dag_4") faucetPos = i;
+            if (dag.tasks[i].kind == TraderTaskKind.DefeatEnemies && deepKillNames.Contains(dag.tasks[i].targetEnemyName))
+                Assert.Greater(i, faucetPos,
+                    "深部 debut の討伐タスク「" + dag.tasks[i].id + "」が中結晶 faucet（dag_4）より前にある");
+        }
+        Assert.GreaterOrEqual(faucetPos, 0, "dag_4 が見つからない");
+    }
+
     [Test]
     public void TaskLines_RequiresPointsBackwardWithinSameTrader()
     {

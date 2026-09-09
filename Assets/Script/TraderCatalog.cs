@@ -262,12 +262,16 @@ public static class TraderCatalog
                 Items(M(MaterialType.MediumManaCrystal, 3))),
             Kill("dag_1", "dag", "魔物を 10 体討伐", null, 10, Items(M(MaterialType.MediumManaCrystal, 4)), rewardMoney: 40),
             Kill("dag_2", "dag", "魔物を 30 体討伐", null, 30, Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 1),
-            Kill("dag_3", "dag", "森の番人を 3 体討伐", "森の番人", 3, Items(Elem(MagicAttribute.Light, 1)), rewardMoney: 50),
+            // 再検証（改善ループ サイクル12）：ダグの連鎖で『森の番人 ×3』（debut 深度19）が dag_2 の直後に
+            // 来ていて、中盤の中結晶 faucet（dag_4＝ゴブリンの牙×12→中×3）以降が壁の“先”でロックされていた。
+            // ID は据え置き（セーブ互換）で、連鎖の並びだけアクセスしやすい順に：dag_4(牙納品)→dag_5(スケルトンd15)
+            // →dag_7(80体)→dag_3(森の番人d19)→dag_6(オーガd22)→dag_8/9(ドラゴン)。
             Deliver("dag_4", "dag", "ゴブリンの牙を 12 本納める",
                 Items(Part("ゴブリンの牙", 12)), Items(M(MaterialType.MediumManaCrystal, 3)), rewardStat: 1),
             Kill("dag_5", "dag", "スケルトンを 8 体討伐", "スケルトン", 8, Items(Frag(MagicAttribute.Dark, 2)), rewardMoney: 70),
-            Kill("dag_6", "dag", "オーガを 5 体討伐", "オーガ", 5, null, rewardStat: 1, rewardRecipe: "wand_runed"),
             Kill("dag_7", "dag", "魔物を 80 体討伐", null, 80, null, rewardStat: 1, rewardMoney: 160),
+            Kill("dag_3", "dag", "森の番人を 3 体討伐", "森の番人", 3, Items(Elem(MagicAttribute.Light, 1)), rewardMoney: 50),
+            Kill("dag_6", "dag", "オーガを 5 体討伐", "オーガ", 5, null, rewardStat: 1, rewardRecipe: "wand_runed"),
             Kill("dag_8", "dag", "ドラゴンを 3 体討伐", "ドラゴン", 3, Items(Elem(MagicAttribute.Fire, 2)), rewardMoney: 120),
             Kill("dag_9", "dag", "ドラゴンを 8 体討伐", "ドラゴン", 8, null, rewardStat: 2, rewardGear: "wand_stormcaller"));
         traders.Add(dag);
