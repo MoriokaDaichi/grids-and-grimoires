@@ -317,12 +317,15 @@ public static class TraderCatalog
             Depth("orca_1", "orca", "深度 5 まで到達する", 5, Items(M(MaterialType.MediumManaCrystal, 5)), rewardMoney: 40),
             // 再検証3 D1／改善ループ通しプレイ：cold-start の壁は深度8〜9 で、大結晶×2 の注入（＝中盤の
             // 結晶 faucet）が要件 深度10 だと壁の“先”にあって永遠に届かない。要件を壁より手前の深度8 へ。
-            Depth("orca_2", "orca", "深度 8 まで到達する", 8, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 1),
+            // 再検証12（S9）：run3〜8 が d10〜11 で足踏み（作業台Lv2＝tier2 杖＝5×5 の欠片ゲート待ち）。
+            // d8 の節目で最初の炎の欠片を直接渡して、Liese の 中→欠片 精製を待たずに 5×5 へ繋ぐ。
+            Depth("orca_2", "orca", "深度 8 まで到達する", 8,
+                Items(M(MaterialType.LargeManaCrystal, 2), Frag(MagicAttribute.Fire, 2)), rewardStat: 2),
             // 「ウェーブ間 HP 無回復＋深部バーストで満タンから即死」の壁（C2）に届く直前で、
             // tier2 サステイン（再生のトルク＝毎秒 +3.5）を作業台Lv2 を待たず直接渡す＝入手性の底上げ。
             // 再検証7 R7-1：中盤のエレメント欠片が枯れて 樫の杖(tier2)・作業台Lv2/Lv3 が詰まる。
-            // 壁ちょうど（d12）でまとまった欠片を出して詰まりを取る。
-            Depth("orca_2b", "orca", "深度 12 まで到達する", 12,
+            // 壁の直前（S9: d12→d11）でまとまった欠片＋サステインを出して、d10〜11 の足踏みを縮める。
+            Depth("orca_2b", "orca", "深度 11 まで到達する", 11,
                 Items(Frag(MagicAttribute.Fire, 3), Frag(MagicAttribute.Dark, 3)), rewardStat: 3, rewardGear: "acc_regen_torc"),
             Deliver("orca_3", "orca", "浅層の素材を 3 つずつ蒐集する",
                 Items(Part("スライムゼリー", 3), Part("ゴブリンの牙", 3), Part("大ネズミの尾", 3), Part("番人の樹皮", 3)),
