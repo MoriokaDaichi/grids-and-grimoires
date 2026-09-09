@@ -179,6 +179,34 @@ public class TraderCatalogTests
         Assert.IsTrue(givesLargeCrystal, "orca_2 が大結晶を出さない（結晶 faucet の役割）");
     }
 
+    // 再検証8（サイクル18）：中盤の属性欠片が枯れて tier2/3 杖・作業台Lv2/Lv3 が詰まる。
+    // リーゼ＝エレメント精製の本分として、魔力結晶→任意属性の欠片 の恒常レートを全属性ぶん持つこと。
+    [Test]
+    public void ElementRefinery_CrystalToFragment_ExistsForEveryAttribute()
+    {
+        Trader liese = null;
+        foreach (Trader t in TraderCatalog.BuildTraders()) if (t.id == "liese") liese = t;
+        Assert.IsNotNull(liese, "liese が見つからない");
+
+        foreach (MagicAttribute att in new[] { MagicAttribute.Fire, MagicAttribute.Thunder, MagicAttribute.Wind,
+                                               MagicAttribute.Light, MagicAttribute.Dark })
+        {
+            bool found = false;
+            foreach (TradeOffer o in liese.offers)
+            {
+                if (o.giveMoney > 0 || o.gainMoney > 0) continue;
+                if (o.give == null || o.give.Count != 1) continue;
+                MaterialType gt = o.give[0].materialType;
+                if (gt != MaterialType.MediumManaCrystal && gt != MaterialType.LargeManaCrystal) continue;
+                if (o.receive == null) continue;
+                foreach (MaterialCost r in o.receive)
+                    if (r != null && r.materialType == MaterialType.ElementFragment
+                        && r.attribute == att && r.amount > 0) found = true;
+            }
+            Assert.IsTrue(found, "結晶→" + att + "の欠片 の精製オファーが無い");
+        }
+    }
+
     [Test]
     public void EverySpecialItemReferenced_IsKnownMonsterPart()
     {

@@ -359,7 +359,36 @@ public class PlaytestAutopilot : MonoBehaviour
                     did = true;
             }
 
-            // 5. 杖を打つ／より上位の杖へ持ち替える（グリッド拡大＝tier1→4×4 / tier2→5×5）。
+            // 4b. 中盤の詰み解消：余った中結晶を 大結晶／属性欠片 へ変換する。
+            //     tier2/3 杖・作業台Lv2/Lv3 は 大結晶＋属性欠片ゲートで、貪欲だと中結晶だけ余って先へ進めない
+            //     （サイクル18＝リーゼに 中結晶→欠片 の精製レートを追加、Glen の 中→大 をここで初めて使う）。
+            if (trade != null && hideout.IsBuilt(FacilityKind.Workbench))
+            {
+                bool wantGrowth = CurrentWandTier(hideout) < 3 || hideout.Level(FacilityKind.Workbench) < 3;
+                if (wantGrowth)
+                {
+                    // (i) 大結晶を数個確保（作業台Lv3＝L(2) / 大魔道の杖＝L(1)）。中結晶が潤沢なときだけ。
+                    var med2large = FindCrystalOffer(trade, MaterialType.MediumManaCrystal, MaterialType.LargeManaCrystal);
+                    int g1 = 0;
+                    while (med2large != null
+                           && CrystalCount(inv, MaterialType.MediumManaCrystal) > 30
+                           && CrystalCount(inv, MaterialType.LargeManaCrystal) < 5
+                           && trade.CanTrade(med2large) && g1++ < 10)
+                    { trade.TryTrade(med2large); econTrades++; did = true; }
+
+                    // (ii) 炎・闇の欠片を 4 つずつ確保（樫の杖=炎2 / 大魔道の杖=闇3 / 作業台Lv2=炎2 / Lv3=闇3）。
+                    foreach (var att in new[] { MagicAttribute.Fire, MagicAttribute.Dark })
+                    {
+                        int g2 = 0;
+                        while (FragCount(inv, att) < 4
+                               && CrystalCount(inv, MaterialType.MediumManaCrystal) > 24
+                               && TryBuyFragment(trade, att) && g2++ < 8)
+                        { econTrades++; did = true; }
+                    }
+                }
+            }
+
+            // 5. 杖を打つ／より上位の杖へ持ち替える（グリッド拡大＝tier1→4×4 / tier2→5×5 / tier3→6×6）。
             {
                 int haveTier = CurrentWandTier(hideout);
                 GearDef bestBuildable = null;
@@ -450,6 +479,32 @@ public class PlaytestAutopilot : MonoBehaviour
                 if (r != null && r.materialType == receiveType) return o;
         }
         return null;
+    }
+
+    private static int FragCount(PlayerInventory inv, MagicAttribute att)
+    {
+        return inv.GetCount(new MaterialCost { materialType = MaterialType.ElementFragment, attribute = att });
+    }
+
+    // give が単一の中/大結晶、receive に指定属性の欠片を含み、お金の絡まないオファーを1回実行する。
+    private static bool TryBuyFragment(TradeManager trade, MagicAttribute att)
+    {
+        foreach (var o in trade.Offers)
+        {
+            if (o == null || o.giveMoney > 0 || o.gainMoney > 0) continue;
+            if (o.give == null || o.give.Count != 1) continue;
+            var gt = o.give[0].materialType;
+            if (gt != MaterialType.MediumManaCrystal && gt != MaterialType.LargeManaCrystal) continue;
+            if (o.receive == null) continue;
+            bool hit = false;
+            foreach (var r in o.receive)
+                if (r != null && r.materialType == MaterialType.ElementFragment && r.attribute == att) hit = true;
+            if (!hit) continue;
+            if (!trade.CanTrade(o)) continue;
+            trade.TryTrade(o);
+            return true;
+        }
+        return false;
     }
 
     private static bool ReceivesCrystal(TradeOffer offer)

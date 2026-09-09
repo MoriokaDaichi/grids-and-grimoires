@@ -198,6 +198,11 @@ public static class TraderCatalog
         for (int i = 0; i < attrs.Length; i++)
         {
             liese.offers.Add(Offer(an[i] + "エレメントの欠片 ×3 → " + an[i] + "エレメント ×1", Frag(attrs[i], 3), Elem(attrs[i], 1)));
+            // 再検証8（サイクル18）：中盤の属性欠片が枯れて 樫の杖(tier2)・大魔道の杖(tier3)・作業台Lv2/Lv3 が
+            // 詰まる（貪欲プレイでは 中結晶が余る一方で欠片の入手経路が素材変換頼み）。リーゼ＝エレメント精製の
+            // 本分どおり、余った魔力結晶を任意属性の欠片へ精製できるレートを開く（結晶→欠片の唯一の恒常経路）。
+            liese.offers.Add(Offer("中結晶 ×4 → " + an[i] + "エレメントの欠片 ×2", M(MaterialType.MediumManaCrystal, 4), Frag(attrs[i], 2)));
+            liese.offers.Add(Offer("大結晶 ×1 → " + an[i] + "エレメントの欠片 ×3", M(MaterialType.LargeManaCrystal, 1), Frag(attrs[i], 3)));
         }
         // モンスター素材から属性の欠片・エレメントを精製する（敵の属性に対応）
         liese.offers.Add(Offer("スライムゼリー ×4 → 風エレメントの欠片 ×1", Part("スライムゼリー", 4), Frag(MagicAttribute.Wind, 1)));
