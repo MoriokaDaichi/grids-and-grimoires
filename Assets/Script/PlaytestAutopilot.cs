@@ -613,13 +613,27 @@ public class PlaytestAutopilot : MonoBehaviour
             if (research != null && !research.IsUnlocked(md)) continue;
             if (md.range == MagicRange.AoE) aoe.Add(md); else single.Add(md);
         }
-        // AoE は大きい順（Giga>Mega>基本）、単体は小さい順（隙間埋め）。
-        aoe.Sort((a, b) => b.shapeNodes.Count.CompareTo(a.shapeNodes.Count));
-        single.Sort((a, b) => a.shapeNodes.Count.CompareTo(b.shapeNodes.Count));
 
         var ordered = new List<MagicData>();
-        ordered.AddRange(aoe);
-        ordered.AddRange(single);
+        if (grid.width >= 5)
+        {
+            // 広いグリッド（tier2+ 杖）: 深部の壁は AoE throughput（再検証9 S1）。
+            // まず AoE を大きい（Giga>Mega>基本）順に詰め、余りを単体で隙間埋め。
+            aoe.Sort((a, b) => b.shapeNodes.Count.CompareTo(a.shapeNodes.Count));
+            single.Sort((a, b) => a.shapeNodes.Count.CompareTo(b.shapeNodes.Count));
+            ordered.AddRange(aoe);
+            ordered.AddRange(single);
+        }
+        else
+        {
+            // 狭いグリッド（3×3/4×4）: 枚数を稼ぐのが最優先（大型 AoE 先置きだと 2 枚しか載らず
+            // cold-start のブートストラップ火力が出ない）。従来どおり形状の小さい順。
+            var all = new List<MagicData>();
+            all.AddRange(aoe);
+            all.AddRange(single);
+            all.Sort((a, b) => a.shapeNodes.Count.CompareTo(b.shapeNodes.Count));
+            ordered = all;
+        }
 
         foreach (var md in ordered)
         {
