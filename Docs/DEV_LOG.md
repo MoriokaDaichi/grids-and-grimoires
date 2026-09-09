@@ -52,10 +52,18 @@ auto memory `game_design_grids_and_grimoires`（`~/.claude/projects/.../memory/`
     `SaveData.repeatableTaskBaselines`/`repeatableTaskClaims`（round-trip テスト）。
   - Mode A ×14: farm×3→push **8→11→13→…→15→14→15→17**（周を重ねるほど深くなる。Atk 21→109、
     研究ステ64、タスク受領19、14周で d8→d17 まだ climbing）。＝エンドレスの成長ループが成立。
+- **C: 深部の同時出現数テーパー**（`EndlessWaveGenerator`）: 深部の壁の正体は「同時4体×単体火力偏重の
+  throughput」で Atk/HP 投資では解けない。`EnemyCountTaperKneeDepth`(=15) より先は実効深度を勾配0.5 で
+  寝かせ、d16〜28 の同時数を 4 体で保つ（素の式なら d21で5・d26で6）。膝まで（浅〜中盤）は完全不変。
+  → 深部フル投資（A+B・15周相当）の壁: d23 → **d26**。「現実的な周回数（15周）で d25」を達成。
 - **ダグの依頼チェーン並べ替え**（`TraderCatalog`）: 『森の番人 ×3』（d19）が dag_2 直後にあり中盤 faucet が
   壁の先で全ロックされていたのを、ID 据え置きでアクセス順（dag_4→5→7→3→6→8/9）に。
-- EditMode 196 → 200 グリーン。ハーネス（`PlaytestAutopilot`）も研究割当・farm 周・杖導線・中結晶温存・
-  大結晶→ステP・ステP 毎周消費 で人力プレイ級に。
+- EditMode 196 → 201 グリーン。ハーネス（`PlaytestAutopilot`）も研究割当・farm 周・杖導線・中結晶温存・
+  大結晶→ステP・ステP 毎周消費 で人力プレイ級に（ただし B＝作業台Lv2/Lv3 は貪欲では未到達＝Mode A は d18止まり）。
+
+**深部設計の到達点**: 投資ラダー cold-start素 d8 → 中盤 d15 → 研究フル d20 → 深部フル投資＋C **d26**。
+無限成長ループ（繰り返し討伐タスク＋大結晶→ステP変換）で周回するほど深くなる。フェイルステートは
+全投資レベルで decisive death（immortality を R1/R4 で2回検出・修正済み）。
 
 ### -10. 改善ループ続行：モードB手動ディープラン → R1/R2/D6 対応（2026-09-09 その10）
 `gg-playtest` スキルのモードB（`execute_code` 手動ディープラン）で「-8.」の改善を再検証しながらの続行分。
