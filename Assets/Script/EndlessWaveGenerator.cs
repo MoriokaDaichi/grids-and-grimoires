@@ -56,6 +56,12 @@ public static class EndlessWaveGenerator
             Mathf.Min(1f + DefGrowthPerDepth * e, DefMultCap));
     }
 
+    // 深部で同時出現数が増えるペースを寝かせる膝。ここまでは素の (深度-1)、そこから先は勾配を落とす。
+    // 深部の壁の正体は「同時4体×単体火力偏重の throughput」で、Atk/HP 投資では解けない（診断: 全投資でも d20）。
+    // 膝から先の“実効深度”を寝かせることで d16〜28 の同時数を 4 体で長く保ち、周回で d25 まで届くようにする。
+    public const int EnemyCountTaperKneeDepth = 15;
+    public const float EnemyCountTaperSlope = 0.5f;
+
     // 深度 depth の同時出現数（1〜maxPerWave）。
     // 深度2以降は最低2体：debut敵をこの深度で必ず1体出す（PickIndices の保証枠）ぶん、
     // もう1枠を RNG に残さないと浅層のウェーブが「debut敵1種で固定」になり、最弱スライム等が
@@ -63,7 +69,10 @@ public static class EndlessWaveGenerator
     public static int EnemyCountFor(int depth, int maxPerWave)
     {
         int d = Mathf.Max(1, depth);
-        int count = 1 + (d - 1) / DepthsPerExtraEnemy;
+        float effD = d <= EnemyCountTaperKneeDepth
+            ? d
+            : EnemyCountTaperKneeDepth + (d - EnemyCountTaperKneeDepth) * EnemyCountTaperSlope;
+        int count = 1 + Mathf.FloorToInt(effD - 1) / DepthsPerExtraEnemy;
         if (d >= MinTwoEnemyDepth) count = Mathf.Max(count, 2);
         int cap = Mathf.Max(1, maxPerWave);
         return Mathf.Clamp(count, 1, cap);

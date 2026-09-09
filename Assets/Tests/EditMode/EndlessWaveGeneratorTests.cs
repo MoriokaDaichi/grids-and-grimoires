@@ -118,6 +118,30 @@ public class EndlessWaveGeneratorTests
         Assert.AreEqual(1, EndlessWaveGenerator.EnemyCountFor(100, 1)); // cap 1 なら1体まで
     }
 
+    // 深部（膝＝EnemyCountTaperKneeDepth より先）は同時出現数の増えるペースが寝る。
+    // d16〜28 は 4 体のまま（膝までは素の 5 深度ごと +1）。
+    [Test]
+    public void EnemyCountFor_TapersInDeepEnd()
+    {
+        int knee = EndlessWaveGenerator.EnemyCountTaperKneeDepth;
+        // 膝まで（d1..knee）は従来式と一致
+        for (int d = 1; d <= knee; d++)
+        {
+            int plain = Mathf.Clamp(Mathf.Max(1 + (d - 1) / EndlessWaveGenerator.DepthsPerExtraEnemy,
+                d >= EndlessWaveGenerator.MinTwoEnemyDepth ? 2 : 1), 1, 6);
+            Assert.AreEqual(plain, EndlessWaveGenerator.EnemyCountFor(d, 6), "depth " + d + " は膝まで不変");
+        }
+        // 膝から先は「テーパー無しの素の式」より同時数が少ない（または同じ）
+        for (int d = knee + 1; d <= 40; d++)
+        {
+            int plain = 1 + (d - 1) / EndlessWaveGenerator.DepthsPerExtraEnemy;
+            Assert.LessOrEqual(EndlessWaveGenerator.EnemyCountFor(d, 6), plain, "depth " + d);
+        }
+        // d21〜d26 の同時数は 4 のまま（素の式なら 5〜6 になる帯）
+        for (int d = 21; d <= 26; d++)
+            Assert.AreEqual(4, EndlessWaveGenerator.EnemyCountFor(d, 6), "depth " + d + " は 4 体で保たれる");
+    }
+
     // 深度2以降のウェーブは常に2体以上（debut敵の保証枠を差し引いても RNG 枠が1つ残る）。
     [Test]
     public void EnemyCountFor_IsAtLeastTwo_FromDepth2()
