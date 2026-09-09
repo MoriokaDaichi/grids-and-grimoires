@@ -79,18 +79,55 @@ public class TraderCatalogTests
     }
 
     [Test]
-    public void EarlyOnboarding_HasCraftWandTask_AtHeadOfAChain()
+    public void EarlyOnboarding_HasCraftWandTask_EarlyInAChain()
     {
-        // 再検証3 D2：「まず杖」導線。どこかのトレーダーの連鎖の先頭に、杖の製作を促す
-        // CraftGear タスクがあること（前提タスク無し＝cold start で即見える）。
+        // 再検証3 D2：「まず杖」導線＝どこかのトレーダーの連鎖の“ごく序盤”に杖の製作を促す
+        // CraftGear タスクがあること。再検証16（S16）で、先頭は無条件で踏める討伐タスクに変えた
+        // （cold-start デッドロック対策）ので、杖タスクは「前提無し」または「前提が前提無しの討伐タスク」であればよい。
+        List<Trader> traders = TraderCatalog.BuildTraders();
+        bool found = false;
+        foreach (Trader t in traders)
+        {
+            foreach (TraderTask task in t.tasks)
+            {
+                if (task.kind != TraderTaskKind.CraftGear || task.targetGearSlot != GearSlot.Wand) continue;
+                if (string.IsNullOrEmpty(task.requires)) { found = true; break; }
+                // 前提が「前提無しの討伐タスク」なら十分に序盤
+                foreach (TraderTask prereq in t.tasks)
+                    if (prereq.id == task.requires
+                        && prereq.kind == TraderTaskKind.DefeatEnemies
+                        && string.IsNullOrEmpty(prereq.requires))
+                        found = true;
+            }
+        }
+        Assert.IsTrue(found, "杖の製作を促す CraftGear タスクが連鎖の序盤に無い（再検証3 D2 / 再検証16 S16）");
+    }
+
+    // 再検証16（S16）：cold-start 経済デッドロック対策。杖⇄小結晶⇄現金⇄深度8⇄タスクが相互ロックしても
+    // 抜けられるよう、どこかのトレーダーの連鎖先頭に「前提なし・討伐（farm で必ず達成）・報酬に結晶」の
+    // 無条件 faucet があること。
+    [Test]
+    public void ColdStart_HasUnconditionalCrystalFaucet_AtHeadOfAChain()
+    {
         bool found = false;
         foreach (Trader t in TraderCatalog.BuildTraders())
+        {
             foreach (TraderTask task in t.tasks)
-                if (task.kind == TraderTaskKind.CraftGear
-                    && task.targetGearSlot == GearSlot.Wand
-                    && string.IsNullOrEmpty(task.requires))
-                    found = true;
-        Assert.IsTrue(found, "杖の製作を促す CraftGear タスクが連鎖の先頭に無い（再検証3 D2）");
+            {
+                if (task.kind != TraderTaskKind.DefeatEnemies) continue;
+                if (!string.IsNullOrEmpty(task.requires)) continue;
+                if (!string.IsNullOrEmpty(task.targetEnemyName)) continue; // 種別指定なし＝累計討伐
+                if (task.repeatable) continue;
+                bool givesCrystal = false;
+                foreach (MaterialCost c in task.rewardItems)
+                    if (c != null && (c.materialType == MaterialType.SmallManaCrystal
+                                   || c.materialType == MaterialType.MediumManaCrystal
+                                   || c.materialType == MaterialType.LargeManaCrystal))
+                        givesCrystal = true;
+                if (givesCrystal && task.targetCount <= 15) found = true;
+            }
+        }
+        Assert.IsTrue(found, "cold-start で無条件に踏める討伐→結晶 faucet が連鎖先頭に無い（S16）");
     }
 
     [Test]
