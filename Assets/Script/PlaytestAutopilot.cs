@@ -364,22 +364,38 @@ public class PlaytestAutopilot : MonoBehaviour
             //     （サイクル18＝リーゼに 中結晶→欠片 の精製レートを追加、Glen の 中→大 をここで初めて使う）。
             if (trade != null && hideout.IsBuilt(FacilityKind.Workbench))
             {
-                bool wantGrowth = CurrentWandTier(hideout) < 3 || hideout.Level(FacilityKind.Workbench) < 3;
+                bool wantGrowth = CurrentWandTier(hideout) < 3
+                    || hideout.Level(FacilityKind.Workbench) < 3
+                    || hideout.Level(FacilityKind.AlchemyCauldron) < 3;
                 if (wantGrowth)
                 {
-                    // (i) 大結晶を数個確保（作業台Lv3＝L(2) / 大魔道の杖＝L(1)）。中結晶が潤沢なときだけ。
+                    // (i) 大結晶を数個確保（作業台Lv3＝L(2) / 大魔道の杖＝L(1) / 錬金釜Lv3＝L(1)）。
                     var med2large = FindCrystalOffer(trade, MaterialType.MediumManaCrystal, MaterialType.LargeManaCrystal);
                     int g1 = 0;
                     while (med2large != null
                            && CrystalCount(inv, MaterialType.MediumManaCrystal) > 30
-                           && CrystalCount(inv, MaterialType.LargeManaCrystal) < 5
-                           && trade.CanTrade(med2large) && g1++ < 10)
+                           && CrystalCount(inv, MaterialType.LargeManaCrystal) < 6
+                           && trade.CanTrade(med2large) && g1++ < 12)
                     { trade.TryTrade(med2large); econTrades++; did = true; }
 
-                    // (ii) 属性欠片を確保。炎: 樫の杖2＋作業台Lv2 2。闇: 大魔道の杖3＋作業台Lv3 3 ＝闇は多めに。
-                    foreach (var att in new[] { MagicAttribute.Fire, MagicAttribute.Dark })
+                    // (ii) 属性欠片を確保。まだ建てていない設備 Lv2/Lv3＋次に打つ杖が要求する属性を
+                    //     ぜんぶ拾う（S14: 錬金釜Lv3 の Frag(Wind,3) を貪欲が取れず x25 の分散源だった）。
+                    var wantFrags = new HashSet<MagicAttribute>();
+                    foreach (FacilityKind fk in Enum.GetValues(typeof(FacilityKind)))
+                        foreach (var c in hideout.NextCost(fk) ?? new List<MaterialCost>())
+                            if (c != null && c.materialType == MaterialType.ElementFragment)
+                                wantFrags.Add(c.attribute);
+                    foreach (var g in GearCatalog.All)
+                        if (g.slot == GearSlot.Wand && !g.recipeGated && g.tier > CurrentWandTier(hideout))
+                            foreach (var c in g.cost)
+                                if (c != null && c.materialType == MaterialType.ElementFragment)
+                                    wantFrags.Add(c.attribute);
+                    // 炎・闇は杖＋作業台で2回要る帯があるので多めに。
+                    wantFrags.Add(MagicAttribute.Fire);
+                    wantFrags.Add(MagicAttribute.Dark);
+                    foreach (var att in wantFrags)
                     {
-                        int target = att == MagicAttribute.Dark ? 7 : 4;
+                        int target = (att == MagicAttribute.Dark || att == MagicAttribute.Fire) ? 7 : 4;
                         int g2 = 0;
                         while (FragCount(inv, att) < target
                                && CrystalCount(inv, MaterialType.MediumManaCrystal) > 24
@@ -459,9 +475,9 @@ public class PlaytestAutopilot : MonoBehaviour
                 { hideout.Advance(kind); econBuilds++; did = true; }
             }
 
-            // 9b. Lv3 強化（S4）。作業台Lv3＝tier3 杖＝6×6 が深部設計 D の要。
-            //     錬金釜Lv3＝tier4-5 変換（深部素材→大結晶）、魔力炉Lv3＝燃料バッファ増も深部で効く。
-            foreach (var kind in new[] { FacilityKind.Workbench, FacilityKind.AlchemyCauldron, FacilityKind.ManaFurnace, FacilityKind.ResearchDesk })
+            // 9b. Lv3 強化（S4）。錬金釜Lv3＝tier1-5 変換（深部素材→大結晶）＝経済エンジンなので最優先
+            //     （S14: これに到達したかで x25 の到達が ±5 深度ぶれていた）。次に作業台Lv3＝tier3 杖＝6×6。
+            foreach (var kind in new[] { FacilityKind.AlchemyCauldron, FacilityKind.Workbench, FacilityKind.ManaFurnace, FacilityKind.ResearchDesk })
             {
                 if (hideout.Level(kind) == 2 && hideout.CanAdvance(kind))
                 { hideout.Advance(kind); econBuilds++; did = true; }
