@@ -294,7 +294,7 @@ public static class TraderCatalog
         // 繰り返し討伐（無限）。dag_1（討伐10）達成で解放。回すたびに 中結晶×3＋ステP+1。
         // 再検証7 R7-2：成長ループのレートが遅い（+1 ステP/周）ので、撃破数 25→20・報酬を 中×4＋ステP+2 に。
         dag.tasks.Add(RepeatKill("dag_grind", "dag", "討伐を回す（繰り返し・魔物 20 体ごと）", "dag_1", 20,
-            Items(M(MaterialType.MediumManaCrystal, 4)), rewardStat: 3)); // S5: +2→+3
+            Items(M(MaterialType.MediumManaCrystal, 5)), rewardStat: 3)); // S5: +2→+3。S13: 中×4→×5
         traders.Add(dag);
 
         // ================================================ 蒐集家 オルカ（深層）
@@ -354,7 +354,7 @@ public static class TraderCatalog
         // ＝「中層で狩る → 大結晶をステPへ変換 → さらに深層」のループ。再検証7 R7-2 で 40→30体。
         // 再検証9（S2）：cold start から 20 周で d25 に届かせるにはレートが足りない。25 体ごと・大結晶×2＋ステP+3 に。
         orca.tasks.Add(RepeatKill("orca_grind", "orca", "澱みを狩り続ける（繰り返し・魔物 25 体ごと）", "orca_4", 25,
-            Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 5)); // S5: +3→+5
+            Items(M(MaterialType.LargeManaCrystal, 3)), rewardStat: 5)); // S5: +3→+5。S13: 大×2→×3（d30 を 25 周に乗せる）
         traders.Add(orca);
 
         return traders;
