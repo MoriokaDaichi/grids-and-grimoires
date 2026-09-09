@@ -135,12 +135,12 @@ public static class ResearchGraph
             Stat("node_" + l.stem + "_e", s4, Amount(s4), l.stem, 2, a - 10f, Label(s4), Title(s4), Sm(2));
             Stat("node_" + l.stem + "_a", s0, Amount(s0), "node_" + l.stem + "_e", 3, a - 10f, Label(s0), Title(s0), Sm(3), Sm(1));
             Magic("Mega" + l.stem, "node_" + l.stem + "_a", 4, a - 10f);
-            Stat("node_" + l.stem + "_c", s2, Amount(s2), "Mega" + l.stem, 5, a - 10f, Label(s2), Title(s2), Md(1));
+            Stat("node_" + l.stem + "_c", s2, Amount(s2), "Mega" + l.stem, 5, a - 10f, Label(s2), Title(s2), Sm(9));
             Magic("Giga" + l.stem, "node_" + l.stem + "_c", 6, a - 10f);
 
             Stat("node_" + l.stem + "_b", s1, Amount(s1), l.aoe, 3, a + 10f, Label(s1), Title(s1), Sm(3));
             Magic("Mega" + l.aoe, "node_" + l.stem + "_b", 4, a + 10f);
-            Stat("node_" + l.stem + "_d", s3, Amount(s3), "Mega" + l.aoe, 5, a + 10f, Label(s3), Title(s3), Md(1));
+            Stat("node_" + l.stem + "_d", s3, Amount(s3), "Mega" + l.aoe, 5, a + 10f, Label(s3), Title(s3), Sm(9));
             Magic("Giga" + l.aoe, "node_" + l.stem + "_d", 6, a + 10f);
 
             // 状態異常特化 ← 単体メガ、付与率バフ ← 状態異常特化

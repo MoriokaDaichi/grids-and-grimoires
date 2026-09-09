@@ -287,8 +287,9 @@ public static class TraderCatalog
             Kill("dag_8", "dag", "ドラゴンを 3 体討伐", "ドラゴン", 3, Items(Elem(MagicAttribute.Fire, 2)), rewardMoney: 120),
             Kill("dag_9", "dag", "ドラゴンを 8 体討伐", "ドラゴン", 8, null, rewardStat: 2, rewardGear: "wand_stormcaller"));
         // 繰り返し討伐（無限）。dag_1（討伐10）達成で解放。回すたびに 中結晶×3＋ステP+1。
-        dag.tasks.Add(RepeatKill("dag_grind", "dag", "討伐を回す（繰り返し・魔物 25 体ごと）", "dag_1", 25,
-            Items(M(MaterialType.MediumManaCrystal, 3)), rewardStat: 1));
+        // 再検証7 R7-2：成長ループのレートが遅い（+1 ステP/周）ので、撃破数 25→20・報酬を 中×4＋ステP+2 に。
+        dag.tasks.Add(RepeatKill("dag_grind", "dag", "討伐を回す（繰り返し・魔物 20 体ごと）", "dag_1", 20,
+            Items(M(MaterialType.MediumManaCrystal, 4)), rewardStat: 2));
         traders.Add(dag);
 
         // ================================================ 蒐集家 オルカ（深層）
@@ -313,14 +314,19 @@ public static class TraderCatalog
             Depth("orca_2", "orca", "深度 8 まで到達する", 8, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 1),
             // 「ウェーブ間 HP 無回復＋深部バーストで満タンから即死」の壁（C2）に届く直前で、
             // tier2 サステイン（再生のトルク＝毎秒 +3.5）を作業台Lv2 を待たず直接渡す＝入手性の底上げ。
-            Depth("orca_2b", "orca", "深度 12 まで到達する", 12, null, rewardGear: "acc_regen_torc"),
+            // 再検証7 R7-1：中盤のエレメント欠片が枯れて 樫の杖(tier2)・作業台Lv2/Lv3 が詰まる。
+            // 壁ちょうど（d12）でまとまった欠片を出して詰まりを取る。
+            Depth("orca_2b", "orca", "深度 12 まで到達する", 12,
+                Items(Frag(MagicAttribute.Fire, 3), Frag(MagicAttribute.Dark, 3)), rewardStat: 3, rewardGear: "acc_regen_torc"),
             Deliver("orca_3", "orca", "浅層の素材を 3 つずつ蒐集する",
                 Items(Part("スライムゼリー", 3), Part("ゴブリンの牙", 3), Part("大ネズミの尾", 3), Part("番人の樹皮", 3)),
-                Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 1),
+                Items(M(MaterialType.LargeManaCrystal, 1), Frag(MagicAttribute.Fire, 2)), rewardStat: 1),
             // 深部設計（サイクル13 案A）：深度到達それ自体を成長ラインにする。各節目でまとまった
             // 恒久ステータスP（＝HP/Atk/Def へ振れる）を出し、「d15 に届けば d18 まで戦える体力が手に入る」
             // という階段を作る。全投資でも壁が d20 で頭打ち（伸びしろ無し）だった診断への対策。
-            Depth("orca_4", "orca", "深度 15 まで到達する", 15, null, rewardStat: 5, rewardMoney: 120),
+            Depth("orca_4", "orca", "深度 15 まで到達する", 15,
+                Items(Frag(MagicAttribute.Light, 3), Frag(MagicAttribute.Wind, 3), M(MaterialType.MediumManaCrystal, 6)),
+                rewardStat: 5, rewardMoney: 120),
             Deliver("orca_5", "orca", "遺跡の遺物 と 50 G を納める（石の破片/古びた骨/腐肉 ×5）",
                 Items(Part("石の破片", 5), Part("古びた骨", 5), Part("腐肉", 5)), null, deliverMoney: 50, rewardMoney: 150),
             Depth("orca_5b", "orca", "深度 18 まで到達する", 18, Items(M(MaterialType.LargeManaCrystal, 2)), rewardStat: 5, rewardRecipe: "armor_scale"),
@@ -331,10 +337,10 @@ public static class TraderCatalog
             Depth("orca_7b", "orca", "深度 22 まで到達する", 22, null, rewardStat: 8, rewardRecipe: "wand_dragoon"),
             Depth("orca_8", "orca", "深度 25 まで到達する", 25, null, rewardStat: 8, rewardMoney: 250),
             Depth("orca_9", "orca", "深度 30 まで到達する", 30, null, rewardStat: 12, rewardGear: "acc_orb"));
-        // 繰り返し討伐（無限・深部向け）。orca_4（深度15到達）達成で解放。回すたびに 大結晶×1＋ステP+2。
-        // ＝「中層で狩る → 大結晶をステPへ変換 → さらに深層」のループを成立させる資源源。
-        orca.tasks.Add(RepeatKill("orca_grind", "orca", "澱みを狩り続ける（繰り返し・魔物 40 体ごと）", "orca_4", 40,
-            Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 2));
+        // 繰り返し討伐（無限・深部向け）。orca_4（深度15到達）達成で解放。撃破数 40→30・報酬 大結晶×1＋ステP+3。
+        // ＝「中層で狩る → 大結晶をステPへ変換 → さらに深層」のループのレートを上げる（再検証7 R7-2）。
+        orca.tasks.Add(RepeatKill("orca_grind", "orca", "澱みを狩り続ける（繰り返し・魔物 30 体ごと）", "orca_4", 30,
+            Items(M(MaterialType.LargeManaCrystal, 1)), rewardStat: 3));
         traders.Add(orca);
 
         return traders;
