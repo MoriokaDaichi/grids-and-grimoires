@@ -253,7 +253,12 @@ public class PlaytestAutopilot : MonoBehaviour
             //    ただし未建造設備が要求する中結晶ぶん＋Lv2 強化1段ぶんは崩さず残す。
             if (trade != null)
             {
-                int keepMedium = 6; // Lv2 強化1段ぶんの中結晶バッファ（M(4〜5)）を常に残す
+                // Lv1 インフラ＋杖が揃ったら、Lv2 強化・tier2 杖・上位研究（＝中結晶ゲート）用に多めに温存。
+                bool lv1InfraDone = true;
+                foreach (var k in buildOrder) if (!hideout.IsBuilt(k)) lv1InfraDone = false;
+                bool bootstrapped = lv1InfraDone && CurrentWandTier(hideout) >= 1;
+
+                int keepMedium = bootstrapped ? 20 : 6;
                 foreach (var k in buildOrder)
                 {
                     if (hideout.IsBuilt(k)) continue;
@@ -300,7 +305,14 @@ public class PlaytestAutopilot : MonoBehaviour
             //    中・大結晶を優先。小結晶は「建材ぶん（最大 S(24)）＋余裕」を超える余剰があるときだけ燃料に回す。
             if (hideout.IsBuilt(FacilityKind.ManaFurnace) && hideout.Fuel < 15)
             {
-                foreach (var ct in new[] { MaterialType.MediumManaCrystal, MaterialType.LargeManaCrystal })
+                // ブートストラップ後は中結晶を燃料にしない（Lv2 ゲート用に温存）。大は可。
+                bool infraDone = true;
+                foreach (var k in buildOrder) if (!hideout.IsBuilt(k)) infraDone = false;
+                bool keepMed = infraDone && CurrentWandTier(hideout) >= 1;
+                var fuelTypes = keepMed
+                    ? new[] { MaterialType.LargeManaCrystal }
+                    : new[] { MaterialType.MediumManaCrystal, MaterialType.LargeManaCrystal };
+                foreach (var ct in fuelTypes)
                 {
                     int safety = 0;
                     while (hideout.Fuel < 15 && CrystalCount(inv, ct) > 0 && hideout.LoadFuel(ct) && safety++ < 20)
