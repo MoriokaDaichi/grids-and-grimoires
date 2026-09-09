@@ -12,8 +12,9 @@ public class MagicGridManager : MonoBehaviour
     [Tooltip("杖 未製作(tier0) のときの1辺。tier1 で +1、tier2 で +2 … と広がる。" +
              "3 スタート＝杖なしでも基本＋1枚は置けて、tier1 杖で 4×4（Mega＋AoE＋単体が両立）に届く")]
     public int minGridSize = 3;
-    [Tooltip("最大の1辺（作業台Lv2以上の杖）")]
-    public int maxGridSize = 5;
+    [Tooltip("最大の1辺。tier3 杖（作業台Lv3）で 6×6＝GigaFlame＋GigaFire＋単体 が同居でき、" +
+             "深部の同時多数（4体）に AoE throughput で対抗できる（深部設計 D）。tier2 杖は 5×5 で据え置き。")]
+    public int maxGridSize = 6;
 
     // グリッドの1辺が変わったときに発火（新 width, height）。
     public System.Action<int, int> OnGridResized;
@@ -120,8 +121,18 @@ public class MagicGridManager : MonoBehaviour
             cachedLayout.constraintCount = width;
         }
 
-        // 直下の子（グリッドのマス目背景）を w*h 個だけ表示する。
+        // 直下の子（グリッドのマス目背景）を w*h 個そろえる。足りなければ子0を複製して増やす
+        // （6×6＝36 セルに対しシーンの既存が 25 だと 11 マス背景が欠けるため。深部設計 D）。
         int need = width * height;
+        if (transform.childCount > 0)
+        {
+            Transform template = transform.GetChild(0);
+            while (transform.childCount < need)
+            {
+                GameObject clone = Instantiate(template.gameObject, transform);
+                clone.name = template.name;
+            }
+        }
         int shown = 0;
         for (int i = 0; i < transform.childCount; i++)
         {

@@ -4789,7 +4789,7 @@ MonoBehaviour:
   height: 5
   cellSize: 50
   minGridSize: 3
-  maxGridSize: 5
+  maxGridSize: 6
 --- !u!114 &482944431
 MonoBehaviour:
   m_ObjectHideFlags: 0
